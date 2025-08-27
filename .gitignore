@@ -1,8 +1,0 @@
-node_modules
-.pnpm-store
-dist
-.next
-.env
-.DS_Store
-coverage
-.turbo
