@@ -1,0 +1,27 @@
+{
+  "name": "cnc-quote",
+  "version": "0.0.1",
+  "private": true,
+  "scripts": {
+    "build": "turbo run build",
+    "dev": "turbo run dev",
+    "lint": "turbo run lint",
+    "format": "prettier --write \"**/*.{ts,tsx,md}\""
+  },
+  "devDependencies": {
+    "eslint": "^8.50.0",
+    "prettier": "^3.0.3",
+    "turbo": "^1.10.16"
+  },
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "dependencies": {
+    "@nestjs/axios": "^4.0.1",
+    "@nestjs/bull": "^10.2.3",
+    "@types/busboy": "^1.5.4",
+    "bull": "^4.16.5",
+    "file-type": "^21.0.0"
+  }
+}

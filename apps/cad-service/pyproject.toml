@@ -1,0 +1,21 @@
+[tool.poetry]
+name = "cad-service"
+version = "0.1.0"
+description = "CAD analysis service for CNC Quote"
+authors = ["Your Name <you@example.com>"]
+
+[tool.poetry.dependencies]
+python = "^3.10"
+fastapi = "^0.104.0"
+uvicorn = "^0.23.2"
+pydantic = "^2.4.2"
+celery = "^5.3.4"
+redis = "^5.0.1"
+python-multipart = "^0.0.6"
+numpy = "^1.26.0"
+python-occ = "^7.7.0"
+httpx = "^0.25.0"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"

@@ -1,0 +1,121 @@
+/* Scoped styles for the widget iframe */
+#cnc-quote-widget {
+  --primary: #674299;
+  --ring: var(--primary);
+  font-family: system-ui, -apple-system, sans-serif;
+}
+
+#cnc-quote-widget * {
+  box-sizing: border-box;
+}
+
+#cnc-quote-widget .card {
+  background: white;
+  border-radius: 0.5rem;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+#cnc-quote-widget .button {
+  background: var(--primary);
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 0.25rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+#cnc-quote-widget .button:hover {
+  opacity: 0.9;
+}
+
+#cnc-quote-widget .button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+#cnc-quote-widget .tabs {
+  display: flex;
+  border-bottom: 1px solid #e5e7eb;
+  margin-bottom: 1rem;
+}
+
+#cnc-quote-widget .tab {
+  padding: 0.5rem 1rem;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+}
+
+#cnc-quote-widget .tab[data-state=active] {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+#cnc-quote-widget .input {
+  width: 100%;
+  padding: 0.5rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.25rem;
+}
+
+#cnc-quote-widget .input:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px rgba(var(--primary), 0.1);
+}
+
+#cnc-quote-widget .dropzone {
+  border: 2px dashed #e5e7eb;
+  border-radius: 0.5rem;
+  padding: 2rem;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+
+#cnc-quote-widget .dropzone:hover {
+  border-color: var(--primary);
+}
+
+#cnc-quote-widget .label {
+  display: block;
+  font-weight: 500;
+  margin-bottom: 0.5rem;
+}
+
+#cnc-quote-widget .select {
+  width: 100%;
+  padding: 0.5rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.25rem;
+  background: white;
+}
+
+#cnc-quote-widget .price {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--primary);
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  #cnc-quote-widget {
+    color-scheme: dark;
+  }
+  
+  #cnc-quote-widget .card {
+    background: #1f2937;
+    color: white;
+  }
+  
+  #cnc-quote-widget .input,
+  #cnc-quote-widget .select {
+    background: #374151;
+    border-color: #4b5563;
+    color: white;
+  }
+  
+  #cnc-quote-widget .dropzone {
+    border-color: #4b5563;
+  }
+}
