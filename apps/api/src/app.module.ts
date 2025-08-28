@@ -1,0 +1,37 @@
+import { Module } from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config';
+import { AuthModule } from './auth/auth.module';
+import { QueueModule } from './queues';
+import { HealthModule } from './modules/health/health.module';
+import { MachineModule } from './modules/machines/machine.module';
+import { PricingModule } from './modules/pricing/pricing.module';
+import { DfmModule } from './modules/dfm/dfm.module';
+import { SupabaseModule } from './lib/supabase/supabase.module';
+import { CacheModule } from './lib/cache/cache.module';
+import { PaymentsModule } from './modules/payments/payments.module';
+import { NotifyModule } from './modules/notify/notify.module';
+import { OrdersModule } from './modules/orders/orders.module';
+import { QapModule } from './modules/qap/qap.module';
+import { ManualReviewModule } from './modules/manual-review/manual-review.module';
+
+@Module({
+  imports: [
+    ConfigModule.forRoot({
+      isGlobal: true,
+    }),
+    SupabaseModule,
+    CacheModule,
+    AuthModule,
+    QueueModule,
+    HealthModule,
+    MachineModule,
+    PricingModule,
+    DfmModule,
+    PaymentsModule,
+    NotifyModule,
+    OrdersModule,
+    QapModule,
+    ManualReviewModule,
+  ],
+})
+export class AppModule {}
