@@ -6,12 +6,23 @@
     "build": "turbo run build",
     "dev": "turbo run dev",
     "lint": "turbo run lint",
-    "format": "prettier --write \"**/*.{ts,tsx,md}\""
+    "format": "prettier --write \"**/*.{ts,tsx,md}\"",
+    "doctor": "ts-node scripts/doctor.ts",
+    "check-rls": "ts-node scripts/check-rls.ts",
+    "check-pricing": "ts-node scripts/check-pricing.ts",
+    "check-cad": "ts-node scripts/upload-and-analyze.ts",
+    "check-embed": "ts-node scripts/embed-check.ts",
+    "check-payment": "ts-node scripts/checkout-sim.ts",
+    "check-slos": "ts-node scripts/measure-slos.ts",
+    "check-observability": "ts-node scripts/emit-test-error.ts"
   },
   "devDependencies": {
     "eslint": "^8.50.0",
     "prettier": "^3.0.3",
-    "turbo": "^1.10.16"
+    "turbo": "^1.10.16",
+    "ts-node": "^10.9.1",
+    "typescript": "^5.2.2",
+    "@types/node": "^20.6.2"
   },
   "workspaces": [
     "apps/*",
@@ -22,6 +33,12 @@
     "@nestjs/bull": "^10.2.3",
     "@types/busboy": "^1.5.4",
     "bull": "^4.16.5",
-    "file-type": "^21.0.0"
+    "file-type": "^21.0.0",
+    "@supabase/supabase-js": "^2.33.2",
+    "axios": "^1.5.0",
+    "puppeteer": "^21.1.1",
+    "stripe": "^13.5.0",
+    "@sentry/node": "^7.54.0",
+    "posthog-node": "^3.1.2"
   }
 }

@@ -2,6 +2,12 @@
 
 A comprehensive, full-stack platform for instant quoting of CNC machining, Sheet Metal fabrication, and Injection Molding services. The platform provides automated CAD analysis, real-time pricing, DFM validation, and complete order management workflows.
 
+## 🎯 Service Level Objectives (SLOs)
+
+- ⚡ **Time to First Price**: P95 < 2000ms
+- 🔄 **CAD Analysis**: P95 < 20000ms
+- 💳 **Payment to Order**: P95 < 10000ms
+
 ## 🚀 Features
 
 ### Core Manufacturing Processes
@@ -45,9 +51,184 @@ A comprehensive, full-stack platform for instant quoting of CNC machining, Sheet
 - **Celery** - Distributed task processing
 - **NumPy** - Scientific computing
 
-### Infrastructure
+### Infrastructure & Monitoring
 - **Supabase** - Backend-as-a-Service (PostgreSQL, Auth, Storage)
 - **Redis** - Caching and job queues
+- **Sentry** - Error tracking and performance monitoring
+- **PostHog** - Product analytics and event tracking
+- **Render.com** - Cloud hosting platform
+
+## 🔄 Development Setup
+
+1. **Prerequisites**
+   - Node.js 18+
+   - PNPM package manager
+   - Python 3.11+
+   - Poetry
+   - Redis
+   - Stripe CLI
+
+2. **Environment Variables**
+
+   Create the following .env files:
+
+   apps/web/.env:
+   ```env
+   NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
+   NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key
+   NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=your_stripe_key
+   NEXT_PUBLIC_API_URL=http://localhost:3000
+   NEXT_PUBLIC_SENTRY_DSN=your_sentry_dsn
+   NEXT_PUBLIC_POSTHOG_KEY=your_posthog_key
+   ```
+
+   apps/api/.env:
+   ```env
+   SUPABASE_URL=your_supabase_url
+   SUPABASE_ANON_KEY=your_anon_key
+   STRIPE_SECRET_KEY=your_stripe_secret
+   STRIPE_WEBHOOK_SECRET=your_webhook_secret
+   SENTRY_DSN=your_sentry_dsn
+   POSTHOG_API_KEY=your_posthog_key
+   PORT=3000
+   ```
+
+   apps/cad-service/.env:
+   ```env
+   SUPABASE_URL=your_supabase_url
+   SUPABASE_ANON_KEY=your_anon_key
+   PORT=3001
+   ```
+
+3. **Installation**
+   ```bash
+   # Install dependencies
+   pnpm install
+
+   # Run database migrations
+   cd apps/api
+   pnpm supabase db push
+   ```
+
+4. **Development Servers**
+   ```bash
+   # Terminal 1 - API
+   cd apps/api
+   pnpm dev
+
+   # Terminal 2 - Web
+   cd apps/web
+   pnpm dev
+
+   # Terminal 3 - CAD Service
+   cd apps/cad-service
+   pnpm dev
+
+   # Terminal 4 - Stripe webhook forwarding
+   stripe listen --forward-to http://localhost:3000/api/payments/stripe/webhook
+   ```
+
+## 🧪 Testing
+
+Run comprehensive test suites:
+```bash
+# Test RLS policies
+pnpm check-rls
+
+# Test pricing engine
+pnpm check-pricing
+
+# Test CAD pipeline
+pnpm check-cad
+
+# Test widget embedding
+pnpm check-embed
+
+# Test payment flow
+pnpm check-payment
+
+# Test performance SLOs
+pnpm check-slos
+
+# Test monitoring setup
+pnpm check-observability
+```
+
+## 📊 Monitoring & Health Checks
+
+- **System Health Dashboard**: /admin/system-health
+  - API/CAD service status
+  - Queue metrics
+  - Database latency
+  - Stripe webhook status
+  - Widget origins
+
+- **Error Tracking**: Sentry integration with:
+  - Organization context
+  - Request ID tracking
+  - Performance monitoring
+
+- **Analytics**: PostHog tracking for:
+  - User journeys
+  - Conversion funnels
+  - Feature usage
+
+## 🚀 Deployment
+
+This project is configured for deployment on Render.com using the provided `render.yaml` blueprint:
+
+1. **Create a Render Account**
+   - Connect your GitHub repository
+   - Create a new Blueprint instance
+
+2. **Environment Setup**
+   - Configure environment variables in Render dashboard
+   - Set up service-specific settings
+
+3. **Service URLs**
+   - Web UI: https://cnc-quote-web.onrender.com
+   - API: https://cnc-quote-api.onrender.com
+   - CAD Service: https://cnc-quote-cad.onrender.com
+
+4. **Post-Deployment**
+   - Configure Stripe webhook endpoints
+   - Update Supabase allowed domains
+   - Verify health checks
+   - Monitor error reporting
+
+## 🔌 Widget Integration
+
+Embed the quote widget in your website:
+
+```html
+<iframe
+  src="https://your-domain.com/widget"
+  width="100%"
+  height="600px"
+  allow="payment"
+></iframe>
+
+<script>
+window.addEventListener('message', (event) => {
+  if (event.origin !== 'https://your-domain.com') return;
+  
+  if (event.data.type === 'price:updated') {
+    console.log('New price:', event.data.price);
+  }
+});
+</script>
+```
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create your feature branch
+3. Run the test suites
+4. Submit a pull request
+
+## 📝 License
+
+[License Name] - See LICENSE file for details
 - **Sentry** - Error monitoring and performance tracking
 - **Stripe & PayPal** - Payment processing
 - **Resend** - Email delivery
