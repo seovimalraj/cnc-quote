@@ -2,6 +2,10 @@ import { Injectable } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bull';
 import { Queue } from 'bullmq';
 
+// Using require because the package.json is outside the TypeScript source tree
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const packageJson = require('../../../package.json');
+
 @Injectable()
 export class HealthService {
   constructor(
@@ -18,13 +22,17 @@ export class HealthService {
     ]);
 
     return {
-      status: 'ok',
+      ok: true,
+      service: 'api',
+      version: packageJson.version,
       timestamp: new Date().toISOString(),
-      queues: {
-        cad: cadCount,
-        pricing: pricingCount,
-        email: emailCount,
-      },
+      details: {
+        queues: {
+          cad: cadCount,
+          pricing: pricingCount,
+          email: emailCount,
+        }
+      }
     };
   }
 }

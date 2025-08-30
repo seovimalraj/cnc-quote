@@ -1,13 +1,15 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
-from .routers import analyze, gltf
+from .routers import analyze, gltf, health
 from .workers.celery import celery_app
 
 app = FastAPI(
     title="CAD Service",
     description="CAD analysis and conversion service for CNC Quote",
-    version="1.0.0"
+    version="1.0.0",
+    docs_url="/docs",
+    redoc_url="/redoc"
 )
 
 # CORS middleware
@@ -22,12 +24,7 @@ app.add_middleware(
 # Include routers
 app.include_router(analyze.router, prefix="/analyze", tags=["analyze"])
 app.include_router(gltf.router, prefix="/gltf", tags=["gltf"])
-
-@app.get("/health")
-async def health_check():
-    # Check Celery workers
-    i = celery_app.control.inspect()
-    workers = i.active()
+app.include_router(health.router, tags=["health"])
     
     if not workers:
         raise HTTPException(status_code=503, detail="No Celery workers available")

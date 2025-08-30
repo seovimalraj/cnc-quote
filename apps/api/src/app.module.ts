@@ -13,6 +13,9 @@ import { NotifyModule } from './modules/notify/notify.module';
 import { OrdersModule } from './modules/orders/orders.module';
 import { QapModule } from './modules/qap/qap.module';
 import { ManualReviewModule } from './modules/manual-review/manual-review.module';
+import { ObservabilityModule } from './observability/observability.module';
+import { TestModule } from './modules/test/test.module';
+import { QueueMonitorModule } from './modules/queue-monitor/queue-monitor.module';
 
 @Module({
   imports: [
@@ -23,6 +26,7 @@ import { ManualReviewModule } from './modules/manual-review/manual-review.module
     CacheModule,
     AuthModule,
     QueueModule,
+    ObservabilityModule,
     HealthModule,
     MachineModule,
     PricingModule,
@@ -32,6 +36,8 @@ import { ManualReviewModule } from './modules/manual-review/manual-review.module
     OrdersModule,
     QapModule,
     ManualReviewModule,
+    TestModule,
+    QueueMonitorModule,
   ],
 })
 export class AppModule {}

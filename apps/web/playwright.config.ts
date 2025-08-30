@@ -15,15 +15,23 @@ const config: PlaywrightTestConfig = {
   fullyParallel: true,
   /* Retry on CI only */
   retries: process.env.CI ? 2 : 0,
-  /* Reporter to use. See https://playwright.dev/docs/test-reporters */
-  reporter: 'html',
-  /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
+  /* Use HTML reporter and list reporter for CI */
+  reporter: [
+    ['html', { outputFolder: 'playwright-report' }],
+    ['list']
+  ],
+  /* Shared settings for all the projects below. */
   use: {
     /* Base URL to use in actions like `await page.goto('/')`. */
     baseURL: process.env.FRONTEND_URL || 'http://localhost:3000',
 
-    /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
-    trace: 'on-first-retry',
+    /* Collect artifacts on failure */
+    trace: 'retain-on-failure',
+    video: {
+      mode: 'retain-on-failure',
+      size: { width: 1280, height: 720 }
+    },
+    screenshot: 'only-on-failure',
   },
   webServer: {
     command: 'pnpm start',
