@@ -1,10 +1,33 @@
 # Render configuration for CNC Quote Platform
 version: "1"
 services:
+  # API Service (NestJS)
+  - type: web
+    name: cnc-quote-api
+    env: node
+    repo: https://github.com/seovimalraj/cnc-quote
+    plan: free
+    region: oregon
+    buildCommand: npm install -g pnpm@8 && pnpm install --no-frozen-lockfile && cd apps/api && pnpm build
+    startCommand: cd apps/api && pnpm start
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NODE_VERSION
+        value: "18"
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_ANON_KEY
+        sync: false
+      - key: SUPABASE_SERVICE_KEY
+        sync: false
+
   # CAD Service (Python/FastAPI)
   - type: web
     name: cnc-quote-cad
     env: docker
+    repo: https://github.com/seovimalraj/cnc-quote
     dockerfilePath: ./apps/cad-service/Dockerfile
     region: oregon
     plan: free
@@ -20,6 +43,24 @@ services:
   # Web Frontend (Next.js)
   - type: web
     name: cnc-quote-web
+    env: node
+    repo: https://github.com/seovimalraj/cnc-quote
+    plan: free
+    region: oregon
+    buildCommand: npm install -g pnpm@8 && pnpm install --no-frozen-lockfile && cd apps/web && pnpm build
+    startCommand: cd apps/web && pnpm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NODE_VERSION
+        value: "18"
+      - key: NEXT_PUBLIC_SUPABASE_URL
+        sync: false
+      - key: NEXT_PUBLIC_SUPABASE_ANON_KEY
+        sync: false
+      - key: NEXT_PUBLIC_API_URL
+        sync: false
     env: node
     repo: https://github.com/seovimalraj/cnc-quote
     plan: free
@@ -51,7 +92,7 @@ services:
     repo: https://github.com/seovimalraj/cnc-quote
     plan: free
     region: oregon
-    buildCommand: pnpm install --frozen-lockfile && cd apps/api && pnpm build
+    buildCommand: npm install -g pnpm@8 && pnpm install --no-frozen-lockfile && cd apps/api && pnpm build
     startCommand: cd apps/api && pnpm start
     healthCheckPath: /api/health
     autoDeployTrigger: commit
