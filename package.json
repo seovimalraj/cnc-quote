@@ -18,20 +18,26 @@
     "check-observability": "ts-node scripts/emit-test-error.ts"
   },
   "dependencies": {
+    "@nestjs/axios": "^4.0.1",
+    "@nestjs/bull": "^10.2.3",
+    "@sentry/node": "^7.54.0",
     "@supabase/supabase-js": "^2.33.2",
     "axios": "^1.5.0",
+    "bull": "^4.16.5",
+    "file-type": "^21.0.0",
+    "posthog-node": "^3.1.2",
     "puppeteer": "^21.1.1",
     "stripe": "^13.5.0",
-    "@sentry/node": "^7.54.0",
-    "posthog-node": "^3.1.2"
+    "@types/busboy": "^1.5.4"
   },
   "devDependencies": {
+    "@types/busboy": "^1.5.4",
+    "@types/node": "^20.6.2",
     "eslint": "^8.50.0",
     "prettier": "^3.0.3",
-    "turbo": "^1.10.16",
     "ts-node": "^10.9.1",
-    "typescript": "^5.2.2",
-    "@types/node": "^20.6.2"
+    "turbo": "^1.10.16",
+    "typescript": "^5.2.2"
   },
   "workspaces": [
     "apps/*",
