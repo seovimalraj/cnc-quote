@@ -8,8 +8,8 @@ services:
     repo: https://github.com/seovimalraj/cnc-quote
     plan: free
     region: oregon
-    buildCommand: npm install -g pnpm@8 && pnpm install --no-frozen-lockfile && cd apps/api && pnpm build
-    startCommand: cd apps/api && pnpm start
+    buildCommand: npm install -g pnpm@8 && pnpm install --no-frozen-lockfile && pnpm run build
+    startCommand: cd apps/api && NODE_ENV=production pnpm start
     healthCheckPath: /health
     envVars:
       - key: NODE_ENV
