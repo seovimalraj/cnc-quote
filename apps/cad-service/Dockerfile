@@ -19,8 +19,9 @@ RUN curl -sSL https://install.python-poetry.org | python3 -
 WORKDIR /app
 
 # Copy project files
-COPY pyproject.toml poetry.lock* ./
-COPY app ./app
+COPY apps/cad-service/pyproject.toml ./pyproject.toml
+COPY apps/cad-service/poetry.lock* ./
+COPY apps/cad-service/app ./app
 
 # Install dependencies
 RUN poetry config virtualenvs.create false \

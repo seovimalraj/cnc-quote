@@ -1,6 +1,22 @@
 # Render configuration for CNC Quote Platform
 version: "1"
 services:
+  # CAD Service (Python/FastAPI)
+  - type: web
+    name: cnc-quote-cad
+    env: docker
+    dockerfilePath: ./apps/cad-service/Dockerfile
+    region: oregon
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_ANON_KEY
+        sync: false
+      - key: PORT
+        value: "10000"
+
   # Web Frontend (Next.js)
   - type: web
     name: cnc-quote-web
