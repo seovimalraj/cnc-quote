@@ -27,8 +27,7 @@
     "file-type": "^21.0.0",
     "posthog-node": "^3.1.2",
     "puppeteer": "^21.1.1",
-    "stripe": "^13.5.0",
-    "@types/busboy": "^1.5.4"
+    "stripe": "^13.5.0"
   },
   "devDependencies": {
     "@types/busboy": "^1.5.4",
@@ -42,18 +41,6 @@
   "workspaces": [
     "apps/*",
     "packages/*"
-  ],
-  "dependencies": {
-    "@nestjs/axios": "^4.0.1",
-    "@nestjs/bull": "^10.2.3",
-    "@types/busboy": "^1.5.4",
-    "bull": "^4.16.5",
-    "file-type": "^21.0.0",
-    "@supabase/supabase-js": "^2.33.2",
-    "axios": "^1.5.0",
-    "puppeteer": "^21.1.1",
-    "stripe": "^13.5.0",
-    "@sentry/node": "^7.54.0",
-    "posthog-node": "^3.1.2"
-  }
+  ]
+}
 }
