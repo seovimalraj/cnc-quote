@@ -12,6 +12,11 @@ RUN apt-get update && apt-get install -y \
     libxrender1 \
     libxft2 \
     occt-draw \
+    libocct-foundation-7.6t64 \
+    libocct-modeling-algorithms-7.6t64 \
+    libocct-modeling-data-7.6t64 \
+    libocct-ocaf-7.6t64 \
+    libocct-visualization-7.6t64 \
     && rm -rf /var/lib/apt/lists/*
 
 # Install poetry
