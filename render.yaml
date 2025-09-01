@@ -11,16 +11,12 @@ services:
     buildCommand: |
       export PATH="/opt/render/project/src/node_modules/.bin:$PATH" &&
       npm install -g pnpm@8 &&
-      pnpm install &&
+      pnpm install --no-frozen-lockfile &&
       cd packages/shared &&
-      npm install -g tsup@7.2.0 &&
       pnpm add -D tsup@7.2.0 &&
-      export PATH="/opt/render/project/src/packages/shared/node_modules/.bin:$PATH" &&
       pnpm build &&
       cd ../../apps/api &&
-      npm install -g @nestjs/cli &&
-      pnpm add -D @nestjs/cli &&
-      export PATH="/opt/render/project/src/apps/api/node_modules/.bin:$PATH" &&
+      pnpm add -D @nestjs/cli @types/node typescript &&
       pnpm build
     startCommand: cd apps/api && pnpm start
     healthCheckPath: /api/health
