@@ -8,7 +8,17 @@ services:
     repo: https://github.com/seovimalraj/cnc-quote
     plan: free
     region: oregon
-    buildCommand: npm install -g pnpm@8 && npm i -g @nestjs/cli tsup && pnpm install --no-frozen-lockfile && cd packages/shared && pnpm install && pnpm build && cd ../../apps/api && pnpm install && pnpm build
+    buildCommand: |
+      npm install -g pnpm@8 tsup @nestjs/cli &&
+      pnpm install --no-frozen-lockfile &&
+      cd packages/shared &&
+      pnpm install &&
+      pnpm add -D tsup &&
+      pnpm build &&
+      cd ../../apps/api &&
+      pnpm install &&
+      pnpm add -D @nestjs/cli &&
+      pnpm build
     startCommand: cd apps/api && pnpm start
     healthCheckPath: /api/health
     autoDeployTrigger: commit
@@ -59,6 +69,7 @@ services:
     env: docker
     repo: https://github.com/seovimalraj/cnc-quote
     dockerfilePath: ./apps/cad-service/Dockerfile
+    dockerContext: .
     region: oregon
     plan: free
     healthCheckPath: /health
@@ -78,7 +89,16 @@ services:
     repo: https://github.com/seovimalraj/cnc-quote
     plan: free
     region: oregon
-    buildCommand: npm install -g pnpm@8 && pnpm install --no-frozen-lockfile && cd packages/shared && pnpm install && pnpm build && cd ../../apps/web && pnpm install && pnpm build
+    buildCommand: |
+      npm install -g pnpm@8 tsup &&
+      pnpm install --no-frozen-lockfile &&
+      cd packages/shared &&
+      pnpm install &&
+      pnpm add -D tsup &&
+      pnpm build &&
+      cd ../../apps/web &&
+      pnpm install &&
+      pnpm build
     startCommand: cd apps/web && pnpm start
     healthCheckPath: /api/health
     autoDeployTrigger: commit

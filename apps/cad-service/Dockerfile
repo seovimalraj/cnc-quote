@@ -22,8 +22,8 @@ ENV PATH="/root/.local/bin:$PATH"
 WORKDIR /app
 
 # Copy project files from the correct monorepo path
-COPY pyproject.toml ./pyproject.toml
-COPY app ./app
+COPY apps/cad-service/pyproject.toml ./pyproject.toml
+COPY apps/cad-service/app ./app
 
 # Install dependencies (generate lock file if missing)
 RUN poetry config virtualenvs.create false \
