@@ -5,7 +5,7 @@ services:
     name: cnc-quote
     env: node
     repo: https://github.com/seovimalraj/cnc-quote
-    plan: standard
+    plan: free
     region: oregon
     buildCommand: |
       npm install -g pnpm@8
@@ -66,14 +66,9 @@ services:
     dockerfilePath: ./apps/cad-service/Dockerfile.render
     dockerContext: .
     region: oregon
-    plan: standard
+    plan: free
     healthCheckPath: /api/health
     autoDeployTrigger: commit
-    scaling:
-      minInstances: 1
-      maxInstances: 3
-      targetMemoryPercent: 75
-      targetCPUPercent: 75
     envVars:
       - key: PYTHONPATH
         value: "/opt/conda/lib/python3.11/site-packages:/app"
