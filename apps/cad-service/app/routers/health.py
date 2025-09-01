@@ -1,5 +1,6 @@
 # routers/health.py
 from uuid import uuid4
+from datetime import datetime
 from fastapi import APIRouter, Response
 from fastapi.responses import JSONResponse
 import importlib.metadata
@@ -26,6 +27,6 @@ async def health_check(response: Response):
         "version": version,
         "timestamp": datetime.utcnow().isoformat(),
         "details": {
-            "workers": celery_app.control.inspect().active() or {}
+            "status": "healthy"
         }
     })
