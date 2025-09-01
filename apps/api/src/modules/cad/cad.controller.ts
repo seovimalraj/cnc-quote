@@ -3,26 +3,60 @@ import { CadService } from "./cad.service";
 import { JwtAuthGuard } from "../../auth/jwt.guard";
 import { OrgGuard } from "../../auth/org.guard";
 import { User } from "../../auth/user.decorator";
-import { ApiTags } from "@nestjs/swagger";
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from "@nestjs/swagger";
+import { QueueAnalysisDto, GetAnalysisResultDto, GetPreviewDto, TaskResponseDto } from "./cad.dto";
+import { CadAnalysisResult } from "./cad.types";
 
-@ApiTags("cad")
+@ApiTags("CAD")
 @Controller("cad")
 @UseGuards(JwtAuthGuard, OrgGuard)
+@ApiBearerAuth()
 export class CadController {
   constructor(private readonly cadService: CadService) {}
 
   @Post("analyze")
-  async analyzeFile(@Body() body: { fileId: string }, @User("sub") userId: string) {
-    return this.cadService.queueAnalysis(body.fileId, userId);
+  @ApiOperation({ summary: "Queue CAD file analysis" })
+  @ApiResponse({
+    status: 201,
+    description: "Analysis task queued successfully",
+    type: TaskResponseDto,
+  })
+  @ApiResponse({ status: 400, description: "Invalid input or file not ready" })
+  @ApiResponse({ status: 404, description: "File not found" })
+  async analyzeFile(
+    @Body() dto: QueueAnalysisDto,
+    @User("sub") userId: string,
+  ): Promise<TaskResponseDto> {
+    return this.cadService.queueAnalysis(dto.fileId, userId);
   }
 
   @Get("analysis/:taskId")
-  async getAnalysisResult(@Param("taskId") taskId: string, @User("sub") _userId: string) {
-    return this.cadService.getAnalysisResult(taskId);
+  @ApiOperation({ summary: "Get CAD analysis result" })
+  @ApiResponse({
+    status: 200,
+    description: "Analysis result retrieved successfully",
+    type: CadAnalysisResult,
+  })
+  @ApiResponse({ status: 404, description: "Task not found" })
+  async getAnalysisResult(
+    @Param() dto: GetAnalysisResultDto,
+  ): Promise<CadAnalysisResult> {
+    return this.cadService.getAnalysisResult(dto.taskId);
   }
 
-  @Get("preview/:fileId")
-  async getPreview(@Param("fileId") fileId: string, @User("sub") userId: string) {
-    return this.cadService.getPreview(fileId, userId);
+  @Post("preview/:fileId")
+  @ApiOperation({ summary: "Queue CAD file preview generation" })
+  @ApiResponse({
+    status: 201,
+    description: "Preview generation task queued successfully",
+    type: TaskResponseDto,
+  })
+  @ApiResponse({ status: 400, description: "Invalid input or file not ready" })
+  @ApiResponse({ status: 404, description: "File not found" })
+  async getPreview(
+    @Param() dto: GetPreviewDto,
+    @User("sub") userId: string,
+  ): Promise<TaskResponseDto> {
+    return this.cadService.getPreview(dto.fileId, userId);
   }
 }
