@@ -8,8 +8,8 @@ services:
     repo: https://github.com/seovimalraj/cnc-quote
     plan: free
     region: oregon
-    buildCommand: npm install -g pnpm@8 && pnpm install --no-frozen-lockfile && pnpm --filter @cnc-quote/shared build && pnpm --filter @cnc-quote/api build
-    startCommand: pnpm --filter @cnc-quote/api start
+    buildCommand: npm install -g pnpm@8 && npm i -g @nestjs/cli tsup && pnpm install --no-frozen-lockfile && cd packages/shared && pnpm install && pnpm build && cd ../../apps/api && pnpm install && pnpm build
+    startCommand: cd apps/api && pnpm start
     healthCheckPath: /api/health
     autoDeployTrigger: commit
     envVars:
@@ -78,8 +78,8 @@ services:
     repo: https://github.com/seovimalraj/cnc-quote
     plan: free
     region: oregon
-    buildCommand: npm install -g pnpm@8 && pnpm install --no-frozen-lockfile && pnpm --filter @cnc-quote/shared build && pnpm --filter @cnc-quote/web build
-    startCommand: pnpm --filter @cnc-quote/web start
+    buildCommand: npm install -g pnpm@8 && pnpm install --no-frozen-lockfile && cd packages/shared && pnpm install && pnpm build && cd ../../apps/web && pnpm install && pnpm build
+    startCommand: cd apps/web && pnpm start
     healthCheckPath: /api/health
     autoDeployTrigger: commit
     envVars:
