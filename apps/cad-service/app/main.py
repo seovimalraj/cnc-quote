@@ -25,8 +25,7 @@ app.add_middleware(
 app.include_router(analyze.router, prefix="/analyze", tags=["analyze"])
 app.include_router(gltf.router, prefix="/gltf", tags=["gltf"])
 app.include_router(health.router, tags=["health"])
-    
-    if not workers:
-        raise HTTPException(status_code=503, detail="No Celery workers available")
-    
-    return {"status": "healthy", "workers": len(workers)}
+
+@app.get("/")
+async def root():
+    return {"message": "CAD Service API", "version": "1.0.0"}
