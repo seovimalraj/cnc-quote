@@ -79,7 +79,7 @@ services:
       - key: SUPABASE_ANON_KEY
         sync: false
       - key: PORT
-        value: "10000"
+        value: "10001"
 
   # Web Frontend (Next.js)
   - type: web

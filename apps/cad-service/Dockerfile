@@ -30,7 +30,7 @@ RUN poetry config virtualenvs.create false \
     && poetry install --no-interaction --no-ansi --only=main
 
 # Expose port
-EXPOSE 10000
+EXPOSE 10001
 
 # Run FastAPI with port from environment
-CMD poetry run uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-10000}
+CMD poetry run uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-10001}
