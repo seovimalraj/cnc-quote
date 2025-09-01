@@ -23,10 +23,7 @@ export class CadController {
   })
   @ApiResponse({ status: 400, description: "Invalid input or file not ready" })
   @ApiResponse({ status: 404, description: "File not found" })
-  async analyzeFile(
-    @Body() dto: QueueAnalysisDto,
-    @User("sub") userId: string,
-  ): Promise<TaskResponseDto> {
+  async analyzeFile(@Body() dto: QueueAnalysisDto, @User("sub") userId: string): Promise<TaskResponseDto> {
     return this.cadService.queueAnalysis(dto.fileId, userId);
   }
 

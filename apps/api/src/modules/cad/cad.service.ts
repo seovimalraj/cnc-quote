@@ -5,7 +5,7 @@ import { HttpService } from "@nestjs/axios";
 import { FilesService } from "../files/files.service";
 import { firstValueFrom } from "rxjs";
 import { FileNotFoundError, FileNotReadyError, CadServiceError } from "./cad.errors";
-import { CadAnalysisResult, CadPreviewResult, CadJobData, CadJobType } from "./cad.types";
+import { CadAnalysisResult, CadJobData, CadJobType } from "./cad.types";
 import { ConfigService } from "@nestjs/config";
 import { AxiosError } from "axios";
 
@@ -44,7 +44,7 @@ export class CadService {
         "analyze" as CadJobType,
         {
           fileId,
-          downloadUrl,
+          downloadUrl: downloadUrl.signedUrl,
         } as CadJobData,
         {
           attempts: 3,
@@ -109,27 +109,24 @@ export class CadService {
       );
 
       // Queue preview generation
-      const job = await this.cadQueue.add(
-        "preview" as CadJobType,
-        {
-          fileId,
-          taskId: conversionRequest.task_id,
-        } as CadJobData,
-        {
-          attempts: 3,
-          backoff: {
-            type: "exponential",
-            delay: 2000,
-          },
-        },
-      );
-
-      this.logger.debug(`Preview generation queued successfully for file ${fileId} with task ${job.id}`);
+    const job = await this.cadQueue.add(
+      "preview" as CadJobType,
+      {
+        fileId,
+        taskId: conversionRequest.task_id,
+      } as CadJobData,
+      {
+        attempts: 3,
+        backoff: {
+          type: "exponential",
+          delay: 2000,
+        }
+      }
+    );      this.logger.debug(`Preview generation queued successfully for file ${fileId} with task ${job.id}`);
       return { taskId: job.id };
     } catch (error) {
       this.logger.error(`Failed to queue preview generation for file ${fileId}:`, error);
       throw new CadServiceError("Failed to queue preview generation");
     }
-  }
   }
 }

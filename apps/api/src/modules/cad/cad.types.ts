@@ -1,5 +1,5 @@
 export interface CadAnalysisResult {
-  status: 'processing' | 'completed' | 'failed';
+  status: "processing" | "completed" | "failed";
   // CAD analysis specific fields
   features?: {
     type: string;
@@ -18,7 +18,7 @@ export interface CadAnalysisResult {
 }
 
 export interface CadPreviewResult {
-  status: 'processing' | 'completed' | 'failed';
+  status: "processing" | "completed" | "failed";
   gltfUrl?: string;
   thumbnailUrl?: string;
   error?: string;
@@ -26,7 +26,7 @@ export interface CadPreviewResult {
 
 export interface CadConversionRequest {
   task_id: string;
-  status: 'pending' | 'processing' | 'completed' | 'failed';
+  status: "pending" | "processing" | "completed" | "failed";
 }
 
 export interface CadJobData {
@@ -35,4 +35,4 @@ export interface CadJobData {
   taskId?: string;
 }
 
-export type CadJobType = 'analyze' | 'preview';
+export type CadJobType = "analyze" | "preview";

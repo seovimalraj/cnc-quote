@@ -1,12 +1,19 @@
 import { Processor, WorkerHost } from "@nestjs/bullmq";
 import { Logger } from "@nestjs/common";
 import { Job } from "bullmq";
+import { CadJobData } from "./cad.types";
+import {
+  CadAnalysisJobResult,
+  CadConversionJobResult,
+  CadJobResult,
+  CadConversionJobData,
+} from "./cad.processor.types";
 
 @Processor("cad")
 export class CadProcessor extends WorkerHost {
   private readonly logger = new Logger(CadProcessor.name);
 
-  async process(job: Job): Promise<any> {
+  async process(job: Job<CadJobData>): Promise<CadJobResult> {
     this.logger.debug(`Processing CAD job ${job.id} of type ${job.name}`);
 
     switch (job.name) {
@@ -23,11 +30,11 @@ export class CadProcessor extends WorkerHost {
     this.logger.error("CAD Worker Error:", error);
   }
 
-  async onCompleted(job: Job, result: any): Promise<void> {
+  async onCompleted(job: Job<CadJobData>, result: CadJobResult): Promise<void> {
     this.logger.debug(`CAD Job ${job.id} completed:`, result);
   }
 
-  async onFailed(job: Job, error: Error): Promise<void> {
+  async onFailed(job: Job<CadJobData>, error: Error): Promise<void> {
     this.logger.error(`CAD Job ${job.id} failed:`, error);
 
     if (job.attemptsMade >= job.opts.attempts!) {
@@ -35,7 +42,7 @@ export class CadProcessor extends WorkerHost {
     }
   }
 
-  private async processAnalysis(job: Job): Promise<any> {
+  private async processAnalysis(job: Job<CadJobData>): Promise<CadAnalysisJobResult> {
     this.logger.debug(`Processing CAD analysis job ${job.id}`);
 
     try {
@@ -64,7 +71,7 @@ export class CadProcessor extends WorkerHost {
     }
   }
 
-  private async processConversion(job: Job): Promise<any> {
+  private async processConversion(job: Job<CadConversionJobData>): Promise<CadConversionJobResult> {
     this.logger.debug(`Processing CAD conversion job ${job.id}`);
 
     try {

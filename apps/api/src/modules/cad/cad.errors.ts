@@ -1,4 +1,4 @@
-import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { BadRequestException, NotFoundException } from "@nestjs/common";
 
 export class FileNotFoundError extends NotFoundException {
   constructor(fileId: string) {

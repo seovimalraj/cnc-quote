@@ -3,6 +3,16 @@ import { EventEmitter2 } from "@nestjs/event-emitter";
 import { SupabaseService } from "../../lib/supabase/supabase.service";
 import { NotifyService } from "../notify/notify.service";
 import { addHours } from "date-fns";
+import {
+  ManualReviewRule,
+  CreateRuleDto,
+  UpdateRuleDto,
+  ReviewTask,
+  GetTasksParams,
+  UpdateTaskDto,
+} from "./manual-review.types";
+import { Quote, ReviewNotification, SlackMessage, RuleConditions } from "./manual-review.domain";
+import { ManualReviewRule, CreateRuleDto, UpdateRuleDto, ReviewTask, GetTasksParams } from "./manual-review.types";
 
 @Injectable()
 export class ManualReviewService {
@@ -12,7 +22,7 @@ export class ManualReviewService {
     private readonly eventEmitter: EventEmitter2,
   ) {}
 
-  async getRules(orgId: string) {
+  async getRules(orgId: string): Promise<ManualReviewRule[]> {
     const { data: rules, error } = await this.supabase.client
       .from("manual_review_rules")
       .select("*")
@@ -24,7 +34,7 @@ export class ManualReviewService {
     return rules;
   }
 
-  async createRule(orgId: string, rule: any) {
+  async createRule(orgId: string, rule: CreateRuleDto): Promise<ManualReviewRule> {
     const { data, error } = await this.supabase.client
       .from("manual_review_rules")
       .insert([{ ...rule, org_id: orgId }])
@@ -35,7 +45,7 @@ export class ManualReviewService {
     return data;
   }
 
-  async updateRule(orgId: string, ruleId: string, updates: any) {
+  async updateRule(orgId: string, ruleId: string, updates: UpdateRuleDto): Promise<ManualReviewRule> {
     const { data, error } = await this.supabase.client
       .from("manual_review_rules")
       .update(updates)
@@ -48,7 +58,7 @@ export class ManualReviewService {
     return data;
   }
 
-  async deleteRule(orgId: string, ruleId: string) {
+  async deleteRule(orgId: string, ruleId: string): Promise<boolean> {
     const { error } = await this.supabase.client
       .from("manual_review_rules")
       .delete()
@@ -59,7 +69,7 @@ export class ManualReviewService {
     return true;
   }
 
-  async checkQuoteForReview(quote: any) {
+  async checkQuoteForReview(quote: Quote): Promise<boolean> {
     const rules = await this.getRules(quote.org_id);
 
     for (const rule of rules) {
@@ -72,14 +82,14 @@ export class ManualReviewService {
           message: rule.message,
           quote_id: quote.id,
           user_id: quote.user_id,
-        });
+        } as ReviewNotification);
 
         // Send Slack notification if configured
         if (rule.slack_channel) {
           await this.notifyService.slack.chat.postMessage({
             channel: rule.slack_channel,
-            text: `🔍 Manual Review Required\nQuote: ${quote.id}\nReason: ${rule.name}\nDue: ${addHours(new Date(), rule.sla_hours).toISOString()}`,
-          });
+            text: `🔍 Manual Review Required\nQuote: ${quote.id}\nReason: ${rule.name}\nDue: ${addHours(new Date(), rule.sla_hours || 24).toISOString()}`,
+          } as SlackMessage);
         }
 
         // Update quote status
@@ -92,8 +102,8 @@ export class ManualReviewService {
     return false;
   }
 
-  private async createReviewTask(quote: any, rule: any) {
-    const dueAt = addHours(new Date(), rule.sla_hours);
+  private async createReviewTask(quote: Quote, rule: ManualReviewRule): Promise<ReviewTask> {
+    const dueAt = addHours(new Date(), rule.conditions.sla_hours || 24);
 
     const { data, error } = await this.supabase.client
       .from("manual_review_tasks")
@@ -111,30 +121,32 @@ export class ManualReviewService {
     return data;
   }
 
-  private quoteMatchesRule(quote: any, rule: any) {
+  private quoteMatchesRule(quote: Quote, rule: ManualReviewRule): boolean {
+    const conditions = rule.conditions as RuleConditions;
+    
     // Check process match
-    if (rule.process && quote.process === rule.process) return true;
+    if (conditions.process && quote.process === conditions.process) return true;
 
     // Check feature match
-    if (rule.feature && quote.features?.includes(rule.feature)) return true;
+    if (conditions.feature && quote.features?.includes(conditions.feature)) return true;
 
     // Check quantity thresholds
     const qty = quote.quantity || 0;
-    if (rule.min_quantity && qty >= rule.min_quantity) return true;
-    if (rule.max_quantity && qty <= rule.max_quantity) return true;
+    if (conditions.min_quantity && qty >= conditions.min_quantity) return true;
+    if (conditions.max_quantity && qty <= conditions.max_quantity) return true;
 
     // Check size limits
     const size = Math.max(quote.dimensions?.length || 0, quote.dimensions?.width || 0, quote.dimensions?.height || 0);
-    if (rule.min_size && size >= rule.min_size) return true;
-    if (rule.max_size && size <= rule.max_size) return true;
+    if (conditions.min_size && size >= conditions.min_size) return true;
+    if (conditions.max_size && size <= conditions.max_size) return true;
 
     // Check material
-    if (rule.material && quote.material === rule.material) return true;
+    if (conditions.material && quote.material === conditions.material) return true;
 
     return false;
   }
 
-  async getReviewTasks(orgId: string, params: any = {}) {
+  async getReviewTasks(orgId: string, params: GetTasksParams): Promise<ReviewTask[]> {
     const query = this.supabase.client
       .from("manual_review_tasks")
       .select(
@@ -150,17 +162,13 @@ export class ManualReviewService {
       query.eq("status", params.status);
     }
 
-    if (params.assignee_id) {
-      query.eq("assignee_id", params.assignee_id);
-    }
-
     const { data: tasks, error } = await query;
 
     if (error) throw error;
     return tasks;
   }
 
-  async updateReviewTask(orgId: string, taskId: string, updates: any) {
+  async updateReviewTask(orgId: string, taskId: string, updates: UpdateTaskDto): Promise<ReviewTask> {
     const { data, error } = await this.supabase.client
       .from("manual_review_tasks")
       .update(updates)
@@ -181,10 +189,10 @@ export class ManualReviewService {
         type: "manual_review_completed",
         org_id: orgId,
         title: `Manual Review ${updates.status === "approved" ? "Approved" : "Rejected"}`,
-        message: updates.notes || "",
+        message: updates.review_notes || "",
         quote_id: data.quote.id,
         user_id: data.quote.user_id,
-      });
+      } as ReviewNotification);
     }
 
     return data;

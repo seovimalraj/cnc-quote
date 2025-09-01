@@ -1,6 +1,7 @@
 import { Injectable, Inject } from "@nestjs/common";
 import { CACHE_MANAGER } from "@nestjs/cache-manager";
 import { Cache } from "cache-manager";
+import { RedisCache } from "./cache.types";
 
 @Injectable()
 export class CacheService {
@@ -20,9 +21,9 @@ export class CacheService {
 
   async reset(): Promise<void> {
     try {
-      const cacheStore = (this.cacheManager as any).store;
-      if (cacheStore && typeof cacheStore.keys === "function") {
-        const keys = await cacheStore.keys();
+      const redisCache = this.cacheManager as RedisCache;
+      if (redisCache.store && typeof redisCache.store.keys === "function") {
+        const keys = await redisCache.store.keys();
         await Promise.all(keys.map((key) => this.cacheManager.del(key)));
       } else {
         throw new Error("Cache store does not support key listing");
