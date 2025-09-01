@@ -33,9 +33,10 @@ ENV PATH="/root/.local/bin:$PATH"
 WORKDIR /app
 
 # Copy project files
-COPY apps/cad-service/pyproject.toml ./
+WORKDIR /app/apps/cad-service
+COPY apps/cad-service/pyproject.toml .
 
-# Install dependencies
+# Install dependencies and generate requirements
 RUN poetry config virtualenvs.create false \
     && poetry install --no-dev --no-interaction --no-ansi \
     && poetry export -f requirements.txt --output requirements.txt
@@ -46,33 +47,6 @@ COPY apps/cad-service/main.py .
 
 # Production stage
 FROM python:3.11-slim
-
-# Install system dependencies
-RUN apt-get update && apt-get install -y \
-    libgl1-mesa-dev \
-    libglu1-mesa-dev \
-    libxrender1 \
-    libxft2 \
-    libxinerama1 \
-    libxcursor1 \
-    libxi6 \
-    && rm -rf /var/lib/apt/lists/*
-
-# Copy conda environment and requirements
-COPY --from=builder /opt/conda /opt/conda
-COPY --from=builder /app/requirements.txt /app/requirements.txt
-
-# Set up environment
-ENV PATH="/opt/conda/bin:$PATH"
-ENV PYTHONPATH="/opt/conda/lib/python3.11/site-packages:/app"
-ENV LD_LIBRARY_PATH="/opt/conda/lib"
-
-# Install Python dependencies
-RUN pip install -r /app/requirements.txt
-COPY --from=builder /opt/conda /opt/conda
-COPY --from=builder /app /app
-
-WORKDIR /app
 
 # Install runtime dependencies only
 RUN apt-get update && apt-get install -y \
@@ -85,9 +59,16 @@ RUN apt-get update && apt-get install -y \
     libxi6 \
     && rm -rf /var/lib/apt/lists/*
 
-# Set up conda environment
+# Copy conda environment and application
+COPY --from=builder /opt/conda /opt/conda
+COPY --from=builder /app/apps/cad-service /app
+
+WORKDIR /app
+
+# Set up environment
 ENV PATH="/opt/conda/bin:$PATH"
-ENV LD_LIBRARY_PATH="/opt/conda/lib:$LD_LIBRARY_PATH"
+ENV PYTHONPATH="/opt/conda/lib/python3.11/site-packages:/app"
+ENV LD_LIBRARY_PATH="/opt/conda/lib"
 
 # Set environment variables
 ENV PYTHONUNBUFFERED=1
