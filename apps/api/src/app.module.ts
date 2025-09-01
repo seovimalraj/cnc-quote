@@ -16,12 +16,27 @@ import { ManualReviewModule } from './modules/manual-review/manual-review.module
 import { ObservabilityModule } from './observability/observability.module';
 import { TestModule } from './modules/test/test.module';
 import { QueueMonitorModule } from './modules/queue-monitor/queue-monitor.module';
+import { RateLimitModule } from './lib/rate-limit/rate-limit.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
+      validate: (config: Record<string, unknown>) => {
+        const requiredEnvVars = [
+          'DATABASE_URL',
+          'JWT_SECRET',
+          'ALLOWED_ORIGINS',
+        ];
+        for (const envVar of requiredEnvVars) {
+          if (!config[envVar]) {
+            throw new Error(`Missing required environment variable: ${envVar}`);
+          }
+        }
+        return config;
+      },
     }),
+    RateLimitModule,
     SupabaseModule,
     CacheModule,
     AuthModule,

@@ -71,12 +71,17 @@ services:
     name: cnc-quote-cad
     env: docker
     repo: https://github.com/seovimalraj/cnc-quote
-    dockerfilePath: ./apps/cad-service/Dockerfile
+    dockerfilePath: ./apps/cad-service/Dockerfile.render
     dockerContext: .
     region: oregon
     plan: free
     healthCheckPath: /health
     autoDeployTrigger: commit
+    scaling:
+      minInstances: 1
+      maxInstances: 3
+      targetMemoryPercent: 75
+      targetCPUPercent: 75
     envVars:
       - key: SUPABASE_URL
         sync: false
@@ -84,6 +89,15 @@ services:
         sync: false
       - key: PORT
         value: "10001"
+      - key: PYTHON_VERSION
+        value: "3.11.0"
+      - key: API_URL
+        value: "https://cnc-quote-api.onrender.com"
+      - key: REDIS_URL
+        fromService:
+          name: cnc-quote-redis
+          type: redis
+          property: connectionString
 
   # Web Frontend (Next.js)
   - type: web
