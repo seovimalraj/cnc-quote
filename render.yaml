@@ -71,7 +71,7 @@ services:
     dockerContext: .
     region: oregon
     plan: standard
-    healthCheckPath: /health
+    healthCheckPath: /api/health
     autoDeployTrigger: commit
     scaling:
       minInstances: 1
