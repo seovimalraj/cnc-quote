@@ -64,86 +64,14 @@ services:
         sync: false
       - key: NEXT_PUBLIC_API_URL
         sync: false
-        sync: false
-      - key: NEXT_PUBLIC_SUPABASE_ANON_KEY
-        sync: false
-      - key: NEXT_PUBLIC_API_URL
-        sync: false
-    env: node
-    repo: https://github.com/seovimalraj/cnc-quote
-    plan: free
-    region: oregon
-    buildCommand: npm install -g pnpm@8 && pnpm install --no-frozen-lockfile && pnpm build
-    startCommand: cd apps/web && pnpm start
-    healthCheckPath: /api/health
-    autoDeployTrigger: commit
-    envVars:
-      - key: NODE_ENV
-        value: production
-      - key: NEXT_PUBLIC_SUPABASE_URL
-        sync: false
-      - key: NEXT_PUBLIC_SUPABASE_ANON_KEY
-        sync: false
       - key: NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
-        sync: false
-      - key: NEXT_PUBLIC_API_URL
         sync: false
       - key: NEXT_PUBLIC_SENTRY_DSN
         sync: false
       - key: NEXT_PUBLIC_POSTHOG_KEY
         sync: false
-
-  # API Service (NestJS)
-  - type: web
-    name: cnc-quote-api
-    env: node
-    repo: https://github.com/seovimalraj/cnc-quote
-    plan: free
-    region: oregon
-    buildCommand: npm install -g pnpm@8 && pnpm install --no-frozen-lockfile && cd apps/api && pnpm build
-    startCommand: cd apps/api && pnpm start
-    healthCheckPath: /api/health
-    autoDeployTrigger: commit
-    envVars:
-      - key: NODE_ENV
-        value: production
-      - key: SUPABASE_URL
-        sync: false
-      - key: SUPABASE_ANON_KEY
-        sync: false
-      - key: STRIPE_SECRET_KEY
-        sync: false
-      - key: STRIPE_WEBHOOK_SECRET
-        sync: false
-      - key: SENTRY_DSN
-        sync: false
-      - key: POSTHOG_API_KEY
-        sync: false
       - key: PORT
         value: 3000
-      - key: REDIS_URL
-        fromService:
-          name: cnc-quote-redis
-          type: redis
-          property: connectionString
-
-  # CAD Service (Python/FastAPI)
-  - type: web
-    name: cnc-quote-cad
-    env: docker
-    repo: https://github.com/seovimalraj/cnc-quote
-    plan: free
-    region: oregon
-    dockerfilePath: ./apps/cad-service/Dockerfile
-    healthCheckPath: /health
-    autoDeployTrigger: commit
-    envVars:
-      - key: SUPABASE_URL
-        sync: false
-      - key: SUPABASE_ANON_KEY
-        sync: false
-      - key: PORT
-        value: 3001
       - key: REDIS_URL
         fromService:
           name: cnc-quote-redis
