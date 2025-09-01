@@ -5,8 +5,9 @@
     "jest": true
   },
   "extends": [
-    "eslint:recommended",
-    "@typescript-eslint/recommended"
+    "../../.eslintrc.json",
+    "plugin:@typescript-eslint/recommended",
+    "plugin:@typescript-eslint/recommended-requiring-type-checking"
   ],
   "parser": "@typescript-eslint/parser",
   "parserOptions": {

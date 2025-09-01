@@ -36,10 +36,8 @@ const nextConfig = {
   },
   // Optimize build for Render.com
   experimental: {
-    optimizeFonts: true,
-    optimizeImages: true,
-    optimizeCss: true,
-    scrollRestoration: true,
+    appDir: false,
+    serverActions: true,
   },
 }
 
