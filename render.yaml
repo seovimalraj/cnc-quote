@@ -79,7 +79,6 @@ services:
         value: "/opt/conda/lib/python3.11/site-packages:/app"
       - key: LD_LIBRARY_PATH
         value: "/opt/conda/lib"
-    envVars:
       - key: SUPABASE_URL
         sync: false
       - key: SUPABASE_ANON_KEY
