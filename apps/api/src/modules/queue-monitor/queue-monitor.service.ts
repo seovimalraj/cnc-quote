@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { InjectQueue } from '@nestjs/bull';
+import { InjectQueue } from '@nestjs/bullmq';
 import { Queue, JobCounts } from 'bullmq';
 
 @Injectable()
@@ -44,7 +44,6 @@ export class QueueMonitorService {
 
   private calculateQueueHealth(counts: JobCounts): 'healthy' | 'degraded' | 'unhealthy' {
     const { active, failed, delayed, waiting, paused, stalled } = counts;
-    
     // Queue is unhealthy if:
     // - Has stalled jobs
     // - More than 10 failed jobs

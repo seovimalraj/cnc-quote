@@ -1,19 +1,21 @@
-import { Module } from '@nestjs/common';
-import { BullModule } from '@nestjs/bull';
+import { Module, MiddlewareConsumer, NestModule } from '@nestjs/common';
+import { BullModule } from '@nestjs/bullmq';
 import { ConfigService } from '@nestjs/config';
 import { createBullBoard } from '@bull-board/api';
-import { BullAdapter } from '@bull-board/api/bullAdapter';
+import { BullMQAdapter } from '@bull-board/api/bullMQAdapter';
 import { ExpressAdapter } from '@bull-board/express';
-import { Queue } from 'bullmq';
+import { Queue as BullMQQueue } from 'bullmq';
 import { QueueMonitorController } from './queue-monitor.controller';
 import { QueueMonitorService } from './queue-monitor.service';
+import { QueueMonitorMiddleware } from './queue-monitor.middleware';
+
+const QUEUE_NAMES = ['cad', 'pricing', 'email'] as const;
+type QueueName = typeof QUEUE_NAMES[number];
 
 @Module({
   imports: [
     BullModule.registerQueue(
-      { name: 'cad' },
-      { name: 'pricing' },
-      { name: 'email' }
+      ...QUEUE_NAMES.map(name => ({ name }))
     ),
   ],
   controllers: [QueueMonitorController],
@@ -23,26 +25,43 @@ import { QueueMonitorService } from './queue-monitor.service';
       provide: 'BULL_BOARD',
       useFactory: async (configService: ConfigService) => {
         const serverAdapter = new ExpressAdapter();
-        
-        // Create Queue instances
-        const redisUrl = configService.get<string>('REDIS_URL');
-        const queues = ['cad', 'pricing', 'email'].map(
-          name => new Queue(name, { connection: { url: redisUrl } })
+        serverAdapter.setBasePath('/admin/queues');
+
+        const redisHost = configService.get<string>('REDIS_HOST', 'localhost');
+        const redisPort = configService.get<number>('REDIS_PORT', 6379);
+        const redisConfig = {
+          connection: {
+            host: redisHost,
+            port: redisPort
+          }
+        };
+
+        const queues = await Promise.all(
+          QUEUE_NAMES.map(async name => {
+            const queue = new BullMQQueue(name, redisConfig);
+            return new BullMQAdapter(queue);
+          })
         );
-        
-        createBullBoard({
-          queues: queues.map(queue => new BullAdapter(queue)),
-          serverAdapter,
+
+        const board = createBullBoard({
+          queues,
+          serverAdapter: serverAdapter as any
         });
 
-        // Configure route base path
-        serverAdapter.setBasePath('/admin/queues');
-        
-        return serverAdapter;
+        return {
+          serverAdapter,
+          board
+        };
       },
       inject: [ConfigService],
     },
   ],
   exports: ['BULL_BOARD'],
 })
-export class QueueMonitorModule {}
+export class QueueMonitorModule implements NestModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer
+      .apply(QueueMonitorMiddleware)
+      .forRoutes('/admin/queues*');
+  }
+}

@@ -19,6 +19,17 @@ export class CacheService {
   }
 
   async reset(): Promise<void> {
-    await this.cacheManager.reset();
+    try {
+      const cacheStore = (this.cacheManager as any).store;
+      if (cacheStore && typeof cacheStore.keys === 'function') {
+        const keys = await cacheStore.keys();
+        await Promise.all(keys.map(key => this.cacheManager.del(key)));
+      } else {
+        throw new Error('Cache store does not support key listing');
+      }
+    } catch (error) {
+      console.error('Failed to reset cache:', error);
+      throw error;
+    }
   }
 }

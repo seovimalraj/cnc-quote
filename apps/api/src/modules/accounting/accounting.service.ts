@@ -18,7 +18,7 @@ export class AccountingService {
     try {
       // Get all orders with payments from last 24h that need syncing
       const { data: orders, error } = await this.supabase
-        .getClient()
+        .client
         .from('orders')
         .select('id, amount, payment_id, customer:users(name, email), created_at')
         .eq('zoho_invoice_id', null) // Not yet synced
@@ -40,7 +40,7 @@ export class AccountingService {
 
           // Update order with Zoho invoice ID
           await this.supabase
-            .getClient()
+            .client
             .from('orders')
             .update({ zoho_invoice_id: invoice.invoice_id })
             .eq('id', order.id);

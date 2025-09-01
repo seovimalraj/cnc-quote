@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { SupabaseService } from '../../lib/supabase/supabase.service';
 import { PdfService } from '../pdf/pdf.service';
 import { Resend } from 'resend';
+import { CreateQuoteDto, UpdateQuoteDto } from './quotes.dto';
 
 @Injectable()
 export class QuotesService {

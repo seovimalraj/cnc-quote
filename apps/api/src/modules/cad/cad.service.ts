@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { InjectQueue } from '@nestjs/bull';
-import { Queue } from 'bull';
+import { InjectQueue } from '@nestjs/bullmq';
+import { Queue } from 'bullmq';
 import { HttpService } from '@nestjs/axios';
 import { FilesService } from '../files/files.service';
 import { firstValueFrom } from 'rxjs';

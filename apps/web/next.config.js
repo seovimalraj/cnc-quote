@@ -1,7 +1,10 @@
-/** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
   output: 'standalone',
+  experimental: {
+    appDir: true,
+    serverActions: true,
+  },
   images: {
     domains: [
       'cnc-quote-web.onrender.com',
@@ -34,11 +37,6 @@ const nextConfig = {
       },
     ];
   },
-  // Optimize build for Render.com
-  experimental: {
-    appDir: false,
-    serverActions: true,
-  },
-}
+};
 
-module.exports = nextConfig
+module.exports = nextConfig;

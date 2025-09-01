@@ -1,9 +1,10 @@
 import { Module } from '@nestjs/common';
 import { CadController } from './cad.controller';
 import { CadService } from './cad.service';
-import { BullModule } from '@nestjs/bull';
+import { BullModule } from '@nestjs/bullmq';
 import { HttpModule } from '@nestjs/axios';
 import { FilesModule } from '../files/files.module';
+import { CadProcessor } from './cad.processor';
 
 @Module({
   imports: [
@@ -17,7 +18,7 @@ import { FilesModule } from '../files/files.module';
     FilesModule,
   ],
   controllers: [CadController],
-  providers: [CadService],
+  providers: [CadService, CadProcessor],
   exports: [CadService],
 })
 export class CadModule {}

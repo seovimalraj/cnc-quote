@@ -84,13 +84,15 @@ export class FilesService {
 
     if (!fileData) throw new Error('File download failed');
 
-    // Calculate SHA256 hash
+        // Calculate SHA256 hash
+    const arrayBuffer = await fileData.arrayBuffer();
+    const uint8Array = new Uint8Array(arrayBuffer);
     const hash = createHash('sha256');
-    hash.update(await fileData.arrayBuffer());
+    hash.update(uint8Array);
     const sha256Hash = hash.digest('hex');
 
     // Detect real MIME type
-    const fileType = await fileTypeFromBuffer(Buffer.from(await fileData.arrayBuffer()));
+    const fileType = await fileTypeFromBuffer(arrayBuffer);
     const mimeType = fileType?.mime || 'application/octet-stream';
 
     // Queue virus scan
