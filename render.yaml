@@ -8,9 +8,9 @@ services:
     repo: https://github.com/seovimalraj/cnc-quote
     plan: free
     region: oregon
-    buildCommand: npm install -g pnpm@8 && pnpm install --no-frozen-lockfile && pnpm build
-    startCommand: cd apps/api && NODE_ENV=production pnpm start
-    healthCheckPath: /health
+    buildCommand: npm install -g pnpm@8 && pnpm install --no-frozen-lockfile && pnpm --filter @cnc-quote/shared build && pnpm --filter @cnc-quote/api build
+    startCommand: pnpm --filter @cnc-quote/api start
+    healthCheckPath: /api/health
     autoDeployTrigger: commit
     envVars:
       - key: NODE_ENV
@@ -23,6 +23,35 @@ services:
         sync: false
       - key: SUPABASE_SERVICE_KEY
         sync: false
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false
+      - key: PAYPAL_CLIENT_ID
+        sync: false
+      - key: PAYPAL_CLIENT_SECRET
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: JWT_AUDIENCE
+        sync: false
+      - key: APP_URL
+        value: "https://cnc-quote-web.onrender.com"
+      - key: APP_NAME
+        value: "CNC Quote Platform"
+      - key: CAD_SERVICE_URL
+        value: "https://cnc-quote-cad.onrender.com"
+      - key: SENTRY_DSN
+        sync: false
+      - key: POSTHOG_API_KEY
+        sync: false
+      - key: PORT
+        value: "10000"
+      - key: REDIS_URL
+        fromService:
+          name: cnc-quote-redis
+          type: redis
+          property: connectionString
 
   # CAD Service (Python/FastAPI)
   - type: web
@@ -49,8 +78,8 @@ services:
     repo: https://github.com/seovimalraj/cnc-quote
     plan: free
     region: oregon
-    buildCommand: npm install -g pnpm@8 && pnpm install --no-frozen-lockfile && cd apps/web && pnpm build
-    startCommand: cd apps/web && NODE_ENV=production pnpm start
+    buildCommand: npm install -g pnpm@8 && pnpm install --no-frozen-lockfile && pnpm --filter @cnc-quote/shared build && pnpm --filter @cnc-quote/web build
+    startCommand: pnpm --filter @cnc-quote/web start
     healthCheckPath: /api/health
     autoDeployTrigger: commit
     envVars:
@@ -63,20 +92,19 @@ services:
       - key: NEXT_PUBLIC_SUPABASE_ANON_KEY
         sync: false
       - key: NEXT_PUBLIC_API_URL
-        sync: false
+        value: "https://cnc-quote-api.onrender.com"
       - key: NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
         sync: false
       - key: NEXT_PUBLIC_SENTRY_DSN
         sync: false
       - key: NEXT_PUBLIC_POSTHOG_KEY
         sync: false
+      - key: NEXT_PUBLIC_PAYPAL_CLIENT_ID
+        sync: false
+      - key: NEXT_PUBLIC_APP_URL
+        value: "https://cnc-quote-web.onrender.com"
       - key: PORT
-        value: 3000
-      - key: REDIS_URL
-        fromService:
-          name: cnc-quote-redis
-          type: redis
-          property: connectionString
+        value: "3000"
 
   # Redis Instance
   - type: redis
