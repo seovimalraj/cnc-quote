@@ -1,13 +1,31 @@
 import { NestFactory } from '@nestjs/core';
-import { ValidationPipe } from '@nestjs/common';
+import { ValidationPipe, VersioningType } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import helmet from 'helmet';
 import * as bodyParser from 'body-parser';
 import * as timeout from 'connect-timeout';
+import * as Sentry from '@sentry/node';
+import { ProfilingIntegration } from '@sentry/profiling-node';
 import { AppModule } from './app.module';
+
+// Initialize Sentry
+Sentry.init({
+  dsn: process.env.SENTRY_DSN,
+  integrations: [
+    new ProfilingIntegration(),
+  ],
+  tracesSampleRate: 1.0,
+  profilesSampleRate: 1.0,
+});
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+
+  // Enable API versioning
+  app.enableVersioning({
+    type: VersioningType.URI,
+    defaultVersion: '1',
+  });
   
   // Configure request size limits
   app.use(bodyParser.json({ limit: '10mb' }));
