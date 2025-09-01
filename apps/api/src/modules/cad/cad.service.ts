@@ -65,10 +65,10 @@ export class CadService {
 
   async getAnalysisResult(taskId: string): Promise<CadAnalysisResult> {
     this.logger.debug(`Fetching analysis result for task ${taskId}`);
-    
+
     try {
       const { data } = await firstValueFrom(
-        this.httpService.get<CadAnalysisResult>(`${this.CAD_SERVICE_URL}/analyze/${taskId}`)
+        this.httpService.get<CadAnalysisResult>(`${this.CAD_SERVICE_URL}/analyze/${taskId}`),
       );
       return data;
     } catch (error) {
@@ -105,24 +105,25 @@ export class CadService {
       const { data: conversionRequest } = await firstValueFrom(
         this.httpService.post(`${this.CAD_SERVICE_URL}/gltf/${fileId}`, {
           file_path: downloadUrl,
-        })
+        }),
       );
 
       // Queue preview generation
-    const job = await this.cadQueue.add(
-      "preview" as CadJobType,
-      {
-        fileId,
-        taskId: conversionRequest.task_id,
-      } as CadJobData,
-      {
-        attempts: 3,
-        backoff: {
-          type: "exponential",
-          delay: 2000,
-        }
-      }
-    );      this.logger.debug(`Preview generation queued successfully for file ${fileId} with task ${job.id}`);
+      const job = await this.cadQueue.add(
+        "preview" as CadJobType,
+        {
+          fileId,
+          taskId: conversionRequest.task_id,
+        } as CadJobData,
+        {
+          attempts: 3,
+          backoff: {
+            type: "exponential",
+            delay: 2000,
+          },
+        },
+      );
+      this.logger.debug(`Preview generation queued successfully for file ${fileId} with task ${job.id}`);
       return { taskId: job.id };
     } catch (error) {
       this.logger.error(`Failed to queue preview generation for file ${fileId}:`, error);

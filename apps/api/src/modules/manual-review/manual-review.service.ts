@@ -123,7 +123,7 @@ export class ManualReviewService {
 
   private quoteMatchesRule(quote: Quote, rule: ManualReviewRule): boolean {
     const conditions = rule.conditions as RuleConditions;
-    
+
     // Check process match
     if (conditions.process && quote.process === conditions.process) return true;
 

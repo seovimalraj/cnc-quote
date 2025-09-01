@@ -10,7 +10,7 @@ import { QueueMonitorService } from "./queue-monitor.service";
 import { QueueMonitorMiddleware } from "./queue-monitor.middleware";
 
 const QUEUE_NAMES = ["cad", "pricing", "email"] as const;
-type QueueName = (typeof QUEUE_NAMES)[number];
+type _QueueName = (typeof QUEUE_NAMES)[number];
 
 @Module({
   imports: [BullModule.registerQueue(...QUEUE_NAMES.map((name) => ({ name })))],
@@ -41,7 +41,7 @@ type QueueName = (typeof QUEUE_NAMES)[number];
 
         const board = createBullBoard({
           queues,
-          serverAdapter: serverAdapter as any,
+          serverAdapter: serverAdapter as ExpressAdapter,
         });
 
         return {

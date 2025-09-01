@@ -19,7 +19,7 @@ export class NotifyService {
     });
   }
 
-  async sendEmail(to: string, subject: string, text: string): Promise<void> {
+  async sendOrderEmail(_orderId: string, _template: NotificationTemplate) {
     const mailOptions = {
       from: this.configService.get("SMTP_FROM"),
       to,
@@ -35,7 +35,7 @@ export class NotifyService {
     }
   }
 
-  async notifyOrderCreated(orderDetails: any): Promise<void> {
+  async notifyOrderCreated(orderDetails: OrderDetails): Promise<void> {
     await this.sendEmail(
       orderDetails.customerEmail,
       "Order Confirmation",
@@ -43,7 +43,7 @@ export class NotifyService {
     );
   }
 
-  async notifyPaymentReceived(orderDetails: any): Promise<void> {
+  async notifyPaymentReceived(orderDetails: OrderDetails): Promise<void> {
     await this.sendEmail(
       orderDetails.customerEmail,
       "Payment Received",
@@ -51,7 +51,7 @@ export class NotifyService {
     );
   }
 
-  async notifyManualReviewNeeded(reviewDetails: any): Promise<void> {
+  async notifyManualReviewNeeded(reviewDetails: ReviewDetails): Promise<void> {
     const adminEmail = this.configService.get("ADMIN_EMAIL");
     await this.sendEmail(
       adminEmail,

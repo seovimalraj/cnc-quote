@@ -17,35 +17,33 @@ export class ApiLogger implements LoggerService {
     });
   }
 
-  private formatMessage(message: any, context?: string, ...args: any[]) {
+  private formatMessage(params: LoggerParams) {
     return {
-      msg: message,
-      ...(context && { context }),
-      ...(args?.length && { args }),
+      msg: params.message,
+      ...(params.context && { context: params.context }),
+      ...(params.error && { error: params.error }),
+      ...(params.metadata && params.metadata),
     };
   }
 
-  log(message: any, context?: string, ...args: any[]) {
-    this.logger.info(this.formatMessage(message, context, ...args));
+  log(params: LoggerParams): void {
+    this.logger.info(this.formatMessage(params));
   }
 
-  error(message: any, trace?: string, context?: string, ...args: any[]) {
-    this.logger.error({
-      ...this.formatMessage(message, context, ...args),
-      ...(trace && { trace }),
-    });
+  error(params: LoggerParams): void {
+    this.logger.error(this.formatMessage(params));
   }
 
-  warn(message: any, context?: string, ...args: any[]) {
-    this.logger.warn(this.formatMessage(message, context, ...args));
+  warn(params: LoggerParams): void {
+    this.logger.warn(this.formatMessage(params));
   }
 
-  debug(message: any, context?: string, ...args: any[]) {
-    this.logger.debug(this.formatMessage(message, context, ...args));
+  debug(params: LoggerParams): void {
+    this.logger.debug(this.formatMessage(params));
   }
 
-  verbose(message: any, context?: string, ...args: any[]) {
-    this.logger.trace(this.formatMessage(message, context, ...args));
+  verbose(params: LoggerParams): void {
+    this.logger.trace(this.formatMessage(params));
   }
 
   // Helper method to attach request context

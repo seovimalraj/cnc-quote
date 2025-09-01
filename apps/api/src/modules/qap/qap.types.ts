@@ -19,7 +19,7 @@ export const qapTemplateSchema = z.object({
   name: z.string().min(1).max(255),
   description: z.string().optional(),
   templateHtml: z.string().min(1),
-  schemaJson: z.record(z.any()),
+  schemaJson: z.record(z.unknown()),
   processType: z.nativeEnum(QapTemplateProcessType),
 });
 
@@ -40,7 +40,7 @@ export class QapTemplateResponse {
   templateHtml: string;
 
   @ApiProperty()
-  schemaJson: Record<string, any>;
+  schemaJson: Record<string, unknown>;
 
   @ApiProperty({ enum: QapTemplateProcessType })
   processType: QapTemplateProcessType;
@@ -71,7 +71,7 @@ export const qapDocumentSchema = z.object({
   templateId: z.string().uuid(),
   orderId: z.string().uuid(),
   orderItemId: z.string().uuid(),
-  documentData: z.record(z.any()),
+  documentData: z.record(z.unknown()),
 });
 
 export class QapDocumentResponse {
@@ -91,7 +91,7 @@ export class QapDocumentResponse {
   order_item_id: string;
 
   @ApiProperty()
-  data: Record<string, any>;
+  data: Record<string, unknown>;
 
   @ApiProperty({ enum: QapDocumentStatus })
   status: QapDocumentStatus;
@@ -143,7 +143,7 @@ export type QapDocument = {
   template_id: string;
   order_id: string;
   order_item_id: string;
-  data: Record<string, any>;
+  data: Record<string, unknown>;
   status: QapDocumentStatus;
   file_path: string;
   download_url?: string;

@@ -22,7 +22,7 @@ export class CreateQapTemplateDto {
 
   @ApiProperty()
   @IsObject()
-  schemaJson: Record<string, any>;
+  schemaJson: Record<string, unknown>;
 
   @ApiProperty({ enum: QapTemplateProcessType })
   @IsEnum(QapTemplateProcessType)
@@ -48,7 +48,7 @@ export class UpdateQapTemplateDto {
   @ApiPropertyOptional()
   @IsOptional()
   @IsObject()
-  schemaJson?: Record<string, any>;
+  schemaJson?: Record<string, unknown>;
 
   @ApiPropertyOptional({ enum: QapTemplateProcessType })
   @IsOptional()
@@ -71,5 +71,5 @@ export class GenerateQapDocumentDto {
 
   @ApiProperty()
   @IsObject()
-  documentData: Record<string, any>;
+  documentData: Record<string, unknown>;
 }

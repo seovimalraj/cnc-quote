@@ -12,7 +12,7 @@ export class PricingProcessor extends WorkerHost {
     }
   }
 
-  private async calculate(job: Job) {
+  private async calculate(_job: Job) {
     // TODO: Implement pricing calculation
     return { status: "processed" };
   }

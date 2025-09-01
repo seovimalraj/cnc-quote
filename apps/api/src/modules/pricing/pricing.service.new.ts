@@ -9,7 +9,7 @@ import {
   CncPriceRequest,
   SheetMetalPriceRequest,
   InjectionMoldingPriceRequest,
-  PriceBreakdown,
+  PriceBreakdown as _PriceBreakdown,
 } from "@cnc-quote/shared";
 
 @Injectable()
@@ -190,7 +190,7 @@ export class PricingService {
       machine_id,
       material_id,
       quantity,
-      part_volume_cc,
+
       shot_weight_g,
       cycle_time_s,
       cavity_count,

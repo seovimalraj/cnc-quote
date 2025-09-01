@@ -16,7 +16,7 @@ export class SentryService implements OnModuleInit {
     });
   }
 
-  captureException(error: Error, context?: Record<string, any>) {
+  captureException(error: Error, context?: Record<string, unknown>) {
     return Sentry.captureException(error, {
       tags: { source: "api" },
       extra: context,

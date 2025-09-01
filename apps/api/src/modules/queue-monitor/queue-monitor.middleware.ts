@@ -1,10 +1,11 @@
 import { Injectable, NestMiddleware, Inject } from "@nestjs/common";
 import { Request, Response, NextFunction } from "express";
 import { ExpressAdapter } from "@bull-board/express";
+import { BoardConfig } from './queue-monitor.board';
 
 @Injectable()
 export class QueueMonitorMiddleware implements NestMiddleware {
-  constructor(@Inject("BULL_BOARD") private readonly bullBoard: { serverAdapter: ExpressAdapter; board: any }) {}
+  constructor(@Inject("BULL_BOARD") private readonly bullBoard: BoardConfig) {}
 
   use(req: Request, res: Response, next: NextFunction) {
     // If the request is for the queue monitor UI, handle it

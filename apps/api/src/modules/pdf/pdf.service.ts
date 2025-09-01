@@ -2,7 +2,7 @@ import { Injectable } from "@nestjs/common";
 import * as PDFKit from "pdfkit";
 import { ConfigService } from "@nestjs/config";
 import { join } from "path";
-import * as fs from "fs";
+// fs module is not used so remove it
 
 @Injectable()
 export class PdfService {
@@ -12,7 +12,7 @@ export class PdfService {
     this.templatesPath = join(process.cwd(), "templates", "pdf");
   }
 
-  async generatePdf(data: any): Promise<Buffer> {
+  async generatePdf(data: DocumentData): Promise<Buffer> {
     const doc = new PDFKit();
 
     // Convert the PDF to a buffer
@@ -30,7 +30,7 @@ export class PdfService {
     });
   }
 
-  private generatePdfContent(doc: PDFKit.PDFDocument, data: any): void {
+  private generatePdfContent(doc: PDFKit.PDFDocument, data: DocumentData): void {
     doc.fontSize(25).text("Quote", { align: "center" }).moveDown().fontSize(12);
 
     // Add quote details
@@ -54,7 +54,7 @@ export class PdfService {
     if (data.items && data.items.length > 0) {
       doc.text("Items:").moveDown();
 
-      data.items.forEach((item: any, index: number) => {
+      data.content.forEach((item: ContentItem, index: number) => {
         doc
           .text(`${index + 1}. ${item.name}`)
           .text(`   Quantity: ${item.quantity}`)

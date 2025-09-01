@@ -35,9 +35,7 @@ export class CadController {
     type: CadAnalysisResult,
   })
   @ApiResponse({ status: 404, description: "Task not found" })
-  async getAnalysisResult(
-    @Param() dto: GetAnalysisResultDto,
-  ): Promise<CadAnalysisResult> {
+  async getAnalysisResult(@Param() dto: GetAnalysisResultDto): Promise<CadAnalysisResult> {
     return this.cadService.getAnalysisResult(dto.taskId);
   }
 
@@ -50,10 +48,7 @@ export class CadController {
   })
   @ApiResponse({ status: 400, description: "Invalid input or file not ready" })
   @ApiResponse({ status: 404, description: "File not found" })
-  async getPreview(
-    @Param() dto: GetPreviewDto,
-    @User("sub") userId: string,
-  ): Promise<TaskResponseDto> {
+  async getPreview(@Param() dto: GetPreviewDto, @User("sub") userId: string): Promise<TaskResponseDto> {
     return this.cadService.getPreview(dto.fileId, userId);
   }
 }

@@ -26,7 +26,7 @@ export class OrdersController {
     @Param("orderId") orderId: string,
     @Body("status") status: string,
     @Body("notes") notes: string,
-    @ReqUser() user: any,
+    @ReqUser() user: { id: string },
   ) {
     return this.ordersService.updateOrderStatus(orderId, status, user.id, notes);
   }

@@ -1,6 +1,8 @@
 import { Injectable } from "@nestjs/common";
 import { InjectQueue } from "@nestjs/bullmq";
-import { Queue, JobCounts } from "bullmq";
+import { Queue } from "bullmq";
+import { QueueJobData, QueueStats } from "./queue-monitor.types";
+import { JobCounts, QueueHealth, QueueMetrics, QueueHealthMetrics } from "./queue-monitor.metrics";
 
 @Injectable()
 export class QueueMonitorService {
@@ -24,7 +26,7 @@ export class QueueMonitorService {
     };
   }
 
-  async getQueueMetrics() {
+  async getQueueStats(_queue: Queue, _active?: QueueJobData[]): Promise<QueueStats> {
     const counts = await this.getQueueCounts();
     const queueMetrics = {};
 
@@ -43,7 +45,7 @@ export class QueueMonitorService {
   }
 
   private calculateQueueHealth(counts: JobCounts): "healthy" | "degraded" | "unhealthy" {
-    const { active, failed, delayed, waiting, paused, stalled } = counts;
+    const { failed, delayed, waiting, paused, stalled } = counts;
     // Queue is unhealthy if:
     // - Has stalled jobs
     // - More than 10 failed jobs
@@ -64,8 +66,8 @@ export class QueueMonitorService {
     return "healthy";
   }
 
-  private calculateOverallHealth(metrics: any): "healthy" | "degraded" | "unhealthy" {
-    const healths = Object.values(metrics).map((m: any) => m.health);
+  private calculateOverallHealth(metrics: Record<string, QueueHealthMetrics>): QueueHealth {
+    const healths = Object.values(metrics).map((m) => m.health);
 
     if (healths.includes("unhealthy")) {
       return "unhealthy";

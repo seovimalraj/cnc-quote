@@ -27,7 +27,7 @@ export class ManualReviewController {
   @Post("rules")
   @ApiOperation({ summary: "Create a new manual review rule" })
   @ApiResponse({ status: 201, type: ManualReviewRule })
-    async createRule(@ReqUser() user: User, @Body() rule: CreateRuleDto): Promise<ManualReviewRule> {
+  async createRule(@ReqUser() user: User, @Body() rule: CreateRuleDto): Promise<ManualReviewRule> {
     return this.manualReviewService.createRule(user.org_id, rule);
   }
 
@@ -37,7 +37,7 @@ export class ManualReviewController {
   async updateRule(
     @ReqUser() user: User,
     @Param("id") id: string,
-    @Body() updates: UpdateRuleDto
+    @Body() updates: UpdateRuleDto,
   ): Promise<ManualReviewRule> {
     return this.manualReviewService.updateRule(user.org_id, id, updates);
   }
@@ -59,7 +59,11 @@ export class ManualReviewController {
   @Put("tasks/:id")
   @ApiOperation({ summary: "Update a manual review task" })
   @ApiResponse({ status: 200, type: ReviewTask })
-  async updateTask(@ReqUser() user: User, @Param("id") id: string, @Body() updates: UpdateTaskDto): Promise<ReviewTask> {
+  async updateTask(
+    @ReqUser() user: User,
+    @Param("id") id: string,
+    @Body() updates: UpdateTaskDto,
+  ): Promise<ReviewTask> {
     return this.manualReviewService.updateReviewTask(user.org_id, id, updates);
   }
 }

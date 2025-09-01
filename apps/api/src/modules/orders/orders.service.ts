@@ -116,7 +116,7 @@ export class OrdersService {
     return orders || [];
   }
 
-  private async generateOrderQapDocuments(order: any, userId: string) {
+  private async generateOrderQapDocuments(order: OrderResponse, userId: string) {
     try {
       // Get order details with quote and items
       const { data: orderDetails } = await this.supabase.client
@@ -151,7 +151,7 @@ export class OrdersService {
 
       // Generate QAP for each order item using the appropriate template
       for (const item of orderDetails.items) {
-        const quoteItem = orderDetails.quote.items.find((qi: any) => qi.id === item.quote_item_id);
+        const quoteItem = orderDetails.quote.items.find((qi: { id: string }) => qi.id === item.quote_item_id);
 
         if (!quoteItem) continue;
 

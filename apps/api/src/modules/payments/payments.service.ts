@@ -12,7 +12,10 @@ export class PaymentsService {
   private readonly stripe: Stripe;
   private readonly paypal: paypal.PayPalHttpClient;
 
-  constructor(private readonly supabase: SupabaseService, private readonly notify: NotifyService) {
+  constructor(
+    private readonly supabase: SupabaseService,
+    private readonly notify: NotifyService,
+  ) {
     this.stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
       apiVersion: "2025-08-27.basil",
     });
@@ -50,12 +53,12 @@ export class PaymentsService {
       total_amount: quote.total_amount,
       currency: quote.currency,
       created_by: quote.created_by,
-      items: quote.items.map(item => ({
+      items: quote.items.map((item) => ({
         id: item.id,
         quantity: item.quantity,
         unit_price: item.unit_price,
-        total_price: item.total_price
-      }))
+        total_price: item.total_price,
+      })),
     };
   }
 
@@ -263,7 +266,7 @@ export class PaymentsService {
 
     await this.notify.notifyOrderCreated({
       orderId: order.id,
-      customerEmail: customer.email
+      customerEmail: customer.email,
     });
   }
 
@@ -299,7 +302,12 @@ export class PaymentsService {
         metadata: captureData,
       });
 
-      await this.addOrderStatusHistory(order.id, "new", "Order created from successful PayPal payment", quote.created_by);
+      await this.addOrderStatusHistory(
+        order.id,
+        "new",
+        "Order created from successful PayPal payment",
+        quote.created_by,
+      );
 
       const { data: customer } = await this.supabase.client
         .from("customers")
@@ -309,7 +317,7 @@ export class PaymentsService {
 
       await this.notify.notifyOrderCreated({
         orderId: order.id,
-        customerEmail: customer.email
+        customerEmail: customer.email,
       });
 
       return {

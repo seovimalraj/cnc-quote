@@ -1,5 +1,6 @@
-import { Stripe } from "stripe";
-import type * as paypal from "@paypal/checkout-server-sdk";
+// These are unused so we prefix with _
+import type { Stripe as _Stripe } from "stripe";
+import type * as _paypal from "@paypal/checkout-server-sdk";
 
 export type PaymentProvider = "stripe" | "paypal";
 
@@ -8,6 +9,8 @@ export interface PaymentSessionResult {
   sessionId?: string;
   orderId?: string;
   url: string;
+  error?: string;
+  metadata?: Record<string, unknown>;
 }
 
 export interface OrderDetails {
@@ -30,4 +33,8 @@ export interface OrderDetails {
 export interface PaymentWebhookResult {
   orderId: string;
   status: string;
+  amount?: number;
+  currency?: string;
+  error?: string;
+  metadata?: Record<string, unknown>;
 }

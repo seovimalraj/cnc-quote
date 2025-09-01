@@ -1,7 +1,7 @@
 import { Body, Controller, Headers, Post, RawBodyRequest, Req, Param, UsePipes, ValidationPipe } from "@nestjs/common";
 import { Request } from "express";
 import { PaymentsService } from "./payments.service";
-import { CreateCheckoutSessionDto, CapturePayPalOrderDto, WebhookDto } from "./payments.dto";
+import { CreateCheckoutSessionDto, CapturePayPalOrderDto } from "./payments.dto";
 import { ApiTags, ApiOperation, ApiBody } from "@nestjs/swagger";
 
 @ApiTags("payments")
@@ -28,10 +28,7 @@ export class PaymentsController {
 
   @Post("webhook")
   @ApiOperation({ summary: "Handle Stripe webhook events" })
-  async handleWebhook(
-    @Headers("stripe-signature") signature: string,
-    @Req() request: RawBodyRequest<Request>,
-  ) {
+  async handleWebhook(@Headers("stripe-signature") signature: string, @Req() request: RawBodyRequest<Request>) {
     return this.paymentsService.handleWebhook(signature, request.rawBody);
   }
 }

@@ -4,7 +4,7 @@ import { SupabaseService } from "../../lib/supabase/supabase.service";
 
 describe("PricingService", () => {
   let service: PricingService;
-  let supabase: SupabaseService;
+  let _supabase: SupabaseService;
 
   const mockProfile = {
     id: "123",

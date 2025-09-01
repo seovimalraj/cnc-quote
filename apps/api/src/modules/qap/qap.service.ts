@@ -3,13 +3,9 @@ import { SupabaseService } from "../../lib/supabase/supabase.service";
 import { InjectQueue } from "@nestjs/bull";
 import { Queue } from "bull";
 import * as puppeteer from "puppeteer";
-import {
-  QapTemplate,
-  QapDocument,
-  QapDocumentStatus,
-  qapTemplateSchema,
-  qapDocumentSchema,
-} from "./qap.types";
+import { QapTemplate, QapDocument, QapDocumentStatus, qapTemplateSchema, qapDocumentSchema } from "./qap.types";
+import { QapInput, QapContext, QapGenerateOptions } from "./qap.input";
+import { QapDocumentInput, QapDocumentData, QapValidationResult, QapPdfOptions } from "./qap.service.types";
 import {
   QapTemplateNotFoundException,
   QapDocumentNotFoundException,
@@ -32,7 +28,7 @@ export class QapService {
     name: string;
     description?: string;
     templateHtml: string;
-    schemaJson: Record<string, any>;
+    schemaJson: Record<string, unknown>;
     processType: string;
     userId: string;
   }): Promise<QapTemplate> {
@@ -144,14 +140,7 @@ export class QapService {
     return templates || [];
   }
 
-  async generateQapDocument(data: {
-    templateId: string;
-    orderId: string;
-    orderItemId: string;
-    orgId: string;
-    userId: string;
-    documentData: Record<string, any>;
-  }): Promise<QapDocument> {
+  async generateQapDocument(data: QapDocumentInput): Promise<QapDocument> {
     try {
       // Validate input data
       const validatedData = qapDocumentSchema.parse({
@@ -210,7 +199,7 @@ export class QapService {
     }
   }
 
-  async generatePdf(documentId: string, templateHtml: string, documentData: Record<string, any>): Promise<string> {
+  async generatePdf(documentId: string, templateHtml: string, documentData: QapDocumentData): Promise<string> {
     try {
       // Update document status to generating
       await this.supabase.client
@@ -290,20 +279,16 @@ export class QapService {
     }
   }
 
-  private injectDataIntoTemplate(template: string, data: Record<string, any>): string {
+  private injectDataIntoTemplate(template: string, data: Record<string, unknown>): string {
     try {
       // Replace template variables with actual data
       let html = template;
 
       // Handle nested objects
-      const flattenObject = (obj: Record<string, any>, prefix = ""): Record<string, any> => {
-        return Object.keys(obj).reduce((acc: Record<string, any>, k: string) => {
+      const flattenObject = (obj: Record<string, unknown>, prefix = ""): Record<string, unknown> => {
+        return Object.keys(obj).reduce((acc: Record<string, unknown>, k: string) => {
           const pre = prefix.length ? prefix + "." : "";
-          if (
-            typeof obj[k] === "object" &&
-            obj[k] !== null &&
-            !Array.isArray(obj[k])
-          ) {
+          if (typeof obj[k] === "object" && obj[k] !== null && !Array.isArray(obj[k])) {
             Object.assign(acc, flattenObject(obj[k], pre + k));
           } else {
             acc[pre + k] = obj[k];
