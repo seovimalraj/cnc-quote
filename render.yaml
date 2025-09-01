@@ -9,15 +9,14 @@ services:
     plan: free
     region: oregon
     buildCommand: |
-      npm install -g pnpm@8 tsup @nestjs/cli &&
-      pnpm install --no-frozen-lockfile &&
+      npm install -g pnpm@8 &&
       cd packages/shared &&
       pnpm install &&
-      pnpm add -D tsup &&
+      npm install -g tsup@7.2.0 &&
       pnpm build &&
       cd ../../apps/api &&
       pnpm install &&
-      pnpm add -D @nestjs/cli &&
+      npm install -g @nestjs/cli &&
       pnpm build
     startCommand: cd apps/api && pnpm start
     healthCheckPath: /api/health
@@ -26,7 +25,7 @@ services:
       - key: NODE_ENV
         value: production
       - key: NODE_VERSION
-        value: "18"
+        value: "18.18.0"
       - key: SUPABASE_URL
         sync: false
       - key: SUPABASE_ANON_KEY
@@ -90,11 +89,10 @@ services:
     plan: free
     region: oregon
     buildCommand: |
-      npm install -g pnpm@8 tsup &&
-      pnpm install --no-frozen-lockfile &&
+      npm install -g pnpm@8 &&
       cd packages/shared &&
       pnpm install &&
-      pnpm add -D tsup &&
+      npm install -g tsup@7.2.0 &&
       pnpm build &&
       cd ../../apps/web &&
       pnpm install &&
@@ -106,7 +104,7 @@ services:
       - key: NODE_ENV
         value: production
       - key: NODE_VERSION
-        value: "18"
+        value: "18.18.0"
       - key: NEXT_PUBLIC_SUPABASE_URL
         sync: false
       - key: NEXT_PUBLIC_SUPABASE_ANON_KEY

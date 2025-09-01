@@ -25,9 +25,8 @@ WORKDIR /app
 COPY apps/cad-service/pyproject.toml ./pyproject.toml
 COPY apps/cad-service/app ./app
 
-# Install dependencies (generate lock file if missing)
+# Install dependencies
 RUN poetry config virtualenvs.create false \
-    && poetry lock --no-update \
     && poetry install --no-interaction --no-ansi --only=main
 
 # Expose port
