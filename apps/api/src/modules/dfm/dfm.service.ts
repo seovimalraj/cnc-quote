@@ -1,7 +1,7 @@
-import { Injectable, Logger } from '@nestjs/common';
-import { Parser } from 'expr-eval';
-import { SupabaseService } from '../../lib/supabase/supabase.service';
-import { CacheService } from '../../lib/cache/cache.service';
+import { Injectable, Logger } from "@nestjs/common";
+import { Parser } from "expr-eval";
+import { SupabaseService } from "../../lib/supabase/supabase.service";
+import { CacheService } from "../../lib/cache/cache.service";
 import {
   DfmRule,
   DfmValidationResponse,
@@ -9,7 +9,7 @@ import {
   CncDfmParams,
   SheetMetalDfmParams,
   InjectionMoldingDfmParams,
-} from '@cnc-quote/shared';
+} from "@cnc-quote/shared";
 
 @Injectable()
 export class DfmService {
@@ -23,7 +23,7 @@ export class DfmService {
 
   private async getRules(processType: string): Promise<DfmRule[]> {
     const cacheKey = `dfm_rules:${processType}`;
-    
+
     // Try to get from cache first
     const cached = await this.cache.get<DfmRule[]>(cacheKey);
     if (cached) {
@@ -31,10 +31,7 @@ export class DfmService {
     }
 
     // If not in cache, get from database
-    const { data: rules } = await this.supabase.client
-      .from('dfm_rules')
-      .select('*')
-      .eq('process_type', processType);
+    const { data: rules } = await this.supabase.client.from("dfm_rules").select("*").eq("process_type", processType);
 
     // Cache for 1 hour
     if (rules) {
@@ -45,7 +42,7 @@ export class DfmService {
   }
 
   async validateCnc(params: CncDfmParams): Promise<DfmValidationResponse> {
-    const rules = await this.getRules('cnc');
+    const rules = await this.getRules("cnc");
     const issues = [];
     let manualReviewRequired = false;
 
@@ -72,14 +69,14 @@ export class DfmService {
     }
 
     return {
-      valid: !issues.some(i => i.severity === Severity.BLOCK),
+      valid: !issues.some((i) => i.severity === Severity.BLOCK),
       issues,
       manual_review_required: manualReviewRequired,
     };
   }
 
   async validateSheetMetal(params: SheetMetalDfmParams): Promise<DfmValidationResponse> {
-    const rules = await this.getRules('sheet_metal');
+    const rules = await this.getRules("sheet_metal");
     const issues = [];
     let manualReviewRequired = false;
 
@@ -106,14 +103,14 @@ export class DfmService {
     }
 
     return {
-      valid: !issues.some(i => i.severity === Severity.BLOCK),
+      valid: !issues.some((i) => i.severity === Severity.BLOCK),
       issues,
       manual_review_required: manualReviewRequired,
     };
   }
 
   async validateInjectionMolding(params: InjectionMoldingDfmParams): Promise<DfmValidationResponse> {
-    const rules = await this.getRules('injection_molding');
+    const rules = await this.getRules("injection_molding");
     const issues = [];
     let manualReviewRequired = false;
 
@@ -140,7 +137,7 @@ export class DfmService {
     }
 
     return {
-      valid: !issues.some(i => i.severity === Severity.BLOCK),
+      valid: !issues.some((i) => i.severity === Severity.BLOCK),
       issues,
       manual_review_required: manualReviewRequired,
     };

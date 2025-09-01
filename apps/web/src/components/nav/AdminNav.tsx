@@ -38,11 +38,11 @@ export function AdminNav() {
             <Link
               key={item.href}
               href={item.href}
-              className={\`px-3 py-2 rounded-md text-sm \${
+              className={`px-3 py-2 rounded-md text-sm ${
                 isActive(item.href)
                   ? 'bg-primary text-white'
                   : 'text-gray-700 hover:bg-gray-100'
-              }\`}
+              }`}
             >
               {item.name}
             </Link>
@@ -57,11 +57,11 @@ export function AdminNav() {
             <Link
               key={item.href}
               href={item.href}
-              className={\`px-3 py-2 rounded-md text-sm \${
+              className={`px-3 py-2 rounded-md text-sm ${
                 isActive(item.href)
                   ? 'bg-primary text-white'
                   : 'text-gray-700 hover:bg-gray-100'
-              }\`}
+              }`}
             >
               {item.name}
             </Link>
@@ -76,11 +76,11 @@ export function AdminNav() {
             <Link
               key={item.href}
               href={item.href}
-              className={\`px-3 py-2 rounded-md text-sm \${
+              className={`px-3 py-2 rounded-md text-sm ${
                 isActive(item.href)
                   ? 'bg-primary text-white'
                   : 'text-gray-700 hover:bg-gray-100'
-              }\`}
+              }`}
             >
               {item.name}
             </Link>

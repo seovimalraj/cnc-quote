@@ -1,22 +1,21 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { api } from '@/lib/api';
 import { toast } from 'react-hot-toast';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import type { QapDocument } from '@/types/qap-document';
 
 export function QapDocumentsList() {
   const params = useParams();
-  const [documents, setDocuments] = useState([]);
+  const [documents, setDocuments] = useState<QapDocument[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    loadDocuments();
-  }, []);
-
-  const loadDocuments = async () => {
+  const loadDocuments = useCallback(async () => {
+    if (!params?.id) return;
+    
     try {
       setIsLoading(true);
       const response = await api.get(`/qap/documents/order/${params.id}`);
@@ -27,7 +26,11 @@ export function QapDocumentsList() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [params?.id]);
+
+  useEffect(() => {
+    loadDocuments();
+  }, [loadDocuments]);
 
   if (isLoading) {
     return <div>Loading...</div>;
@@ -43,7 +46,7 @@ export function QapDocumentsList() {
 
   return (
     <div className="space-y-4">
-      {documents.map((doc: any) => (
+      {documents.map((doc) => (
         <Card key={doc.id} className="p-4">
           <div className="flex items-center justify-between">
             <div>
@@ -56,7 +59,7 @@ export function QapDocumentsList() {
               <Badge
                 variant={
                   doc.status === 'completed'
-                    ? 'success'
+                    ? 'secondary'
                     : doc.status === 'failed'
                     ? 'destructive'
                     : 'default'

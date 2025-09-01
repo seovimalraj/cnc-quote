@@ -1,23 +1,15 @@
-import {
-  Body,
-  Controller,
-  Get,
-  Param,
-  Post,
-  Put,
-  UseGuards,
-} from '@nestjs/common';
-import { AuthGuard } from '@nestjs/passport';
-import { OrgGuard } from '../../auth/org.guard';
-import { ReqUser } from '../../auth/req-user.decorator';
-import { QapService } from './qap.service';
+import { Body, Controller, Get, Param, Post, Put, UseGuards } from "@nestjs/common";
+import { AuthGuard } from "@nestjs/passport";
+import { OrgGuard } from "../../auth/org.guard";
+import { ReqUser } from "../../auth/req-user.decorator";
+import { QapService } from "./qap.service";
 
-@Controller('qap')
-@UseGuards(AuthGuard('jwt'), OrgGuard)
+@Controller("qap")
+@UseGuards(AuthGuard("jwt"), OrgGuard)
 export class QapController {
   constructor(private readonly qapService: QapService) {}
 
-  @Post('templates')
+  @Post("templates")
   async createTemplate(
     @Body()
     data: {
@@ -36,9 +28,9 @@ export class QapController {
     });
   }
 
-  @Put('templates/:id')
+  @Put("templates/:id")
   async updateTemplate(
-    @Param('id') id: string,
+    @Param("id") id: string,
     @Body()
     data: {
       name?: string;
@@ -55,17 +47,17 @@ export class QapController {
     });
   }
 
-  @Get('templates/:id')
-  async getTemplate(@Param('id') id: string) {
+  @Get("templates/:id")
+  async getTemplate(@Param("id") id: string) {
     return this.qapService.getTemplate(id);
   }
 
-  @Get('templates/org/:orgId')
-  async getTemplates(@Param('orgId') orgId: string) {
+  @Get("templates/org/:orgId")
+  async getTemplates(@Param("orgId") orgId: string) {
     return this.qapService.getTemplates(orgId);
   }
 
-  @Post('documents')
+  @Post("documents")
   async generateQapDocument(
     @Body()
     data: {
@@ -83,13 +75,13 @@ export class QapController {
     });
   }
 
-  @Get('documents/:id')
-  async getQapDocument(@Param('id') id: string) {
+  @Get("documents/:id")
+  async getQapDocument(@Param("id") id: string) {
     return this.qapService.getQapDocument(id);
   }
 
-  @Get('documents/order/:orderId')
-  async getOrderQapDocuments(@Param('orderId') orderId: string) {
+  @Get("documents/order/:orderId")
+  async getOrderQapDocuments(@Param("orderId") orderId: string) {
     return this.qapService.getOrderQapDocuments(orderId);
   }
 }

@@ -1,5 +1,5 @@
-import { Injectable, LoggerService } from '@nestjs/common';
-import pino from 'pino';
+import { Injectable, LoggerService } from "@nestjs/common";
+import pino from "pino";
 
 @Injectable()
 export class ApiLogger implements LoggerService {
@@ -7,13 +7,13 @@ export class ApiLogger implements LoggerService {
 
   constructor() {
     this.logger = pino({
-      level: process.env.LOG_LEVEL || 'info',
+      level: process.env.LOG_LEVEL || "info",
       formatters: {
         level: (label) => ({ level: label }),
       },
       timestamp: () => `,"time":"${new Date(Date.now()).toISOString()}"`,
-      messageKey: 'msg',
-      base: undefined // Remove pid and hostname
+      messageKey: "msg",
+      base: undefined, // Remove pid and hostname
     });
   }
 
@@ -21,7 +21,7 @@ export class ApiLogger implements LoggerService {
     return {
       msg: message,
       ...(context && { context }),
-      ...(args?.length && { args })
+      ...(args?.length && { args }),
     };
   }
 
@@ -32,7 +32,7 @@ export class ApiLogger implements LoggerService {
   error(message: any, trace?: string, context?: string, ...args: any[]) {
     this.logger.error({
       ...this.formatMessage(message, context, ...args),
-      ...(trace && { trace })
+      ...(trace && { trace }),
     });
   }
 
@@ -53,7 +53,7 @@ export class ApiLogger implements LoggerService {
     return this.logger.child({
       request_id: requestId,
       ...(userId && { user_id: userId }),
-      ...(orgId && { org_id: orgId })
+      ...(orgId && { org_id: orgId }),
     });
   }
 }

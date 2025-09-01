@@ -1,4 +1,4 @@
-import { IsString, IsNumber, IsUUID, IsOptional, IsArray } from 'class-validator';
+import { IsString, IsNumber, IsUUID, IsOptional, IsArray } from "class-validator";
 
 export class CreateQuoteDto {
   @IsUUID()
@@ -71,7 +71,7 @@ export class CreateQuoteItemDto {
 export class UpdateQuoteDto {
   @IsString()
   @IsOptional()
-  status?: 'draft' | 'sent' | 'accepted' | 'rejected' | 'expired';
+  status?: "draft" | "sent" | "accepted" | "rejected" | "expired";
 
   @IsNumber()
   @IsOptional()
@@ -92,4 +92,10 @@ export class UpdateQuoteDto {
   @IsArray()
   @IsOptional()
   items?: CreateQuoteItemDto[];
+
+  @IsOptional()
+  acceptedAt?: Date;
+
+  @IsOptional()
+  rejectedAt?: Date;
 }

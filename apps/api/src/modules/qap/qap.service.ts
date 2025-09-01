@@ -1,10 +1,10 @@
-import { Injectable, Logger } from '@nestjs/common';
-import { SupabaseService } from '../../lib/supabase/supabase.service';
-import { InjectQueue } from '@nestjs/bull';
-import { Queue } from 'bull';
-import * as puppeteer from 'puppeteer';
-import { join } from 'path';
-import { createReadStream } from 'fs';
+import { Injectable, Logger } from "@nestjs/common";
+import { SupabaseService } from "../../lib/supabase/supabase.service";
+import { InjectQueue } from "@nestjs/bull";
+import { Queue } from "bull";
+import * as puppeteer from "puppeteer";
+import { join } from "path";
+import { createReadStream } from "fs";
 
 @Injectable()
 export class QapService {
@@ -12,7 +12,7 @@ export class QapService {
 
   constructor(
     private readonly supabase: SupabaseService,
-    @InjectQueue('qap') private readonly qapQueue: Queue,
+    @InjectQueue("qap") private readonly qapQueue: Queue,
   ) {}
 
   async createTemplate(data: {
@@ -25,7 +25,7 @@ export class QapService {
     userId: string;
   }) {
     const { data: template } = await this.supabase.client
-      .from('qap_templates')
+      .from("qap_templates")
       .insert({
         org_id: data.orgId,
         name: data.name,
@@ -54,13 +54,13 @@ export class QapService {
     },
   ) {
     const { data: template } = await this.supabase.client
-      .from('qap_templates')
+      .from("qap_templates")
       .update({
         ...data,
         updated_by: data.userId,
         updated_at: new Date().toISOString(),
       })
-      .eq('id', templateId)
+      .eq("id", templateId)
       .select()
       .single();
 
@@ -68,21 +68,17 @@ export class QapService {
   }
 
   async getTemplate(templateId: string) {
-    const { data: template } = await this.supabase.client
-      .from('qap_templates')
-      .select()
-      .eq('id', templateId)
-      .single();
+    const { data: template } = await this.supabase.client.from("qap_templates").select().eq("id", templateId).single();
 
     return template;
   }
 
   async getTemplates(orgId: string) {
     const { data: templates } = await this.supabase.client
-      .from('qap_templates')
+      .from("qap_templates")
       .select()
-      .eq('org_id', orgId)
-      .order('created_at', { ascending: false });
+      .eq("org_id", orgId)
+      .order("created_at", { ascending: false });
 
     return templates || [];
   }
@@ -98,20 +94,20 @@ export class QapService {
     // Get template
     const template = await this.getTemplate(data.templateId);
     if (!template) {
-      throw new Error('Template not found');
+      throw new Error("Template not found");
     }
 
     // Create QAP document record
     const { data: document } = await this.supabase.client
-      .from('qap_documents')
+      .from("qap_documents")
       .insert({
         org_id: data.orgId,
         template_id: data.templateId,
         order_id: data.orderId,
         order_item_id: data.orderItemId,
         data: data.documentData,
-        status: 'pending',
-        file_path: '', // Will be updated after generation
+        status: "pending",
+        file_path: "", // Will be updated after generation
         created_by: data.userId,
         updated_by: data.userId,
       })
@@ -120,7 +116,7 @@ export class QapService {
 
     // Queue PDF generation
     await this.qapQueue.add(
-      'generate-pdf',
+      "generate-pdf",
       {
         documentId: document.id,
         templateHtml: template.template_html,
@@ -129,7 +125,7 @@ export class QapService {
       {
         attempts: 3,
         backoff: {
-          type: 'exponential',
+          type: "exponential",
           delay: 2000,
         },
       },
@@ -138,33 +134,29 @@ export class QapService {
     return document;
   }
 
-  async generatePdf(
-    documentId: string,
-    templateHtml: string,
-    documentData: any,
-  ) {
+  async generatePdf(documentId: string, templateHtml: string, documentData: any) {
     try {
       // Launch browser
       const browser = await puppeteer.launch({
-        args: ['--no-sandbox'],
+        args: ["--no-sandbox"],
       });
       const page = await browser.newPage();
 
       // Inject data into template
       const html = this.injectDataIntoTemplate(templateHtml, documentData);
       await page.setContent(html, {
-        waitUntil: 'networkidle0',
+        waitUntil: "networkidle0",
       });
 
       // Generate PDF
       const pdfBuffer = await page.pdf({
-        format: 'A4',
+        format: "A4",
         printBackground: true,
         margin: {
-          top: '20mm',
-          right: '20mm',
-          bottom: '20mm',
-          left: '20mm',
+          top: "20mm",
+          right: "20mm",
+          bottom: "20mm",
+          left: "20mm",
         },
       });
 
@@ -172,12 +164,10 @@ export class QapService {
 
       // Upload to Supabase Storage
       const filePath = `qap/${documentId}.pdf`;
-      const { error } = await this.supabase.client.storage
-        .from('documents')
-        .upload(filePath, pdfBuffer, {
-          contentType: 'application/pdf',
-          upsert: true,
-        });
+      const { error } = await this.supabase.client.storage.from("documents").upload(filePath, pdfBuffer, {
+        contentType: "application/pdf",
+        upsert: true,
+      });
 
       if (error) {
         throw error;
@@ -185,26 +175,26 @@ export class QapService {
 
       // Update document record
       await this.supabase.client
-        .from('qap_documents')
+        .from("qap_documents")
         .update({
           file_path: filePath,
-          status: 'completed',
+          status: "completed",
           updated_at: new Date().toISOString(),
         })
-        .eq('id', documentId);
+        .eq("id", documentId);
 
       return filePath;
     } catch (error) {
-      this.logger.error('Error generating QAP PDF:', error);
+      this.logger.error("Error generating QAP PDF:", error);
 
       // Update document status to failed
       await this.supabase.client
-        .from('qap_documents')
+        .from("qap_documents")
         .update({
-          status: 'failed',
+          status: "failed",
           updated_at: new Date().toISOString(),
         })
-        .eq('id', documentId);
+        .eq("id", documentId);
 
       throw error;
     }
@@ -215,14 +205,10 @@ export class QapService {
     let html = template;
 
     // Handle nested objects
-    const flattenObject = (obj: any, prefix = '') => {
+    const flattenObject = (obj: any, prefix = "") => {
       return Object.keys(obj).reduce((acc: any, k: string) => {
-        const pre = prefix.length ? prefix + '.' : '';
-        if (
-          typeof obj[k] === 'object' &&
-          obj[k] !== null &&
-          !Array.isArray(obj[k])
-        ) {
+        const pre = prefix.length ? prefix + "." : "";
+        if (typeof obj[k] === "object" && obj[k] !== null && !Array.isArray(obj[k])) {
           Object.assign(acc, flattenObject(obj[k], pre + k));
         } else {
           acc[pre + k] = obj[k];
@@ -235,7 +221,7 @@ export class QapService {
 
     // Replace all {{ variable }} occurrences
     Object.entries(flatData).forEach(([key, value]) => {
-      const regex = new RegExp(`{{\\s*${key}\\s*}}`, 'g');
+      const regex = new RegExp(`{{\\s*${key}\\s*}}`, "g");
       html = html.replace(regex, String(value));
     });
 
@@ -244,8 +230,9 @@ export class QapService {
 
   async getQapDocument(documentId: string) {
     const { data: document } = await this.supabase.client
-      .from('qap_documents')
-      .select(`
+      .from("qap_documents")
+      .select(
+        `
         *,
         template:qap_templates (
           name,
@@ -263,14 +250,13 @@ export class QapService {
           quantity,
           status
         )
-      `)
-      .eq('id', documentId)
+      `,
+      )
+      .eq("id", documentId)
       .single();
 
     if (document?.file_path) {
-      const { data } = await this.supabase.client.storage
-        .from('documents')
-        .createSignedUrl(document.file_path, 3600); // 1 hour expiry
+      const { data } = await this.supabase.client.storage.from("documents").createSignedUrl(document.file_path, 3600); // 1 hour expiry
 
       if (data) {
         document.download_url = data.signedUrl;
@@ -282,24 +268,24 @@ export class QapService {
 
   async getOrderQapDocuments(orderId: string) {
     const { data: documents } = await this.supabase.client
-      .from('qap_documents')
-      .select(`
+      .from("qap_documents")
+      .select(
+        `
         *,
         template:qap_templates (
           name,
           process_type
         )
-      `)
-      .eq('order_id', orderId)
-      .order('created_at', { ascending: false });
+      `,
+      )
+      .eq("order_id", orderId)
+      .order("created_at", { ascending: false });
 
     // Get signed URLs for all documents
     if (documents) {
       for (const doc of documents) {
         if (doc.file_path) {
-          const { data } = await this.supabase.client.storage
-            .from('documents')
-            .createSignedUrl(doc.file_path, 3600);
+          const { data } = await this.supabase.client.storage.from("documents").createSignedUrl(doc.file_path, 3600);
 
           if (data) {
             doc.download_url = data.signedUrl;

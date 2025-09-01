@@ -1,25 +1,26 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { api } from '@/lib/api';
 import { toast } from 'react-hot-toast';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import type { Order } from '@/types/order';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { QapDocumentsList } from './qap/page';
 
 export default function OrderDetailsPage() {
   const params = useParams();
-  const [order, setOrder] = useState<any>(null);
+  const [order, setOrder] = useState<Order | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     loadOrder();
-  }, []);
+  }, [loadOrder]);
 
-  const loadOrder = async () => {
+  const loadOrder = useCallback(async () => {
     try {
       setIsLoading(true);
       const response = await api.get(`/orders/${params.id}`);
@@ -30,7 +31,7 @@ export default function OrderDetailsPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [params.id]);
 
   if (isLoading) {
     return <div>Loading...</div>;
@@ -103,7 +104,7 @@ export default function OrderDetailsPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {order.items.map((item: any) => (
+                    {order.items.map((item) => (
                       <tr key={item.id} className="border-b">
                         <td className="py-2">Part #{item.id.slice(0, 8)}</td>
                         <td className="py-2">

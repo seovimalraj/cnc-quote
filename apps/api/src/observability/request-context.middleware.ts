@@ -1,7 +1,9 @@
-import { Injectable, NestMiddleware } from '@nestjs/common';
-import { Request, Response, NextFunction } from 'express';
-import { v4 as uuidv4 } from 'uuid';
-import { ApiLogger } from './logger.service';
+import { Injectable, NestMiddleware } from "@nestjs/common";
+import { Request, Response, NextFunction } from "express";
+import { v4 as uuidv4 } from "uuid";
+import { ApiLogger } from "./logger.service";
+import { RequestUser } from "../../auth/jwt.strategy";
+import "../../types/express";
 
 @Injectable()
 export class RequestContextMiddleware implements NestMiddleware {
@@ -9,42 +11,40 @@ export class RequestContextMiddleware implements NestMiddleware {
 
   use(req: Request, res: Response, next: NextFunction) {
     // Generate or use existing request ID
-    const requestId = req.headers['x-request-id'] as string || uuidv4();
-    
+    const requestId = (req.headers["x-request-id"] as string) || uuidv4();
+
     // Get user and org context from JWT if available
-    const user = (req as any).user;
-    const userId = user?.sub;
-    const orgId = user?.org_id;
+    const { sub: userId, org_id: orgId } = req.user || {};
 
     // Attach request ID to response headers
-    res.setHeader('x-request-id', requestId);
+    res.setHeader("x-request-id", requestId);
 
     // Create request-scoped logger
     const requestLogger = this.logger.withRequest(requestId, userId, orgId);
-    
+
     // Log the incoming request
     requestLogger.info({
-      msg: 'Incoming request',
+      msg: "Incoming request",
       method: req.method,
       url: req.url,
       headers: {
         ...req.headers,
-        authorization: undefined // Don't log auth tokens
-      }
+        authorization: undefined, // Don't log auth tokens
+      },
     });
 
     // Add logger and request ID to request object for use in handlers
-    (req as any).logger = requestLogger;
-    (req as any).requestId = requestId;
+    req.logger = requestLogger;
+    req.requestId = requestId;
 
     // Log response on finish
-    res.on('finish', () => {
+    res.on("finish", () => {
       requestLogger.info({
-        msg: 'Request completed',
+        msg: "Request completed",
         method: req.method,
         url: req.url,
         status: res.statusCode,
-        duration: Date.now() - req[Symbol.for('request-received')],
+        duration: Date.now() - req[Symbol.for("request-received")],
       });
     });
 

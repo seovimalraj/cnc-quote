@@ -1,27 +1,30 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { useParams, useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
-import { Editor } from '@monaco-editor/react';
+// import { Editor } from '@monaco-editor/react';
 import { toast } from 'react-hot-toast';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/select';
+import type { QapTemplate, QapPreviewData } from '@/types/qap';
 
 // Load Monaco editor dynamically to avoid SSR issues
 const MonacoEditor = dynamic(() => import('@monaco-editor/react'), { ssr: false });
 
 export default function QapTemplateEditor() {
-  const params = useParams();
+  const params = useParams() as { id: string };
   const router = useRouter();
-  const [template, setTemplate] = useState<any>(null);
+
+
+  const [template, setTemplate] = useState<QapTemplate | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [isPreviewMode, setIsPreviewMode] = useState(false);
-  const [previewData, setPreviewData] = useState<any>({
+  const [previewData, setPreviewData] = useState<QapPreviewData>({
     part: {
       name: 'Example Part',
       material: 'Aluminum 6061',
@@ -48,6 +51,16 @@ export default function QapTemplateEditor() {
     },
   });
 
+  const loadTemplate = useCallback(async () => {
+    try {
+      const response = await api.get(`/qap/templates/${params.id}`);
+      setTemplate(response.data);
+    } catch (error) {
+      toast.error('Failed to load template');
+      console.error('Error loading template:', error);
+    }
+  }, [params.id]);
+
   useEffect(() => {
     if (params.id !== 'new') {
       loadTemplate();
@@ -59,19 +72,9 @@ export default function QapTemplateEditor() {
         schema_json: defaultSchema,
       });
     }
-  }, [params.id]);
+  }, [params.id, loadTemplate]);
 
-  const loadTemplate = async () => {
-    try {
-      const response = await api.get(`/qap/templates/${params.id}`);
-      setTemplate(response.data);
-    } catch (error) {
-      toast.error('Failed to load template');
-      console.error('Error loading template:', error);
-    }
-  };
-
-  const handleSave = async () => {
+  const handleSave = useCallback(async () => {
     try {
       setIsSaving(true);
       if (params.id === 'new') {
@@ -91,11 +94,11 @@ export default function QapTemplateEditor() {
     } finally {
       setIsSaving(false);
     }
-  };
+  }, [params.id, template, router]);
 
-  const handlePreview = () => {
+  const handlePreview = useCallback(() => {
     setIsPreviewMode(!isPreviewMode);
-  };
+  }, [isPreviewMode]);
 
   if (!template) {
     return <div>Loading...</div>;
@@ -180,7 +183,10 @@ export default function QapTemplateEditor() {
                     : JSON.stringify(template.schema_json, null, 2)
                 }
                 onChange={(value) =>
-                  setTemplate({ ...template, schema_json: JSON.parse(value) })
+                  setTemplate(template && value ? {
+                    ...template,
+                    schema_json: JSON.parse(value)
+                  } : null)
                 }
                 options={{
                   minimap: { enabled: false },
@@ -197,7 +203,7 @@ export default function QapTemplateEditor() {
                 height="100%"
                 defaultLanguage="json"
                 value={JSON.stringify(previewData, null, 2)}
-                onChange={(value) => setPreviewData(JSON.parse(value))}
+                onChange={(value) => value ? setPreviewData(JSON.parse(value) as QapPreviewData) : null}
                 options={{
                   minimap: { enabled: false },
                   scrollBeyondLastLine: false,
@@ -215,8 +221,11 @@ export default function QapTemplateEditor() {
                   __html: template.template_html.replace(
                     /{{([^}]+)}}/g,
                     (match: string, key: string) => {
-                      const value = key.split('.').reduce((obj: any, k: string) => {
-                        return obj?.[k];
+                      const value = key.split('.').reduce<unknown>((obj, k) => {
+                        if (obj && typeof obj === 'object') {
+                          return (obj as Record<string, unknown>)[k];
+                        }
+                        return undefined;
                       }, previewData);
                       return value ?? match;
                     }

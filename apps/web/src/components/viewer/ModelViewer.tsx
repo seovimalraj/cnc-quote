@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls, Stage } from '@react-three/drei';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
@@ -17,7 +17,7 @@ export function ModelViewer({ url, showWireframe = false }: ModelViewerProps) {
   const [error, setError] = useState<string | null>(null);
 
   // Load model when URL changes
-  useState(() => {
+  useEffect(() => {
     if (!url) return;
 
     const loader = new GLTFLoader();
@@ -29,8 +29,8 @@ export function ModelViewer({ url, showWireframe = false }: ModelViewerProps) {
       },
       undefined,
       (err) => {
-        console.error('Error loading model:', err);
-        setError('Failed to load model');
+        const errorMessage = err instanceof Error ? err.message : 'Failed to load model';
+        setError(errorMessage);
       }
     );
   }, [url]);
@@ -47,12 +47,12 @@ export function ModelViewer({ url, showWireframe = false }: ModelViewerProps) {
             {model && (
               <group ref={modelRef}>
                 <primitive object={model} />
-                {showWireframe && (
-                  <wireframe
-                    geometry={model.children[0].geometry}
+                                {showWireframe && model.children[0] && (
+                  <mesh
+                    geometry={(model.children[0] as THREE.Mesh).geometry}
                     material={new THREE.MeshBasicMaterial({
                       wireframe: true,
-                      color: 0x000000,
+                      color: 0x000000
                     })}
                   />
                 )}

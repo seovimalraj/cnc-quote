@@ -1,23 +1,25 @@
-import pino from 'pino';
+import pino from "pino";
+import { LogContext, RequestLogContext } from "./types";
+import { Request } from "express";
 
 const logger = pino({
-  level: process.env.LOG_LEVEL || 'info',
+  level: process.env.LOG_LEVEL || "info",
   transport: {
-    target: 'pino-pretty',
+    target: "pino-pretty",
     options: {
       colorize: true,
-      translateTime: 'SYS:standard',
-      ignore: 'pid,hostname',
+      translateTime: "SYS:standard",
+      ignore: "pid,hostname",
     },
   },
 });
 
 export class Logger {
-  static info(msg: string, context?: Record<string, any>) {
+  static info(msg: string, context?: LogContext) {
     logger.info(context, msg);
   }
 
-  static error(msg: string, error?: Error, context?: Record<string, any>) {
+  static error(msg: string, error?: Error, context?: LogContext) {
     logger.error(
       {
         err: {
@@ -30,25 +32,25 @@ export class Logger {
     );
   }
 
-  static warn(msg: string, context?: Record<string, any>) {
+  static warn(msg: string, context?: LogContext) {
     logger.warn(context, msg);
   }
 
-  static debug(msg: string, context?: Record<string, any>) {
+  static debug(msg: string, context?: LogContext) {
     logger.debug(context, msg);
   }
 
-  static child(bindings: Record<string, any>) {
+  static child(bindings: LogContext) {
     return logger.child(bindings);
   }
 }
 
-export const getRequestLogger = (req: any) => {
+export const getRequestLogger = (req: Request) => {
   return Logger.child({
-    requestId: req.id,
+    requestId: req.requestId,
     method: req.method,
     url: req.url,
     ip: req.ip,
-    userAgent: req.get('user-agent'),
-  });
+    userAgent: req.headers["user-agent"],
+  } as RequestLogContext);
 };

@@ -1,8 +1,8 @@
-import { Processor, WorkerHost } from '@nestjs/bullmq';
-import { Logger } from '@nestjs/common';
-import { Job } from 'bullmq';
+import { Processor, WorkerHost } from "@nestjs/bullmq";
+import { Logger } from "@nestjs/common";
+import { Job } from "bullmq";
 
-@Processor('cad')
+@Processor("cad")
 export class CadProcessor extends WorkerHost {
   private readonly logger = new Logger(CadProcessor.name);
 
@@ -10,9 +10,9 @@ export class CadProcessor extends WorkerHost {
     this.logger.debug(`Processing CAD job ${job.id} of type ${job.name}`);
 
     switch (job.name) {
-      case 'analyze':
+      case "analyze":
         return this.processAnalysis(job);
-      case 'convert':
+      case "convert":
         return this.processConversion(job);
       default:
         throw new Error(`Unknown job type: ${job.name}`);
@@ -20,7 +20,7 @@ export class CadProcessor extends WorkerHost {
   }
 
   async onError(error: Error): Promise<void> {
-    this.logger.error('CAD Worker Error:', error);
+    this.logger.error("CAD Worker Error:", error);
   }
 
   async onCompleted(job: Job, result: any): Promise<void> {
@@ -29,7 +29,7 @@ export class CadProcessor extends WorkerHost {
 
   async onFailed(job: Job, error: Error): Promise<void> {
     this.logger.error(`CAD Job ${job.id} failed:`, error);
-    
+
     if (job.attemptsMade >= job.opts.attempts!) {
       this.logger.error(`CAD Job ${job.id} has failed all retry attempts`);
     }
@@ -46,17 +46,17 @@ export class CadProcessor extends WorkerHost {
       // - Material requirements
       // - Estimated machining time
       return {
-        status: 'analyzed',
+        status: "analyzed",
         dimensions: {
           x: 100,
           y: 200,
-          z: 50
+          z: 50,
         },
         features: {
           holes: 4,
-          pockets: 2
+          pockets: 2,
         },
-        estimatedMachiningTime: 120 // minutes
+        estimatedMachiningTime: 120, // minutes
       };
     } catch (error) {
       this.logger.error(`Failed to process CAD analysis job ${job.id}:`, error);
@@ -74,9 +74,9 @@ export class CadProcessor extends WorkerHost {
       // - STEP <-> OBJ
       // - STEP <-> IGES
       return {
-        status: 'converted',
+        status: "converted",
         outputFormat: job.data.targetFormat,
-        outputPath: `/tmp/converted/${job.id}.${job.data.targetFormat.toLowerCase()}`
+        outputPath: `/tmp/converted/${job.id}.${job.data.targetFormat.toLowerCase()}`,
       };
     } catch (error) {
       this.logger.error(`Failed to process CAD conversion job ${job.id}:`, error);

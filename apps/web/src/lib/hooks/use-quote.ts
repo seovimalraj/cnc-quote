@@ -1,23 +1,10 @@
-import { create } from 'zustand'
-
-interface Quote {
-  files: File[]
-  material?: string
-  finish?: string
-  tolerance?: string
-  quantity?: number
-  price?: {
-    unit_price: number
-    total_price: number
-    breakdown: any
-  }
-  isValid: boolean
-}
+import { create } from 'zustand';
+import type { Quote } from '@/types/quotes';
 
 interface QuoteStore {
-  quote: Quote
-  updateQuote: (updates: Partial<Quote>) => void
-  calculatePrice: () => Promise<any>
+  quote: Quote;
+  updateQuote: (updates: Partial<Quote>) => void;
+  calculatePrice: () => Promise<Quote['price']>;
 }
 
 export const useQuote = create<QuoteStore>((set, get) => ({

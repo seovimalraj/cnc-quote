@@ -1,6 +1,6 @@
-import { Injectable, Inject } from '@nestjs/common';
-import { CACHE_MANAGER } from '@nestjs/cache-manager';
-import { Cache } from 'cache-manager';
+import { Injectable, Inject } from "@nestjs/common";
+import { CACHE_MANAGER } from "@nestjs/cache-manager";
+import { Cache } from "cache-manager";
 
 @Injectable()
 export class CacheService {
@@ -21,14 +21,14 @@ export class CacheService {
   async reset(): Promise<void> {
     try {
       const cacheStore = (this.cacheManager as any).store;
-      if (cacheStore && typeof cacheStore.keys === 'function') {
+      if (cacheStore && typeof cacheStore.keys === "function") {
         const keys = await cacheStore.keys();
-        await Promise.all(keys.map(key => this.cacheManager.del(key)));
+        await Promise.all(keys.map((key) => this.cacheManager.del(key)));
       } else {
-        throw new Error('Cache store does not support key listing');
+        throw new Error("Cache store does not support key listing");
       }
     } catch (error) {
-      console.error('Failed to reset cache:', error);
+      console.error("Failed to reset cache:", error);
       throw error;
     }
   }

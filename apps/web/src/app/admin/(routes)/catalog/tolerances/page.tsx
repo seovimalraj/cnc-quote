@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { cookies } from 'next/headers'
-import Link from 'next/link'
+// import Link from 'next/link'
 import { PlusIcon } from '@heroicons/react/20/solid'
 
 export default async function TolerancesPage() {

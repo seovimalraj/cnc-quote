@@ -14,7 +14,9 @@
   "dependencies": {
     "@cnc-quote/shared": "workspace:*",
     "@headlessui/react": "^1.7.17",
+    "@hello-pangea/dnd": "^18.0.1",
     "@heroicons/react": "^2.0.18",
+    "@hookform/resolvers": "^5.2.1",
     "@monaco-editor/react": "^4.7.0",
     "@paypal/react-paypal-js": "^8.8.3",
     "@radix-ui/react-dialog": "^1.1.15",
@@ -46,6 +48,7 @@
     "swr": "^2.3.6",
     "tailwind-merge": "^3.3.1",
     "three": "^0.179.1",
+    "zod": "^3.25.76",
     "zustand": "^5.0.8"
   },
   "devDependencies": {

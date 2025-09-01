@@ -1,7 +1,7 @@
-import { createClient } from '@/lib/supabase/server'
-import { cookies } from 'next/headers'
-import Link from 'next/link'
-import { PlusIcon, CheckCircleIcon, ClockIcon } from '@heroicons/react/20/solid'
+
+import { createClient } from '@/lib/supabase/server';
+import { cookies } from 'next/headers';
+import { PlusIcon, CheckCircleIcon, ClockIcon } from '@heroicons/react/20/solid';
 
 export default async function ProfilesPage() {
   const supabase = createClient(cookies())

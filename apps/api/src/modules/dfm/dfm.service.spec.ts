@@ -1,33 +1,33 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { DfmService } from './dfm.service';
-import { SupabaseService } from '../../lib/supabase/supabase.service';
-import { CacheService } from '../../lib/cache/cache.service';
-import { Severity } from '@cnc-quote/shared';
+import { Test, TestingModule } from "@nestjs/testing";
+import { DfmService } from "./dfm.service";
+import { SupabaseService } from "../../lib/supabase/supabase.service";
+import { CacheService } from "../../lib/cache/cache.service";
+import { Severity } from "@cnc-quote/shared";
 
-describe('DfmService', () => {
+describe("DfmService", () => {
   let service: DfmService;
   let supabase: SupabaseService;
   let cache: CacheService;
 
   const mockRules = [
     {
-      id: '1',
-      name: 'Min Wall Thickness',
-      description: 'Check if wall thickness is below minimum for material',
-      process_type: 'cnc',
+      id: "1",
+      name: "Min Wall Thickness",
+      description: "Check if wall thickness is below minimum for material",
+      process_type: "cnc",
       severity: Severity.BLOCK,
-      condition: 'min_wall_thickness < 1.0',
-      message: 'Wall thickness must be at least 1mm',
+      condition: "min_wall_thickness < 1.0",
+      message: "Wall thickness must be at least 1mm",
       triggers_manual_review: false,
     },
     {
-      id: '2',
-      name: 'Tool Reach Depth',
-      description: 'Check if features are beyond max tool reach',
-      process_type: 'cnc',
+      id: "2",
+      name: "Tool Reach Depth",
+      description: "Check if features are beyond max tool reach",
+      process_type: "cnc",
       severity: Severity.WARN,
-      condition: 'max_tool_reach_depth > 150',
-      message: 'Feature depth exceeds maximum tool reach of 150mm',
+      condition: "max_tool_reach_depth > 150",
+      message: "Feature depth exceeds maximum tool reach of 150mm",
       triggers_manual_review: true,
     },
   ];
@@ -61,7 +61,7 @@ describe('DfmService', () => {
     cache = module.get<CacheService>(CacheService);
   });
 
-  it('should validate CNC rules correctly', async () => {
+  it("should validate CNC rules correctly", async () => {
     const params = {
       min_wall_thickness: 0.5,
       max_tool_reach_depth: 200,
@@ -77,10 +77,10 @@ describe('DfmService', () => {
     expect(result.manual_review_required).toBeTruthy();
   });
 
-  it('should handle empty rules gracefully', async () => {
-    jest.spyOn(supabase.client, 'from').mockReturnThis();
-    jest.spyOn(supabase.client, 'select').mockReturnThis();
-    jest.spyOn(supabase.client, 'eq').mockResolvedValue({ data: [] });
+  it("should handle empty rules gracefully", async () => {
+    jest.spyOn(supabase.client, "from").mockReturnThis();
+    jest.spyOn(supabase.client, "select").mockReturnThis();
+    jest.spyOn(supabase.client, "eq").mockResolvedValue({ data: [] });
 
     const params = {
       min_wall_thickness: 2.0,
@@ -97,8 +97,8 @@ describe('DfmService', () => {
     expect(result.manual_review_required).toBeFalsy();
   });
 
-  it('should use cached rules when available', async () => {
-    jest.spyOn(cache, 'get').mockResolvedValue(mockRules);
+  it("should use cached rules when available", async () => {
+    jest.spyOn(cache, "get").mockResolvedValue(mockRules);
 
     const params = {
       min_wall_thickness: 0.5,
@@ -110,7 +110,7 @@ describe('DfmService', () => {
 
     await service.validateCnc(params);
 
-    expect(cache.get).toHaveBeenCalledWith('dfm_rules:cnc');
+    expect(cache.get).toHaveBeenCalledWith("dfm_rules:cnc");
     expect(supabase.client.from).not.toHaveBeenCalled();
   });
 });

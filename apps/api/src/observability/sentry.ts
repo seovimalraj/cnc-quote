@@ -1,5 +1,5 @@
-import * as Sentry from '@sentry/node';
-import { Injectable, OnModuleInit } from '@nestjs/common';
+import * as Sentry from "@sentry/node";
+import { Injectable, OnModuleInit } from "@nestjs/common";
 
 @Injectable()
 export class SentryService implements OnModuleInit {
@@ -18,20 +18,16 @@ export class SentryService implements OnModuleInit {
 
   captureException(error: Error, context?: Record<string, any>) {
     return Sentry.captureException(error, {
-      tags: { source: 'api' },
+      tags: { source: "api" },
       extra: context,
     });
   }
 
-  captureMessage(message: string, level: Sentry.SeverityLevel = 'info') {
+  captureMessage(message: string, level: Sentry.SeverityLevel = "info") {
     return Sentry.captureMessage(message, { level });
   }
 
-  startTransaction(context: {
-    name: string;
-    op: string;
-    description?: string;
-  }) {
+  startTransaction(context: { name: string; op: string; description?: string }) {
     return Sentry.startTransaction({
       name: context.name,
       op: context.op,

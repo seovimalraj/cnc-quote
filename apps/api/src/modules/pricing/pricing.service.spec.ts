@@ -1,14 +1,14 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { PricingService } from './pricing.service';
-import { SupabaseService } from '../../lib/supabase/supabase.service';
+import { Test, TestingModule } from "@nestjs/testing";
+import { PricingService } from "./pricing.service";
+import { SupabaseService } from "../../lib/supabase/supabase.service";
 
-describe('PricingService', () => {
+describe("PricingService", () => {
   let service: PricingService;
   let supabase: SupabaseService;
 
   const mockProfile = {
-    id: '123',
-    machine_id: '456',
+    id: "123",
+    machine_id: "456",
     setup_cost: 100,
     machine_rate_per_hour: 150,
     min_order_qty: 1,
@@ -53,11 +53,11 @@ describe('PricingService', () => {
     supabase = module.get<SupabaseService>(SupabaseService);
   });
 
-  it('should calculate CNC price correctly', async () => {
+  it("should calculate CNC price correctly", async () => {
     const request = {
-      process_type: 'milling',
-      machine_id: '456',
-      material_id: '789',
+      process_type: "milling",
+      machine_id: "456",
+      material_id: "789",
       quantity: 1,
       volume_cc: 100,
       surface_area_cm2: 200,
@@ -88,11 +88,11 @@ describe('PricingService', () => {
     );
   });
 
-  it('should calculate sheet metal price correctly', async () => {
+  it("should calculate sheet metal price correctly", async () => {
     const request = {
-      process_type: 'sheet_metal',
-      machine_id: '456',
-      material_id: '789',
+      process_type: "sheet_metal",
+      machine_id: "456",
+      material_id: "789",
       quantity: 1,
       thickness_mm: 2,
       sheet_area_cm2: 500,
@@ -122,11 +122,11 @@ describe('PricingService', () => {
     );
   });
 
-  it('should calculate injection molding price correctly', async () => {
+  it("should calculate injection molding price correctly", async () => {
     const request = {
-      process_type: 'injection_molding',
-      machine_id: '456',
-      material_id: '789',
+      process_type: "injection_molding",
+      machine_id: "456",
+      material_id: "789",
       quantity: 1000,
       volume_cc: 50,
       mold_complexity: 1.5,
@@ -156,11 +156,11 @@ describe('PricingService', () => {
     );
   });
 
-  it('should apply quantity breaks correctly', async () => {
+  it("should apply quantity breaks correctly", async () => {
     const baseRequest = {
-      process_type: 'milling',
-      machine_id: '456',
-      material_id: '789',
+      process_type: "milling",
+      machine_id: "456",
+      material_id: "789",
       volume_cc: 100,
       surface_area_cm2: 200,
       removed_material_cc: 30,
@@ -176,7 +176,7 @@ describe('PricingService', () => {
     // Test different quantities
     const quantities = [1, 10, 50, 100, 500];
     const results = await Promise.all(
-      quantities.map(qty =>
+      quantities.map((qty) =>
         service.calculateCncPrice({
           ...baseRequest,
           quantity: qty,
@@ -185,19 +185,19 @@ describe('PricingService', () => {
     );
 
     // Price per unit should decrease with quantity
-    const unitPrices = results.map(r => r.unit_price);
+    const unitPrices = results.map((r) => r.unit_price);
     for (let i = 1; i < unitPrices.length; i++) {
       expect(unitPrices[i]).toBeLessThan(unitPrices[i - 1]);
     }
   });
 
-  it('should apply minimum order value', async () => {
+  it("should apply minimum order value", async () => {
     const request = {
-      process_type: 'milling',
-      machine_id: '456',
-      material_id: '789',
+      process_type: "milling",
+      machine_id: "456",
+      material_id: "789",
       quantity: 1,
-      volume_cc: 10,  // Small part
+      volume_cc: 10, // Small part
       surface_area_cm2: 20,
       removed_material_cc: 3,
       features: {
@@ -213,11 +213,11 @@ describe('PricingService', () => {
     expect(result.total_price).toBeGreaterThanOrEqual(mockProfile.min_order_value);
   });
 
-  it('should apply rush surcharge correctly', async () => {
+  it("should apply rush surcharge correctly", async () => {
     const baseRequest = {
-      process_type: 'milling',
-      machine_id: '456',
-      material_id: '789',
+      process_type: "milling",
+      machine_id: "456",
+      material_id: "789",
       quantity: 1,
       volume_cc: 100,
       surface_area_cm2: 200,

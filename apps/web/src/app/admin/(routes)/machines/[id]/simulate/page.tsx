@@ -23,13 +23,20 @@ const supabase = createClient();
 
 export default function SimulatePage() {
   const { id: machineId } = useParams();
-  const [machine, setMachine] = useState<any>(null);
-  const [selectedFile, setSelectedFile] = useState<any>(null);
+  interface Machine {
+    id: string;
+    name: string;
+    complexity_settings: unknown;
+    complexity_brackets: Array<unknown>;
+  }
+  
+  const [machine, setMachine] = useState<Machine|null>(null);
+  const [selectedFile, setSelectedFile] = useState<{ id: string; name: string }|null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [metrics, setMetrics] = useState<any>(null);
+  const [metrics, setMetrics] = useState<Record<string, unknown>|null>(null);
   const [priceResponse, setPriceResponse] = useState<PriceResponse | null>(null);
   const [quantity, setQuantity] = useState(1);
-  const [isLoading, setIsLoading] = useState(false);
+  const [_isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     // Load machine details
@@ -47,7 +54,7 @@ export default function SimulatePage() {
     }
   }, [machineId]);
 
-  const handleFileSelect = async (file: any) => {
+  const _handleFileSelect = async (file: { id: string }) => {
     setSelectedFile(file);
     setIsLoading(true);
 
@@ -88,7 +95,7 @@ export default function SimulatePage() {
     }
   };
 
-  const calculatePrice = async (metrics: any) => {
+  const calculatePrice = async (metrics: Record<string, unknown>) => {
     if (!machine || !metrics) return;
 
     const baseRequest = {

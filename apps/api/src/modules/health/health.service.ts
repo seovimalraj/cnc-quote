@@ -1,17 +1,17 @@
-import { Injectable } from '@nestjs/common';
-import { InjectQueue } from '@nestjs/bullmq';
-import { Queue } from 'bullmq';
+import { Injectable } from "@nestjs/common";
+import { InjectQueue } from "@nestjs/bullmq";
+import { Queue } from "bullmq";
 
 // Using require because the package.json is outside the TypeScript source tree
 // eslint-disable-next-line @typescript-eslint/no-var-requires
-const packageJson = require('../../../package.json');
+const packageJson = require("../../../package.json");
 
 @Injectable()
 export class HealthService {
   constructor(
-    @InjectQueue('cad') private readonly cadQueue: Queue,
-    @InjectQueue('pricing') private readonly pricingQueue: Queue,
-    @InjectQueue('email') private readonly emailQueue: Queue,
+    @InjectQueue("cad") private readonly cadQueue: Queue,
+    @InjectQueue("pricing") private readonly pricingQueue: Queue,
+    @InjectQueue("email") private readonly emailQueue: Queue,
   ) {}
 
   async check() {
@@ -23,7 +23,7 @@ export class HealthService {
 
     return {
       ok: true,
-      service: 'api',
+      service: "api",
       version: packageJson.version,
       timestamp: new Date().toISOString(),
       details: {
@@ -31,8 +31,8 @@ export class HealthService {
           cad: cadCount,
           pricing: pricingCount,
           email: emailCount,
-        }
-      }
+        },
+      },
     };
   }
 }

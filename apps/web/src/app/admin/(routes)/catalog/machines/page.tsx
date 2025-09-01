@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { cookies } from 'next/headers'
-import { Machine } from '@cnc-quote/shared'
+import type { Machine as _Machine } from '@cnc-quote/shared';
 
 export default async function MachinesPage() {
   const supabase = createClient(cookies())

@@ -1,11 +1,11 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, type ChangeEvent } from 'react';
 import { useParams } from 'next/navigation';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
-import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
-import { Trash2, GripVertical, Save } from 'lucide-react';
+import { DragDropContext, Droppable, Draggable, type DroppableProvided, type DraggableProvided, type DropResult } from '@hello-pangea/dnd';
+import { Trash2, GripVertical } from 'lucide-react';
 import * as z from 'zod';
 
 import { createClient } from '@/lib/supabase/client';
@@ -40,7 +40,7 @@ const bracketSchema = z.object({
 
 export default function ComplexityPage() {
   const { id: machineId } = useParams();
-  const [settings, setSettings] = useState<z.infer<typeof settingsSchema>>();
+  const [settings, setSettings] = useState<z.infer<typeof settingsSchema> | null>(null);
   const [brackets, setBrackets] = useState<z.infer<typeof bracketSchema>[]>([]);
   
   // Simulator state
@@ -54,11 +54,9 @@ export default function ComplexityPage() {
     defaultValues: settings
   });
 
-  useEffect(() => {
-    loadData();
-  }, [machineId]);
+  const loadData = useCallback(async () => {
+    if (!machineId) return;
 
-  async function loadData() {
     const { data: settingsData } = await supabase
       .from('complexity_settings')
       .select('*')
@@ -78,7 +76,11 @@ export default function ComplexityPage() {
     if (bracketsData) {
       setBrackets(bracketsData);
     }
-  }
+  }, [machineId]);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
   const onSaveSettings = async (data: z.infer<typeof settingsSchema>) => {
     const { error } = await supabase
@@ -102,7 +104,7 @@ export default function ComplexityPage() {
     }
   };
 
-  const onDragEnd = async (result: any) => {
+  const onDragEnd = async (result: DropResult) => {
     if (!result.destination) return;
 
     const items = Array.from(brackets);
@@ -239,7 +241,7 @@ export default function ComplexityPage() {
                 <Select 
                   {...register('formula')}
                   value={settings?.formula}
-                  onValueChange={(value: any) => setSettings(s => ({...s!, formula: value}))}
+                  onValueChange={(value: z.infer<typeof settingsSchema>['formula']) => setSettings(s => ({...s!, formula: value}))}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select formula type" />
@@ -281,7 +283,7 @@ export default function ComplexityPage() {
                 <Input
                   type="number"
                   value={volume}
-                  onChange={e => setVolume(parseFloat(e.target.value) || 0)}
+                  onChange={(e: ChangeEvent<HTMLInputElement>) => setVolume(parseFloat(e.target.value) || 0)}
                 />
               </div>
 
@@ -290,7 +292,7 @@ export default function ComplexityPage() {
                 <Input
                   type="number"
                   value={surfaceArea}
-                  onChange={e => setSurfaceArea(parseFloat(e.target.value) || 0)}
+                  onChange={(e: ChangeEvent<HTMLInputElement>) => setSurfaceArea(parseFloat(e.target.value) || 0)}
                 />
               </div>
 
@@ -299,7 +301,7 @@ export default function ComplexityPage() {
                 <Input
                   type="number"
                   value={features}
-                  onChange={e => setFeatures(parseInt(e.target.value) || 0)}
+                  onChange={(e: ChangeEvent<HTMLInputElement>) => setFeatures(parseInt(e.target.value) || 0)}
                 />
               </div>
 
@@ -324,18 +326,18 @@ export default function ComplexityPage() {
         <CardContent>
           <DragDropContext onDragEnd={onDragEnd}>
             <Droppable droppableId="brackets">
-              {(provided) => (
-                <div {...provided.droppableProps} ref={provided.innerRef}>
+              {(droppableProvided: DroppableProvided) => (
+                <div {...droppableProvided.droppableProps} ref={droppableProvided.innerRef}>
                   {brackets.map((bracket, index) => (
                     <Draggable 
                       key={bracket.id} 
                       draggableId={bracket.id!} 
                       index={index}
                     >
-                      {(provided) => (
+                      {(draggableProvided: DraggableProvided) => (
                         <div
-                          ref={provided.innerRef}
-                          {...provided.draggableProps}
+                          ref={draggableProvided.innerRef}
+                          {...draggableProvided.draggableProps}
                           className="flex items-center gap-4 p-4 mb-2 bg-secondary/50 rounded-lg"
                         >
                           <div {...provided.dragHandleProps}>
@@ -346,7 +348,7 @@ export default function ComplexityPage() {
                             <Input
                               placeholder="Name"
                               value={bracket.name}
-                              onChange={e => updateBracket(bracket.id!, { name: e.target.value })}
+                              onChange={(e: ChangeEvent<HTMLInputElement>) => updateBracket(bracket.id!, { name: e.target.value })}
                               className="col-span-2"
                             />
                             <Input
@@ -354,21 +356,21 @@ export default function ComplexityPage() {
                               step="0.1"
                               placeholder="Min Value"
                               value={bracket.min_value}
-                              onChange={e => updateBracket(bracket.id!, { min_value: parseFloat(e.target.value) })}
+                              onChange={(e: ChangeEvent<HTMLInputElement>) => updateBracket(bracket.id!, { min_value: parseFloat(e.target.value) })}
                             />
                             <Input
                               type="number"
                               step="0.1"
                               placeholder="Max Value"
                               value={bracket.max_value || ''}
-                              onChange={e => updateBracket(bracket.id!, { max_value: e.target.value ? parseFloat(e.target.value) : null })}
+                              onChange={(e: ChangeEvent<HTMLInputElement>) => updateBracket(bracket.id!, { max_value: e.target.value ? parseFloat(e.target.value) : null })}
                             />
                             <Input
                               type="number"
                               step="0.1"
                               placeholder="Multiplier"
                               value={bracket.multiplier}
-                              onChange={e => updateBracket(bracket.id!, { multiplier: parseFloat(e.target.value) })}
+                              onChange={(e: ChangeEvent<HTMLInputElement>) => updateBracket(bracket.id!, { multiplier: parseFloat(e.target.value) })}
                             />
                             <Button
                               variant="destructive"

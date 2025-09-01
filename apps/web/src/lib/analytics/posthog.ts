@@ -1,4 +1,5 @@
 import posthog from 'posthog-js';
+import type { AnalyticsProperties } from '@/types/analytics';
 
 export function initAnalytics() {
   // Only initialize in production
@@ -14,19 +15,19 @@ export function initAnalytics() {
   }
 }
 
-export function trackEvent(event: string, properties?: Record<string, any>) {
+export function trackEvent(event: string, properties?: AnalyticsProperties) {
   if (process.env.NODE_ENV === 'production') {
     posthog.capture(event, properties);
   }
 }
 
-export function setUserProperties(properties: Record<string, any>) {
+export function setUserProperties(properties: AnalyticsProperties) {
   if (process.env.NODE_ENV === 'production') {
     posthog.people.set(properties);
   }
 }
 
-export function identifyUser(userId: string, properties?: Record<string, any>) {
+export function identifyUser(userId: string, properties?: AnalyticsProperties) {
   if (process.env.NODE_ENV === 'production') {
     posthog.identify(userId, properties);
   }
@@ -41,7 +42,7 @@ export function startQuoteSession() {
   return '';
 }
 
-export function trackStep(step: string, properties?: Record<string, any>) {
+export function trackStep(step: string, properties?: AnalyticsProperties) {
   trackEvent('quote_step', {
     step,
     ...properties,

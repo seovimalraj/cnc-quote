@@ -22,12 +22,14 @@ export default function QAPTemplatesList(): ReactElement {
     const fetchTemplates = async () => {
       try {
         const response = await fetch('/api/qap-templates')
-        if (response.ok) {
-          const data = await response.json()
-          setTemplates(data)
+        if (!response.ok) {
+          throw new Error('Failed to fetch templates')
         }
+        const data = await response.json()
+        setTemplates(data)
       } catch (error) {
-        console.error('Error fetching templates:', error)
+        // Handle error appropriately (could show a toast notification, error state, etc.)
+        setTemplates([])
       }
     }
 

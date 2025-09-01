@@ -1,7 +1,7 @@
-import { Injectable } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import { createClient } from '@supabase/supabase-js';
-import { Machine, MachineLimit, MachineSpec } from '@cnc-quote/shared';
+import { Injectable } from "@nestjs/common";
+import { ConfigService } from "@nestjs/config";
+import { createClient } from "@supabase/supabase-js";
+import { Machine, MachineLimit, MachineSpec } from "@cnc-quote/shared";
 
 @Injectable()
 export class MachineService {
@@ -9,15 +9,13 @@ export class MachineService {
 
   constructor(private readonly config: ConfigService) {
     this.supabase = createClient(
-      this.config.getOrThrow('SUPABASE_URL'),
-      this.config.getOrThrow('SUPABASE_SERVICE_KEY'),
+      this.config.getOrThrow("SUPABASE_URL"),
+      this.config.getOrThrow("SUPABASE_SERVICE_KEY"),
     );
   }
 
   async findAll() {
-    const { data, error } = await this.supabase
-      .from('machines')
-      .select(`
+    const { data, error } = await this.supabase.from("machines").select(`
         *,
         machine_specs(*),
         machine_limits(*)
@@ -32,13 +30,15 @@ export class MachineService {
 
   async findOne(id: string) {
     const { data, error } = await this.supabase
-      .from('machines')
-      .select(`
+      .from("machines")
+      .select(
+        `
         *,
         machine_specs(*),
         machine_limits(*)
-      `)
-      .eq('id', id)
+      `,
+      )
+      .eq("id", id)
       .single();
 
     if (error) {

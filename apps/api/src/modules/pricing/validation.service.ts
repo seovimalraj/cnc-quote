@@ -1,11 +1,11 @@
-import { Injectable } from '@nestjs/common';
-import { CncPriceRequest, SheetMetalPriceRequest, InjectionMoldingPriceRequest } from '@cnc-quote/shared';
-import { z } from 'zod';
+import { Injectable } from "@nestjs/common";
+import { CncPriceRequest, SheetMetalPriceRequest, InjectionMoldingPriceRequest } from "@cnc-quote/shared";
+import { z } from "zod";
 
 @Injectable()
 export class ValidationService {
   private cncSchema = z.object({
-    process_type: z.enum(['milling', 'turning']),
+    process_type: z.enum(["milling", "turning"]),
     machine_id: z.string().uuid(),
     material_id: z.string().uuid(),
     quantity: z.number().int().positive(),
@@ -24,7 +24,7 @@ export class ValidationService {
   });
 
   private sheetMetalSchema = z.object({
-    process_type: z.enum(['laser', 'punch', 'waterjet']),
+    process_type: z.enum(["laser", "punch", "waterjet"]),
     machine_id: z.string().uuid(),
     material_id: z.string().uuid(),
     quantity: z.number().int().positive(),
@@ -38,7 +38,7 @@ export class ValidationService {
   });
 
   private injectionMoldingSchema = z.object({
-    process_type: z.literal('injection_molding'),
+    process_type: z.literal("injection_molding"),
     machine_id: z.string().uuid(),
     material_id: z.string().uuid(),
     quantity: z.number().int().min(100), // Minimum order quantity for IM

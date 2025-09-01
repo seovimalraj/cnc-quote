@@ -1,8 +1,8 @@
-import { Injectable, Logger } from '@nestjs/common';
-import { SupabaseService } from '../../lib/supabase/supabase.service';
-import { PdfService } from '../pdf/pdf.service';
-import { Resend } from 'resend';
-import { CreateQuoteDto, UpdateQuoteDto } from './quotes.dto';
+import { Injectable, Logger } from "@nestjs/common";
+import { SupabaseService } from "../../lib/supabase/supabase.service";
+import { PdfService } from "../pdf/pdf.service";
+import { Resend } from "resend";
+import { CreateQuoteDto, UpdateQuoteDto } from "./quotes.dto";
 
 @Injectable()
 export class QuotesService {
@@ -18,13 +18,13 @@ export class QuotesService {
 
   async createQuote(data: CreateQuoteDto) {
     const { data: quote, error } = await this.supabase.client
-      .from('quotes')
+      .from("quotes")
       .insert({
         ...data,
-        status: 'draft',
+        status: "draft",
         expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
       })
-      .select('*')
+      .select("*")
       .single();
 
     if (error) throw error;
@@ -33,12 +33,14 @@ export class QuotesService {
 
   async getQuote(id: string) {
     const { data: quote, error } = await this.supabase.client
-      .from('quotes')
-      .select(`
+      .from("quotes")
+      .select(
+        `
         *,
         items:quote_items(*)
-      `)
-      .eq('id', id)
+      `,
+      )
+      .eq("id", id)
       .single();
 
     if (error) throw error;
@@ -47,9 +49,9 @@ export class QuotesService {
 
   async updateQuote(id: string, data: UpdateQuoteDto) {
     const { data: quote, error } = await this.supabase.client
-      .from('quotes')
+      .from("quotes")
       .update(data)
-      .eq('id', id)
+      .eq("id", id)
       .select()
       .single();
 
@@ -59,35 +61,23 @@ export class QuotesService {
 
   async generatePdf(id: string): Promise<Buffer> {
     const quote = await this.getQuote(id);
-    
+
     // Get org details
-    const { data: org } = await this.supabase.client
-      .from('organizations')
-      .select('*')
-      .eq('id', quote.org_id)
-      .single();
+    const { data: org } = await this.supabase.client.from("organizations").select("*").eq("id", quote.org_id).single();
 
     // Get customer details
     const { data: customer } = await this.supabase.client
-      .from('customers')
-      .select('*')
-      .eq('id', quote.customer_id)
+      .from("customers")
+      .select("*")
+      .eq("id", quote.customer_id)
       .single();
 
     // Format items
     const items = await Promise.all(
       quote.items.map(async (item) => {
         const [{ data: material }, { data: file }] = await Promise.all([
-          this.supabase.client
-            .from('materials')
-            .select('*')
-            .eq('id', item.material_id)
-            .single(),
-          this.supabase.client
-            .from('files')
-            .select('*')
-            .eq('id', item.file_id)
-            .single(),
+          this.supabase.client.from("materials").select("*").eq("id", item.material_id).single(),
+          this.supabase.client.from("files").select("*").eq("id", item.file_id).single(),
         ]);
 
         return {
@@ -96,7 +86,7 @@ export class QuotesService {
           material: material.name,
           finishes: [], // TODO: Get finish names
         };
-      })
+      }),
     );
 
     return this.pdfService.generateQuotePdf({
@@ -131,7 +121,7 @@ export class QuotesService {
 
     // Send email
     await this.resend.emails.send({
-      from: 'quotes@yourcompany.com',
+      from: "quotes@yourcompany.com",
       to: email,
       subject: `Quote Q-${id.slice(0, 8)}`,
       html: `
@@ -152,13 +142,13 @@ export class QuotesService {
 
     // Update quote status
     await this.updateQuote(id, {
-      status: 'sent',
+      status: "sent",
       email_sent_at: new Date(),
     });
   }
 
   private async generateAcceptToken(quoteId: string): Promise<string> {
     // TODO: Implement secure token generation
-    return Buffer.from(`${quoteId}-${Date.now()}`).toString('base64');
+    return Buffer.from(`${quoteId}-${Date.now()}`).toString("base64");
   }
 }

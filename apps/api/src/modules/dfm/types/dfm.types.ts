@@ -1,9 +1,9 @@
 export interface ProcessType {
-  type: 'milling' | 'turning' | 'laser_cutting' | 'press_brake' | 'injection';
+  type: "milling" | "turning" | "laser_cutting" | "press_brake" | "injection";
 }
 
 export interface CncDfmParams {
-  processType: 'milling' | 'turning';
+  processType: "milling" | "turning";
   volume_cc: number;
   surface_area_cm2: number;
   min_wall_thickness: number;
@@ -18,7 +18,7 @@ export interface CncDfmParams {
 }
 
 export interface SheetMetalDfmParams {
-  processType: 'laser_cutting' | 'press_brake';
+  processType: "laser_cutting" | "press_brake";
   thickness_mm: number;
   min_bend_radius: number;
   min_hole_diameter: number;
@@ -32,7 +32,7 @@ export interface SheetMetalDfmParams {
 }
 
 export interface InjectionMoldingDfmParams {
-  processType: 'injection';
+  processType: "injection";
   part_volume_cc: number;
   shot_weight_g: number;
   cycle_time_s: number;

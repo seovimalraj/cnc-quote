@@ -1,6 +1,8 @@
 import { useQuoteEta } from '@/lib/hooks/use-quote-eta';
 
-export function QuoteEtaBadge({ quote }: { quote: any }) {
+import type { Quote } from '@/types/quote';
+
+export function QuoteEtaBadge({ quote }: { quote: Quote }) {
   const eta = useQuoteEta(quote);
   
   if (!eta) return null;

@@ -1,4 +1,4 @@
-import { FC } from 'react'
+// import type { ReactNode } from 'react';
 import { Card } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
@@ -8,7 +8,7 @@ import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 export default function EmbedWidgetPage() {
   const supabase = createClientComponentClient()
   
-  const generateEmbedCode = async (origin: string, themeColor: string) => {
+  const _generateEmbedCode = async (origin: string, themeColor: string) => {
     // Add origin to allowed list
     await supabase
       .from('widget_origins')

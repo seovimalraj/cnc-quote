@@ -9,6 +9,7 @@ import { MetricsPanel } from '@/components/viewer/MetricsPanel';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Loader2 } from 'lucide-react';
+import type { FileMetrics } from '@/types/file-metrics';
 
 const supabase = createClient();
 
@@ -20,7 +21,7 @@ export default function UploadsPage() {
     status: string;
   } | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [metrics, setMetrics] = useState<any>(null);
+  const [metrics, setMetrics] = useState<FileMetrics | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [organizationId, setOrganizationId] = useState<string | null>(null);
 
@@ -163,3 +164,4 @@ export default function UploadsPage() {
       )}
     </div>
   );
+}

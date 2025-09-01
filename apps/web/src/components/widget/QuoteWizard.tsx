@@ -1,10 +1,8 @@
-import { FC, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import { Dropzone } from '@/components/upload/Dropzone'
 import { MaterialSelector } from '@/components/widget/MaterialSelector'
 import { FinishSelector } from '@/components/widget/FinishSelector'
@@ -15,16 +13,16 @@ import { useQuote } from '@/lib/hooks/use-quote'
 
 interface Props {
   clientOrigin: string
-  theme: string
+  theme?: string
 }
 
-export const QuoteWizard: FC<Props> = ({ clientOrigin, theme }) => {
+export const QuoteWizard = ({ clientOrigin, theme: _theme }: Props) => {
   const router = useRouter()
   const [step, setStep] = useState(0)
   const { quote, updateQuote, calculatePrice } = useQuote()
   
   // Post messages to parent window
-  const postToParent = (type: string, data: any) => {
+  const postToParent = (type: string, data: unknown) => {
     if (window.parent !== window) {
       window.parent.postMessage({
         type,

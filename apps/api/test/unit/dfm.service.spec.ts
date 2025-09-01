@@ -1,12 +1,12 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { DfmService } from '../src/modules/dfm/dfm.service';
-import { PricingService } from '../src/modules/pricing/pricing.service';
-import { SupabaseService } from '../src/lib/supabase/supabase.service';
+import { DfmService } from "../../src/modules/dfm/dfm.service";
+import { PricingService } from "../../src/modules/pricing/pricing.service";
+import { SupabaseService } from "../../src/lib/supabase/supabase.service";
 
 describe('DfmService', () => {
   let service: DfmService;
-  let pricingService: PricingService;
-  let supabaseService: SupabaseService;
+  let _pricingService: PricingService;
+  let _supabaseService: SupabaseService;
 
   const mockSupabaseService = {
     client: {
@@ -38,8 +38,8 @@ describe('DfmService', () => {
     }).compile();
 
     service = module.get<DfmService>(DfmService);
-    pricingService = module.get<PricingService>(PricingService);
-    supabaseService = module.get<SupabaseService>(SupabaseService);
+    _pricingService = module.get<PricingService>(PricingService);
+    _supabaseService = module.get<SupabaseService>(SupabaseService);
   });
 
   it('should be defined', () => {

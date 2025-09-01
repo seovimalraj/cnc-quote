@@ -7,10 +7,11 @@ import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { toast } from '@/components/ui/use-toast';
+import type { FileUpload, UploadError } from '@/types/upload';
 
 const supabase = createClient();
 
-const ALLOWED_TYPES = [
+const _ALLOWED_TYPES = [
   'model/step',          // STEP files
   'model/x.stl-binary', // Binary STL
   'model/stl',          // ASCII STL
@@ -34,9 +35,10 @@ interface UploadState {
 }
 
 export function Dropzone({ organizationId, onUploadComplete }: FileUploadProps) {
-  const [uploads, setUploads] = useState<UploadState[]>([]);
+  const [uploads, setUploads] = useState<FileUpload[]>([]);
 
   const onDrop = useCallback(async (acceptedFiles: File[]) => {
+    const _storagePath = `uploads/${organizationId}`;
     for (const file of acceptedFiles) {
       // Initialize upload state
       const upload: UploadState = {
@@ -60,7 +62,7 @@ export function Dropzone({ organizationId, onUploadComplete }: FileUploadProps) 
 
         if (fileError) throw new Error(fileError.message);
 
-        const { id: fileId, uploadUrl, storagePath } = fileData;
+        const { id: fileId, uploadUrl, storagePath: _storagePath } = fileData;
 
         // Update state with file ID
         setUploads(prev => {
@@ -148,25 +150,26 @@ export function Dropzone({ organizationId, onUploadComplete }: FileUploadProps) 
           }
         }, 2000);
 
-      } catch (error: any) {
+      } catch (error) {
+        const err = error as UploadError;
         setUploads(prev => {
           const newUploads = [...prev];
           newUploads[uploadIndex] = {
             ...newUploads[uploadIndex],
             status: 'error',
-            error: error.message
+            error: err.message
           };
           return newUploads;
         });
 
         toast({
           title: 'Upload failed',
-          description: error.message,
+          description: err.message,
           variant: 'destructive'
         });
       }
     }
-  }, [organizationId, onUploadComplete]);
+  }, [organizationId, onUploadComplete, uploads.length]);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
