@@ -8,9 +8,10 @@ services:
     repo: https://github.com/seovimalraj/cnc-quote
     plan: free
     region: oregon
-    buildCommand: npm install -g pnpm@8 && pnpm install --no-frozen-lockfile && pnpm run build
+    buildCommand: npm install -g pnpm@8 && pnpm install --no-frozen-lockfile && pnpm build
     startCommand: cd apps/api && NODE_ENV=production pnpm start
     healthCheckPath: /health
+    autoDeployTrigger: commit
     envVars:
       - key: NODE_ENV
         value: production
@@ -21,6 +22,47 @@ services:
       - key: SUPABASE_ANON_KEY
         sync: false
       - key: SUPABASE_SERVICE_KEY
+        sync: false
+
+  # CAD Service (Python/FastAPI)
+  - type: web
+    name: cnc-quote-cad
+    env: docker
+    repo: https://github.com/seovimalraj/cnc-quote
+    dockerfilePath: ./apps/cad-service/Dockerfile
+    region: oregon
+    plan: free
+    healthCheckPath: /health
+    autoDeployTrigger: commit
+    envVars:
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_ANON_KEY
+        sync: false
+      - key: PORT
+        value: "10000"
+
+  # Web Frontend (Next.js)
+  - type: web
+    name: cnc-quote-web
+    env: node
+    repo: https://github.com/seovimalraj/cnc-quote
+    plan: free
+    region: oregon
+    buildCommand: npm install -g pnpm@8 && pnpm install --no-frozen-lockfile && cd apps/web && pnpm build
+    startCommand: cd apps/web && NODE_ENV=production pnpm start
+    healthCheckPath: /api/health
+    autoDeployTrigger: commit
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NODE_VERSION
+        value: "18"
+      - key: NEXT_PUBLIC_SUPABASE_URL
+        sync: false
+      - key: NEXT_PUBLIC_SUPABASE_ANON_KEY
+        sync: false
+      - key: NEXT_PUBLIC_API_URL
         sync: false
 
   # CAD Service (Python/FastAPI)
