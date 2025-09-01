@@ -1,24 +1,18 @@
-# Render configuration for CNC Quote Platform
+# Combined Render configuration for CNC Quote Platform
 version: "1"
 services:
-  # API Service (NestJS)
   - type: web
-    name: cnc-quote-api
+    name: cnc-quote
     env: node
     repo: https://github.com/seovimalraj/cnc-quote
-    plan: free
+    plan: standard
     region: oregon
     buildCommand: |
-      export PATH="/opt/render/project/src/node_modules/.bin:$PATH" &&
-      npm install -g pnpm@8 &&
-      pnpm install --no-frozen-lockfile &&
-      cd packages/shared &&
-      pnpm add -D tsup@7.2.0 &&
-      pnpm build &&
-      cd ../../apps/api &&
-      pnpm add -D @nestjs/cli @types/node typescript &&
-      pnpm build
-    startCommand: cd apps/api && pnpm start
+      npm install -g pnpm@8
+      pnpm install --no-frozen-lockfile
+      cd packages/shared && pnpm build
+      cd ../.. && pnpm build
+    startCommand: node apps/api/dist/main.js
     healthCheckPath: /api/health
     autoDeployTrigger: commit
     envVars:
@@ -26,6 +20,8 @@ services:
         value: production
       - key: NODE_VERSION
         value: "18.18.0"
+      - key: PNPM_VERSION
+        value: "8.9.0"
       - key: SUPABASE_URL
         sync: false
       - key: SUPABASE_ANON_KEY

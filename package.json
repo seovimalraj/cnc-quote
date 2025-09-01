@@ -4,19 +4,13 @@
   "private": true,
   "scripts": {
     "build": "turbo run build",
+    "start": "node apps/api/dist/main.js",
     "dev": "turbo run dev",
     "lint": "turbo run lint",
     "clean": "turbo run clean",
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
-    "start": "turbo run start",
-    "doctor": "ts-node scripts/doctor.ts",
-    "check-rls": "ts-node scripts/check-rls.ts",
-    "check-pricing": "ts-node scripts/check-pricing.ts",
-    "check-cad": "ts-node scripts/upload-and-analyze.ts",
-    "check-embed": "ts-node scripts/embed-check.ts",
-    "check-payment": "ts-node scripts/checkout-sim.ts",
-    "check-slos": "ts-node scripts/measure-slos.ts",
-    "check-observability": "ts-node scripts/emit-test-error.ts"
+    "test": "turbo run test",
+    "deploy": "turbo run build && pnpm start"
   },
   "dependencies": {
     "@nestjs/axios": "^4.0.1",
