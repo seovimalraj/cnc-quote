@@ -2,13 +2,42 @@ import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import helmet from 'helmet';
+import * as bodyParser from 'body-parser';
+import * as timeout from 'connect-timeout';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  
+  // Configure request size limits
+  app.use(bodyParser.json({ limit: '10mb' }));
+  app.use(bodyParser.urlencoded({ limit: '10mb', extended: true }));
+  
+  // Configure timeout middleware
+  app.use(timeout('30s'));
+  app.use((req, res, next) => {
+    if (!req.timedout) next();
+  });
 
   // Security headers
-  app.use(helmet());
+  app.use(
+    helmet({
+      contentSecurityPolicy: {
+        directives: {
+          defaultSrc: ["'self'"],
+          scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
+          styleSrc: ["'self'", "'unsafe-inline'"],
+          imgSrc: ["'self'", "data:", "https:"],
+          connectSrc: ["'self'", "https://cnc-quote-api.onrender.com", "https://cnc-quote-cad.onrender.com"],
+          frameSrc: ["'none'"],
+          objectSrc: ["'none'"],
+        },
+      },
+      crossOriginEmbedderPolicy: { policy: "require-corp" },
+      crossOriginOpenerPolicy: { policy: "same-origin" },
+      crossOriginResourcePolicy: { policy: "same-site" },
+    })
+  );
 
   // Enable CORS with Render.com domains
   app.enableCors({
