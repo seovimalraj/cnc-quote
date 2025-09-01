@@ -1,4 +1,4 @@
-import { QapTemplate, QapDocument, QapDocumentStatus } from '@cnc-quote/shared';
+import { QapTemplate } from "./qap.types";
 
 export interface QapInput {
   orgId: string;

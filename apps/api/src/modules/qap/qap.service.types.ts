@@ -7,17 +7,24 @@ export interface QapDocumentInput {
   documentData: QapDocumentData;
 }
 
-export interface QapDocumentData {
+export interface QapDocumentData extends Record<string, unknown> {
   part: {
     name: string;
     material: string;
     quantity: number;
   };
-  measurements: QapMeasurement[];
+  measurements: Array<{
+    id: string;
+    name: string;
+    nominal: number;
+    tolerance: number;
+    actual?: number;
+    result?: string;
+  }>;
   inspection: {
     inspector: string;
     date: string;
-    result: 'PENDING' | 'PASS' | 'FAIL';
+    result: string;
   };
 }
 
@@ -29,7 +36,7 @@ export interface QapMeasurement {
     lower: number;
   };
   actual?: number;
-  result?: 'PASS' | 'FAIL';
+  result?: "PASS" | "FAIL";
 }
 
 export interface QapValidationResult {

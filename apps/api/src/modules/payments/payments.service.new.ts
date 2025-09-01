@@ -5,6 +5,7 @@ import { NotifyService } from "../notify/notify.service";
 import * as paypal from "@paypal/checkout-server-sdk";
 import { OrderDetails, PaymentProvider, PaymentSessionResult } from "./payments.types";
 import { PaymentProviderError, QuoteNotFoundError } from "./payments.errors";
+import { Quote } from "./payments.types.quotes";
 
 @Injectable()
 export class PaymentsService {
@@ -99,7 +100,7 @@ export class PaymentsService {
     });
   }
 
-  private async createStripeCheckoutSession(quote: any): Promise<PaymentSessionResult> {
+  private async createStripeCheckoutSession(quote: Quote): Promise<PaymentSessionResult> {
     const lineItems = quote.items.map((item) => ({
       price_data: {
         currency: quote.currency.toLowerCase(),
@@ -131,7 +132,7 @@ export class PaymentsService {
     };
   }
 
-  private async createPayPalCheckoutSession(quote: any): Promise<PaymentSessionResult> {
+  private async createPayPalCheckoutSession(quote: Quote): Promise<PaymentSessionResult> {
     const request = new paypal.orders.OrdersCreateRequest();
     request.prefer("return=representation");
     request.requestBody({

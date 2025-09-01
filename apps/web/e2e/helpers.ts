@@ -1,5 +1,6 @@
-import { test as base, expect } from '@playwright/test';
-import { createClient } from '@supabase/supabase-js';
+/* eslint-disable react-hooks/rules-of-hooks */
+import { test as base, Page } from '@playwright/test';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
 export interface TestUser {
   email: string;
@@ -12,10 +13,10 @@ export interface TestUser {
 export const test = base.extend<{
   adminUser: TestUser;
   portalUser: TestUser;
-  supabase: ReturnType<typeof createClient>;
+  supabase: SupabaseClient;
 }>({
   // Provide admin user
-  adminUser: async ({}, use) => {
+  adminUser: async ({}, use: (user: TestUser) => Promise<void>) => {
     const user = {
       email: process.env.ADMIN_EMAIL || 'admin@example.com',
       password: process.env.ADMIN_PASSWORD || 'admin123',
@@ -42,7 +43,7 @@ export const test = base.extend<{
   },
 
   // Provide portal user
-  portalUser: async ({}, use) => {
+  portalUser: async ({}, use: (user: TestUser) => Promise<void>) => {
     const user = {
       email: process.env.PORTAL_EMAIL || 'user@example.com',
       password: process.env.PORTAL_PASSWORD || 'user123',
@@ -68,7 +69,7 @@ export const test = base.extend<{
   },
 
   // Provide Supabase client
-  supabase: async ({}, use) => {
+  supabase: async ({}, use: (client: SupabaseClient) => Promise<void>) => {
     const supabase = createClient(
       process.env.SUPABASE_URL!,
       process.env.SUPABASE_ANON_KEY!
@@ -78,7 +79,7 @@ export const test = base.extend<{
 });
 
 // Helpers for file uploads
-export const uploadFile = async (page: any, selector: string, filePath: string) => {
+export const uploadFile = async (page: Page, selector: string, filePath: string) => {
   const [fileChooser] = await Promise.all([
     page.waitForEvent('filechooser'),
     page.click(selector)
@@ -87,7 +88,7 @@ export const uploadFile = async (page: any, selector: string, filePath: string) 
 };
 
 // Helper to wait for quote status
-export const waitForQuoteStatus = async (supabase: any, quoteId: string, status: string, timeoutMs = 30000) => {
+export const waitForQuoteStatus = async (supabase: SupabaseClient, quoteId: string, status: string, timeoutMs = 30000) => {
   const startTime = Date.now();
   while (Date.now() - startTime < timeoutMs) {
     const { data: quote } = await supabase

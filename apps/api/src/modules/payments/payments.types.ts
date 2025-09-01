@@ -13,6 +13,13 @@ export interface PaymentSessionResult {
   metadata?: Record<string, unknown>;
 }
 
+export interface OrderItem {
+  id: string;
+  quantity: number;
+  unit_price: number;
+  total_price: number;
+}
+
 export interface OrderDetails {
   id: string;
   org_id: string;
@@ -22,12 +29,11 @@ export interface OrderDetails {
   total_amount: number;
   currency: string;
   created_by: string;
-  items: Array<{
-    id: string;
-    quantity: number;
-    unit_price: number;
-    total_price: number;
-  }>;
+  items: OrderItem[];
+  customer?: {
+    email: string;
+    name: string;
+  };
 }
 
 export interface PaymentWebhookResult {

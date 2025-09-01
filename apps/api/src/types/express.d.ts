@@ -1,10 +1,11 @@
-import { RequestUser } from "../../auth/jwt.strategy";
+import { RequestUser } from "../auth/jwt.strategy";
+import { LoggerService } from "../observability/logger.types";
 
 declare global {
   namespace Express {
     interface Request {
       user?: RequestUser;
-      logger?: any; // TODO: Add proper logger type
+      logger?: LoggerService;
       requestId?: string;
     }
   }

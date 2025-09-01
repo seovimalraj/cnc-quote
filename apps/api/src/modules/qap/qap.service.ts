@@ -4,8 +4,18 @@ import { InjectQueue } from "@nestjs/bull";
 import { Queue } from "bull";
 import * as puppeteer from "puppeteer";
 import { QapTemplate, QapDocument, QapDocumentStatus, qapTemplateSchema, qapDocumentSchema } from "./qap.types";
-import { QapInput, QapContext, QapGenerateOptions } from "./qap.input";
-import { QapDocumentInput, QapDocumentData, QapValidationResult, QapPdfOptions } from "./qap.service.types";
+import { QapTemplateSchema } from "./qap.types.schema";
+import {
+  QapInput as _QapInput,
+  QapContext as _QapContext,
+  QapGenerateOptions as _QapGenerateOptions,
+} from "./qap.input";
+import {
+  QapDocumentInput,
+  QapDocumentData,
+  QapValidationResult as _QapValidationResult,
+  QapPdfOptions as _QapPdfOptions,
+} from "./qap.service.types";
 import {
   QapTemplateNotFoundException,
   QapDocumentNotFoundException,
@@ -71,7 +81,7 @@ export class QapService {
       name?: string;
       description?: string;
       templateHtml?: string;
-      schemaJson?: Record<string, any>;
+      schemaJson?: QapTemplateSchema;
       processType?: string;
       userId: string;
     },
@@ -289,7 +299,7 @@ export class QapService {
         return Object.keys(obj).reduce((acc: Record<string, unknown>, k: string) => {
           const pre = prefix.length ? prefix + "." : "";
           if (typeof obj[k] === "object" && obj[k] !== null && !Array.isArray(obj[k])) {
-            Object.assign(acc, flattenObject(obj[k], pre + k));
+            Object.assign(acc, flattenObject(obj[k] as Record<string, unknown>, pre + k));
           } else {
             acc[pre + k] = obj[k];
           }

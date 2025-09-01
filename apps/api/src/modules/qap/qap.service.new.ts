@@ -4,6 +4,7 @@ import { InjectQueue } from "@nestjs/bull";
 import { Queue } from "bull";
 import * as puppeteer from "puppeteer";
 import { QapTemplate, QapDocument, QapDocumentStatus, qapTemplateSchema, qapDocumentSchema } from "./qap.types";
+import { QapTemplateSchema, QapDocumentData } from "./qap.types.schema";
 import {
   QapTemplateNotFoundException,
   QapDocumentNotFoundException,
@@ -26,7 +27,7 @@ export class QapService {
     name: string;
     description?: string;
     templateHtml: string;
-    schemaJson: Record<string, any>;
+    schemaJson: QapTemplateSchema;
     processType: string;
     userId: string;
   }): Promise<QapTemplate> {
@@ -69,7 +70,7 @@ export class QapService {
       name?: string;
       description?: string;
       templateHtml?: string;
-      schemaJson?: Record<string, any>;
+      schemaJson?: QapTemplateSchema;
       processType?: string;
       userId: string;
     },
@@ -144,7 +145,7 @@ export class QapService {
     orderItemId: string;
     orgId: string;
     userId: string;
-    documentData: Record<string, any>;
+    documentData: QapDocumentData;
   }): Promise<QapDocument> {
     try {
       // Validate input data
@@ -204,7 +205,7 @@ export class QapService {
     }
   }
 
-  async generatePdf(documentId: string, templateHtml: string, documentData: Record<string, any>): Promise<string> {
+  async generatePdf(documentId: string, templateHtml: string, documentData: QapDocumentData): Promise<string> {
     try {
       // Update document status to generating
       await this.supabase.client
@@ -284,19 +285,24 @@ export class QapService {
     }
   }
 
-  private injectDataIntoTemplate(template: string, data: Record<string, any>): string {
+  private injectDataIntoTemplate(template: string, data: QapDocumentData): string {
     try {
       // Replace template variables with actual data
       let html = template;
 
       // Handle nested objects
-      const flattenObject = (obj: Record<string, any>, prefix = ""): Record<string, any> => {
-        return Object.keys(obj).reduce((acc: Record<string, any>, k: string) => {
+      const flattenObject = (obj: QapDocumentData, prefix = ""): Record<string, string | number | boolean> => {
+        return Object.keys(obj).reduce((acc: Record<string, string | number | boolean>, k: string) => {
           const pre = prefix.length ? prefix + "." : "";
           if (typeof obj[k] === "object" && obj[k] !== null && !Array.isArray(obj[k])) {
             Object.assign(acc, flattenObject(obj[k], pre + k));
           } else {
-            acc[pre + k] = obj[k];
+            const value = obj[k];
+            if (typeof value === "object") {
+              Object.assign(acc, flattenObject(value as QapDocumentData, pre + k));
+            } else {
+              acc[pre + k] = value as string | number | boolean;
+            }
           }
           return acc;
         }, {});

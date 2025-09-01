@@ -1,5 +1,5 @@
 // These imports are not used so we prefix them with _
-import { Job as _Job, JobId as _JobId, Queue as _Queue } from 'bull';mport { Job, JobId, Queue } from "bull";
+import { Job as _Job, JobId as _JobId, Queue as _Queue } from "bull";
 
 export interface QueueConfig {
   name: string;

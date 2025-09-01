@@ -2,7 +2,7 @@ import { Injectable } from "@nestjs/common";
 import { InjectQueue } from "@nestjs/bullmq";
 import { Queue } from "bullmq";
 import { QueueJobData, QueueStats } from "./queue-monitor.types";
-import { JobCounts, QueueHealth, QueueMetrics, QueueHealthMetrics } from "./queue-monitor.metrics";
+import { JobCounts, QueueHealth, QueueMetrics as _QueueMetrics, QueueHealthMetrics } from "./queue-monitor.metrics";
 
 @Injectable()
 export class QueueMonitorService {

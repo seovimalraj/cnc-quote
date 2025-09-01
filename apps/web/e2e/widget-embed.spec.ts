@@ -1,7 +1,7 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, FrameLocator } from '@playwright/test';
 
 test.describe('Widget Flow', () => {
-  let widgetFrame: any;
+  let widgetFrame: FrameLocator;
 
   test.beforeEach(async ({ page }) => {
     // Load the test page that embeds the widget
@@ -23,33 +23,33 @@ test.describe('Widget Flow', () => {
     await fileChooser.setFiles('./fixtures/test-part.stl');
 
     // Wait for upload and processing
-    await widgetFrame.waitForSelector('text=File uploaded successfully');
-    await widgetFrame.waitForSelector('text=Part Analysis');
+    await widgetFrame.getByText('File uploaded successfully').waitFor();
+    await widgetFrame.getByText('Part Analysis').waitFor();
 
     // Select material
     await widgetFrame.locator('select[name="material"]').selectOption('alu-6061');
-    await widgetFrame.click('button:has-text("Next")');
+    await widgetFrame.getByRole('button', { name: 'Next' }).click();
 
     // Wait for DFM analysis
-    await widgetFrame.waitForSelector('text=Manufacturability Score');
+    await widgetFrame.getByText('Manufacturability Score').waitFor();
 
     // Configure features
     await widgetFrame.locator('select[name="surfaceFinish"]').selectOption('as-machined');
     await widgetFrame.locator('select[name="tolerance"]').selectOption('standard');
     await widgetFrame.locator('input[name="quantity"]').fill('10');
-    await widgetFrame.click('button:has-text("Calculate")');
+    await widgetFrame.getByRole('button', { name: 'Calculate' }).click();
 
     // Wait for pricing
-    await widgetFrame.waitForSelector('text=Price per unit');
-    await widgetFrame.waitForSelector('text=Total price');
+    await widgetFrame.getByText('Price per unit').waitFor();
+    await widgetFrame.getByText('Total price').waitFor();
 
     // Fill customer info
     await widgetFrame.locator('input[name="customerName"]').fill('Test User');
     await widgetFrame.locator('input[name="customerEmail"]').fill('test@example.com');
-    await widgetFrame.click('button:has-text("Create Quote")');
+    await widgetFrame.getByRole('button', { name: 'Create Quote' }).click();
 
     // Wait for quote creation
-    await widgetFrame.waitForSelector('text=Quote created successfully');
+    await widgetFrame.getByText('Quote created successfully').waitFor();
 
     // Verify quote summary 
     const quoteSummary = await widgetFrame.locator('.quote-summary').textContent();
@@ -68,10 +68,10 @@ test.describe('Widget Flow', () => {
 
     // Select material and trigger analysis
     await widgetFrame.locator('select[name="material"]').selectOption('alu-6061');
-    await widgetFrame.click('button:has-text("Next")');
+    await widgetFrame.getByRole('button', { name: 'Next' }).click();
 
     // Verify DFM warnings are shown
-    await widgetFrame.waitForSelector('text=Manufacturing Issues Found');
+    await widgetFrame.getByText('Manufacturing Issues Found').waitFor();
     const dfmWarnings = await widgetFrame.locator('.dfm-warnings').textContent();
     expect(dfmWarnings).toContain('Thin walls detected');
   });
@@ -85,13 +85,13 @@ test.describe('Widget Flow', () => {
     ]);
     await fileChooser.setFiles('./fixtures/test-part.stl');
     await widgetFrame.locator('select[name="material"]').selectOption('alu-6061');
-    await widgetFrame.click('button:has-text("Next")');
+    await widgetFrame.getByRole('button', { name: 'Next' }).click();
 
     // Try setting invalid quantity
     await widgetFrame.locator('input[name="quantity"]').fill('0');
-    await widgetFrame.click('button:has-text("Calculate")');
+    await widgetFrame.getByRole('button', { name: 'Calculate' }).click();
 
     // Verify error message
-    await widgetFrame.waitForSelector('text=Minimum quantity is 1');
+    await widgetFrame.getByText('Minimum quantity is 1').waitFor();
   });
 });

@@ -21,7 +21,7 @@ describe("AppController (e2e)", () => {
 
   describe("End-to-end Quote Flow", () => {
     let quoteId: string;
-    let sessionId: string;
+    let _sessionId: string;
 
     const mockFile = {
       originalname: "test-part.stl",

@@ -1,7 +1,7 @@
 import { Injectable, NestMiddleware, Inject } from "@nestjs/common";
 import { Request, Response, NextFunction } from "express";
-import { ExpressAdapter } from "@bull-board/express";
-import { BoardConfig } from './queue-monitor.board';
+import { ExpressAdapter as _ExpressAdapter } from "@bull-board/express";
+import { BoardConfig } from "./queue-monitor.board";
 
 @Injectable()
 export class QueueMonitorMiddleware implements NestMiddleware {

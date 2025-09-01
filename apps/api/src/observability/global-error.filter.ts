@@ -1,5 +1,7 @@
 import { ExceptionFilter, Catch, ArgumentsHost, HttpException, HttpStatus, Logger } from "@nestjs/common";
 import { Request, Response } from "express";
+import { RequestWithContext } from "../types/request-context";
+import { ErrorResponse } from "./error.types";
 
 @Catch()
 export class GlobalErrorFilter implements ExceptionFilter {
@@ -11,12 +13,18 @@ export class GlobalErrorFilter implements ExceptionFilter {
     const request = ctx.getRequest<Request>();
 
     // Get request ID from request context
-    const requestId = (request as any).requestId || "unknown";
-    const requestLogger = (request as any).logger || this.logger;
+    const requestId = (request as RequestWithContext).requestId || "unknown";
+    const requestLogger = (request as RequestWithContext).logger || this.logger;
 
     // Determine status code and error details
+    interface ErrorResponse {
+      message: string;
+      code?: string;
+      details?: unknown;
+    }
+
     let status = HttpStatus.INTERNAL_SERVER_ERROR;
-    let errorResponse = { message: "Internal server error" };
+    let errorResponse: ErrorResponse = { message: "Internal server error" };
 
     // Handle RLS violations from Supabase
     if (error.message?.includes("JWT role claim")) {
@@ -29,7 +37,8 @@ export class GlobalErrorFilter implements ExceptionFilter {
     // Handle HTTP exceptions
     else if (error instanceof HttpException) {
       status = error.getStatus();
-      errorResponse = error.getResponse();
+      const response = error.getResponse();
+      errorResponse = typeof response === "string" ? { message: response } : (response as ErrorResponse);
     }
 
     // Convert error response to standard format
@@ -86,11 +95,14 @@ export class GlobalErrorFilter implements ExceptionFilter {
     }
   }
 
-  private getErrorMessage(errorResponse: any): string {
+  private getErrorMessage(errorResponse: ErrorResponse): string {
     if (typeof errorResponse === "string") {
       return errorResponse;
     }
-    if (typeof errorResponse === "object") {
+    if (errorResponse instanceof Error || errorResponse instanceof HttpException) {
+      return errorResponse.message;
+    }
+    if (typeof errorResponse === "object" && errorResponse !== null) {
       return errorResponse.message || errorResponse.error || "An error occurred";
     }
     return "An error occurred";
