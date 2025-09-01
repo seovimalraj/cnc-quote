@@ -17,7 +17,8 @@
     "test:e2e": "jest --config test/jest-e2e.json --runInBand",
     "test:e2e:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand --config test/jest-e2e.json",
     "security:audit": "pnpm audit",
-    "backup:db": "ts-node scripts/backup-db.ts"
+    "backup:db": "ts-node scripts/backup-db.ts",
+    "type-check": "tsc --noEmit"
   },
   "dependencies": {
     "@automapper/classes": "^8.8.1",
