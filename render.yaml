@@ -74,7 +74,7 @@ services:
     dockerfilePath: ./apps/cad-service/Dockerfile.render
     dockerContext: .
     region: oregon
-    plan: free
+    plan: standard
     healthCheckPath: /health
     autoDeployTrigger: commit
     scaling:
@@ -82,6 +82,11 @@ services:
       maxInstances: 3
       targetMemoryPercent: 75
       targetCPUPercent: 75
+    envVars:
+      - key: PYTHONPATH
+        value: "/opt/conda/lib/python3.11/site-packages:/app"
+      - key: LD_LIBRARY_PATH
+        value: "/opt/conda/lib"
     envVars:
       - key: SUPABASE_URL
         sync: false

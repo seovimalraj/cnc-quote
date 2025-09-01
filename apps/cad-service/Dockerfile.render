@@ -4,7 +4,26 @@ FROM python:3.11-slim as builder
 RUN apt-get update && apt-get install -y \
     curl \
     build-essential \
+    cmake \
+    libgl1-mesa-dev \
+    libglu1-mesa-dev \
+    libxrender1 \
+    libxft2 \
+    libxinerama1 \
+    libxcursor1 \
+    libxi6 \
+    wget \
     && rm -rf /var/lib/apt/lists/*
+
+# Install OpenCASCADE from conda-forge
+RUN wget https://github.com/conda-forge/miniforge/releases/latest/download/Mambaforge-Linux-x86_64.sh && \
+    bash Mambaforge-Linux-x86_64.sh -b -p /opt/conda && \
+    rm Mambaforge-Linux-x86_64.sh
+
+ENV PATH="/opt/conda/bin:$PATH"
+
+# Install pythonocc dependencies
+RUN mamba install -y -c conda-forge pythonocc-core=7.7.0 occt=7.7.2
 
 # Install poetry
 RUN curl -sSL https://install.python-poetry.org | python3 -
@@ -29,6 +48,7 @@ FROM python:3.11-slim
 
 # Copy built dependencies and application from builder
 COPY --from=builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
+COPY --from=builder /opt/conda /opt/conda
 COPY --from=builder /app /app
 
 WORKDIR /app
@@ -36,7 +56,17 @@ WORKDIR /app
 # Install runtime dependencies only
 RUN apt-get update && apt-get install -y \
     libgl1-mesa-glx \
+    libglu1-mesa \
+    libxrender1 \
+    libxft2 \
+    libxinerama1 \
+    libxcursor1 \
+    libxi6 \
     && rm -rf /var/lib/apt/lists/*
+
+# Set up conda environment
+ENV PATH="/opt/conda/bin:$PATH"
+ENV LD_LIBRARY_PATH="/opt/conda/lib:$LD_LIBRARY_PATH"
 
 # Set environment variables
 ENV PYTHONUNBUFFERED=1
