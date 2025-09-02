@@ -5,13 +5,13 @@ import helmet from "helmet";
 import * as bodyParser from "body-parser";
 import * as timeout from "connect-timeout";
 import * as Sentry from "@sentry/node";
-import { ProfilingIntegration } from "@sentry/profiling-node";
+import { nodeProfilingIntegration } from "@sentry/profiling-node";
 import { AppModule } from "./app.module";
 
 // Initialize Sentry
 Sentry.init({
   dsn: process.env.SENTRY_DSN,
-  integrations: [new ProfilingIntegration()],
+  integrations: [nodeProfilingIntegration()],
   tracesSampleRate: 1.0,
   profilesSampleRate: 1.0,
 });

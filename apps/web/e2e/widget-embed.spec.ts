@@ -1,4 +1,5 @@
-import { test, expect, FrameLocator } from '@playwright/test';
+import { test, expect, FrameLocator, Page } from '@playwright/test';
+// No need to declare page globally
 
 test.describe('Widget Flow', () => {
   let widgetFrame: FrameLocator;
@@ -11,7 +12,7 @@ test.describe('Widget Flow', () => {
     widgetFrame = await page.frameLocator('#cnc-quote-widget');
   });
 
-  test('should upload file and complete quote flow', async () => {
+  test('should upload file and complete quote flow', async ({ page }) => {
     // Click the upload button and handle file dialog
     const uploadButton = await widgetFrame.locator('button:has-text("Upload")');
     const [fileChooser] = await Promise.all([
@@ -57,7 +58,7 @@ test.describe('Widget Flow', () => {
     expect(quoteSummary).toContain('Quantity: 10');
   });
 
-  test('should show DFM warnings', async () => {
+  test('should show DFM warnings', async ({ page }) => {
     // Upload a file with known DFM issues
     const uploadButton = await widgetFrame.locator('button:has-text("Upload")');
     const [fileChooser] = await Promise.all([
@@ -76,7 +77,7 @@ test.describe('Widget Flow', () => {
     expect(dfmWarnings).toContain('Thin walls detected');
   });
 
-  test('should enforce minimum quantity', async () => {
+  test('should enforce minimum quantity', async ({ page }) => {
     // Complete upload and material selection
     const uploadButton = await widgetFrame.locator('button:has-text("Upload")');
     const [fileChooser] = await Promise.all([

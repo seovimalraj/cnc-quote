@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { cookies } from 'next/headers'
 import { notFound } from 'next/navigation'
+import type { Material } from '@cnc-quote/shared'
 
 export default async function MaterialDetailPage({
   params: { id }
@@ -111,7 +112,7 @@ export default async function MaterialDetailPage({
             <div>
               <h3 className="text-lg font-medium text-gray-900">Material Costing</h3>
               <div className="mt-4 space-y-4">
-                {material.material_costing?.map((cost, index) => (
+                {material.material_costing?.map((cost) => (
                   <div key={cost.id} className="grid grid-cols-1 gap-4 sm:grid-cols-4 items-end">
                     <div>
                       <label className="block text-sm font-medium text-gray-700">
@@ -196,13 +197,13 @@ export default async function MaterialDetailPage({
         <div className="px-4 py-5 sm:p-6">
           <h3 className="text-lg font-medium text-gray-900">Machine Mappings</h3>
           <div className="mt-4 divide-y divide-gray-200">
-            {material.machine_materials?.map((mapping) => (
-              <div key={mapping.id} className="py-4">
+            {material.machine_materials?.map((machineMaterial) => (
+              <div key={machineMaterial.id} className="py-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <h4 className="font-medium text-gray-900">{mapping.machine.name}</h4>
+                    <h4 className="font-medium text-gray-900">{machineMaterial.machine.name}</h4>
                     <p className="text-sm text-gray-500">
-                      Wall thickness: {mapping.min_wall_thickness} - {mapping.max_wall_thickness} mm
+                      Speed: {machineMaterial.cutting_speed_m_min} m/min
                     </p>
                   </div>
                   <button

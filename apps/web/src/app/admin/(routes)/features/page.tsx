@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { cookies } from 'next/headers'
 import { PlusIcon } from '@heroicons/react/20/solid'
+import { FeatureType, FeatureRule } from '@cnc-quote/shared'
 
 export default async function FeaturesPage() {
   const supabase = createClient(cookies())

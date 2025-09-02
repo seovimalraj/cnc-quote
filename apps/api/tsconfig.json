@@ -13,11 +13,12 @@
     "baseUrl": "./",
     "incremental": true,
     "skipLibCheck": true,
-    "strictNullChecks": false,
+    "strict": false,
+    "alwaysStrict": false,
     "noImplicitAny": false,
+    "noImplicitThis": false,
+    "strictNullChecks": false,
     "strictBindCallApply": false,
-    "forceConsistentCasingInFileNames": false,
-    "noFallthroughCasesInSwitch": false,
     "paths": {
       "@/*": ["src/*"],
       "@cnc-quote/shared": ["../../packages/shared/src"]

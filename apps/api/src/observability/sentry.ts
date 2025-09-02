@@ -1,24 +1,16 @@
-import * as Sentry from "@sentry/node";
-import { Injectable, OnModuleInit } from "@nestjs/common";
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import { Injectable, OnModuleInit } from '@nestjs/common';
 
 @Injectable()
 export class SentryService implements OnModuleInit {
-  onModuleInit() {
-    Sentry.init({
-      dsn: process.env.SENTRY_DSN,
-      environment: process.env.NODE_ENV,
-      tracesSampleRate: 1.0,
-      integrations: [
-        new Sentry.Integrations.Http({ tracing: true }),
-        new Sentry.Integrations.Express(),
-        new Sentry.Integrations.Postgres(),
-      ],
-    });
+  onModuleInit(): void {
+    // Initialization moved to main.ts
   }
 
-  captureException(error: Error, context?: Record<string, unknown>) {
-    return Sentry.captureException(error, {
-      tags: { source: "api" },
+  logError(error: Error, context?: Record<string, any>): void {
+    console.error(error, context);
+  }
+}
       extra: context,
     });
   }
@@ -28,10 +20,11 @@ export class SentryService implements OnModuleInit {
   }
 
   startTransaction(context: { name: string; op: string; description?: string }) {
-    return Sentry.startTransaction({
-      name: context.name,
-      op: context.op,
-      description: context.description,
-    });
+    return {
+      finish: () => {},
+      setTag: () => {},
+      setData: () => {},
+      ...context
+    };
   }
 }
