@@ -93,8 +93,7 @@ export default function ComplexityPage() {
     if (error) {
       toast({
         title: 'Error saving settings',
-        description: error.message,
-        variant: 'destructive'
+        description: error.message
       });
     } else {
       toast({

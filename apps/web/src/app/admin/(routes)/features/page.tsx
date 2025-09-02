@@ -95,7 +95,7 @@ export default async function FeaturesPage() {
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-gray-200 bg-white">
-                            {feature.machine_feature_rules.map((rule) => (
+                            {feature.machine_feature_rules.map((rule: any) => (
                               <tr key={rule.id}>
                                 <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm text-gray-900">
                                   {rule.machine.name}
@@ -149,7 +149,7 @@ export default async function FeaturesPage() {
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-gray-200 bg-white">
-                            {feature.sheet_features.map((rule) => (
+                            {feature.sheet_features.map((rule: any) => (
                               <tr key={rule.id}>
                                 <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm text-gray-900">
                                   {rule.machine.name}
@@ -203,7 +203,7 @@ export default async function FeaturesPage() {
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-gray-200 bg-white">
-                            {feature.im_features.map((rule) => (
+                            {feature.im_features.map((rule: any) => (
                               <tr key={rule.id}>
                                 <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm text-gray-900">
                                   {rule.machine.name}

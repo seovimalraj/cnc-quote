@@ -17,10 +17,13 @@ export default function OrderDetailsPage() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    loadOrder();
-  }, [loadOrder]);
+    if (params?.id) {
+      loadOrder();
+    }
+  }, [params?.id]);
 
   const loadOrder = useCallback(async () => {
+    if (!params?.id) return;
     try {
       setIsLoading(true);
       const response = await api.get(`/orders/${params.id}`);

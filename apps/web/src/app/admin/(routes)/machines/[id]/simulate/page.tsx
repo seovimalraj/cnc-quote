@@ -12,28 +12,25 @@ import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from '@/components/ui/use-toast';
 import { Loader2 } from 'lucide-react';
-import type {
-  CncPriceRequest,
-  SheetMetalPriceRequest,
-  InjectionMoldingPriceRequest,
-  PriceResponse
-} from '@cnc-quote/shared';
+import {
+  CncPricingRequest,
+  SheetMetalPricingRequest,
+  InjectionMoldingPricingRequest,
+  PriceResponse,
+  Machine
+} from '@cnc-quote/shared'
+import type { Metrics } from '@/types/metrics';
 
 const supabase = createClient();
 
 export default function SimulatePage() {
-  const { id: machineId } = useParams();
-  interface Machine {
-    id: string;
-    name: string;
-    complexity_settings: unknown;
-    complexity_brackets: Array<unknown>;
-  }
+  const params = useParams();
+  const machineId = params?.id as string;
   
-  const [machine, setMachine] = useState<Machine|null>(null);
-  const [selectedFile, setSelectedFile] = useState<{ id: string; name: string }|null>(null);
+  const [machine, setMachine] = useState<Machine | null>(null);
+  const [selectedFile, setSelectedFile] = useState<{ id: string; name: string } | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [metrics, setMetrics] = useState<Record<string, unknown>|null>(null);
+  const [metrics, setMetrics] = useState<Metrics | null>(null);
   const [priceResponse, setPriceResponse] = useState<PriceResponse | null>(null);
   const [quantity, setQuantity] = useState(1);
   const [_isLoading, setIsLoading] = useState(false);
@@ -54,7 +51,7 @@ export default function SimulatePage() {
     }
   }, [machineId]);
 
-  const _handleFileSelect = async (file: { id: string }) => {
+  const _handleFileSelect = async (file: { id: string; name: string }) => {
     setSelectedFile(file);
     setIsLoading(true);
 
@@ -95,7 +92,7 @@ export default function SimulatePage() {
     }
   };
 
-  const calculatePrice = async (metrics: Record<string, unknown>) => {
+  const calculatePrice = async (metrics: Metrics) => {
     if (!machine || !metrics) return;
 
     const baseRequest = {
@@ -106,31 +103,29 @@ export default function SimulatePage() {
 
     let priceRequest;
 
-    switch (machine.process_type) {
-      case 'milling':
-      case 'turning':
+    // Use type property instead of process_type since that's what's available in Machine
+    switch (machine.type) {
+      case 'cnc':
         priceRequest = {
           ...baseRequest,
-          process_type: machine.process_type,
+          process_type: 'milling', // Default to milling for CNC
           volume_cc: metrics.volume,
           surface_area_cm2: metrics.surface_area,
           removed_material_cc: metrics.volume * 0.3, // Estimate
           features: metrics.primitive_features,
           complexity_multiplier: 1.0, // Will be calculated
-        } as CncPriceRequest;
+        } as CncPricingRequest;
         break;
 
-      case 'laser':
-      case 'punch':
-      case 'waterjet':
+      case 'sheet_metal':
         priceRequest = {
           ...baseRequest,
-          process_type: machine.process_type,
+          process_type: 'laser_cutting', // Default to laser cutting for sheet metal
           thickness_mm: 3, // Example
           cut_length_mm: metrics.bbox.max.x * 2 + metrics.bbox.max.y * 2,
           pierces: metrics.primitive_features.holes,
           nest_utilization: 0.8,
-        } as SheetMetalPriceRequest;
+        } as SheetMetalPricingRequest;
         break;
 
       case 'injection_molding':
@@ -143,7 +138,7 @@ export default function SimulatePage() {
           cavity_count: 1,
           tonnage_required: metrics.surface_area * 0.1, // Estimate
           cooling_time_s: 15,
-        } as InjectionMoldingPriceRequest;
+        } as InjectionMoldingPricingRequest;
         break;
     }
 

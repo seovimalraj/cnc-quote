@@ -53,7 +53,7 @@ export default async function AssignMaterialsPage({
 
               <div className="mt-6 space-y-8">
                 {materials?.map((material) => {
-                  const mapping = material.machine_materials?.find(m => m.machine_id === machineId)
+                  const mapping = material.machine_materials?.find((m: any) => m.machine_id === machineId)
                   return (
                     <div key={material.id} className="border-b border-gray-200 pb-6">
                       <div className="flex items-start">
