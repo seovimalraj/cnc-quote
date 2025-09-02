@@ -14,7 +14,23 @@ export interface ReviewDetails {
 }
 
 export interface NotificationTemplate {
+  recipientEmail: string;
   subject: string;
-  html: string;
   text: string;
+  html?: string;
+}
+
+export interface ReviewNotification {
+  quoteId: string;
+  ruleId: string;
+  dueAt: Date;
+  recipientEmail?: string;
+  slackChannel?: string;
+}
+
+export interface NotificationMessage {
+  subject: string;
+  body: string;
+  recipientEmail?: string;
+  slackChannel?: string;
 }

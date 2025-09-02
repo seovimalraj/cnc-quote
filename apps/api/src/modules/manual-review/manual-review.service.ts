@@ -12,7 +12,6 @@ import {
   UpdateTaskDto,
 } from "./manual-review.types";
 import { Quote, ReviewNotification, SlackMessage, RuleConditions } from "./manual-review.domain";
-import { ManualReviewRule, CreateRuleDto, UpdateRuleDto, ReviewTask, GetTasksParams } from "./manual-review.types";
 
 @Injectable()
 export class ManualReviewService {
@@ -75,14 +74,14 @@ export class ManualReviewService {
     for (const rule of rules) {
       if (this.quoteMatchesRule(quote, rule)) {
         await this.createReviewTask(quote, rule);
+        const dueAt = addHours(new Date(), rule.sla_hours || 24);
         await this.notifyService.sendReviewNotification({
-          type: "manual_review_required",
-          org_id: quote.org_id,
-          title: "Manual Review Required",
-          message: rule.message,
-          quote_id: quote.id,
-          user_id: quote.user_id,
-        } as ReviewNotification);
+          quoteId: quote.id,
+          ruleId: rule.id,
+          dueAt,
+          recipientEmail: quote.user_id, // Assuming user_id is an email
+          slackChannel: rule.slack_channel,
+        });
 
         // Send Slack notification if configured
         if (rule.slack_channel) {
@@ -125,7 +124,7 @@ export class ManualReviewService {
     const conditions = rule.conditions as RuleConditions;
 
     // Check process match
-    if (conditions.process && quote.process === conditions.process) return true;
+    if (conditions.process && quote.process_type === conditions.process) return true;
 
     // Check feature match
     if (conditions.feature && quote.features?.includes(conditions.feature)) return true;
@@ -141,7 +140,7 @@ export class ManualReviewService {
     if (conditions.max_size && size <= conditions.max_size) return true;
 
     // Check material
-    if (conditions.material && quote.material === conditions.material) return true;
+    if (conditions.material && quote.material_id === conditions.material) return true;
 
     return false;
   }
@@ -186,13 +185,11 @@ export class ManualReviewService {
 
     if (updates.status === "approved" || updates.status === "rejected") {
       await this.notifyService.notify({
-        type: "manual_review_completed",
-        org_id: orgId,
-        title: `Manual Review ${updates.status === "approved" ? "Approved" : "Rejected"}`,
-        message: updates.review_notes || "",
-        quote_id: data.quote.id,
-        user_id: data.quote.user_id,
-      } as ReviewNotification);
+        subject: `Manual Review ${updates.status === "approved" ? "Approved" : "Rejected"}`,
+        body: updates.review_notes || "",
+        recipientEmail: data.quote.user_id, // Assuming user_id is an email
+        slackChannel: data.rule.slack_channel,
+      });
     }
 
     return data;

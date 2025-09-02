@@ -11,5 +11,5 @@ module.exports = {
   moduleNameMapper: {
     '^@app/(.*)$': '<rootDir>/$1',
   },
-  setupFiles: ['<rootDir>/test/setup.ts'],
+  setupFiles: ['../test/setup.ts'],
 };

@@ -3,7 +3,7 @@ import { CacheModule as NestCacheModule, CACHE_MANAGER } from "@nestjs/cache-man
 import { ConfigService } from "@nestjs/config";
 import { createClient } from 'redis';
 import { CacheService } from "./cache.service";
-import { RedisClientStore, RedisCache } from "./cache.types";
+import { RedisClientStore, RedisCache, RedisClient } from "./cache.types";
 
 const createRedisStore = async (config: ConfigService): Promise<RedisClientStore> => {
   const client = createClient({
@@ -12,7 +12,7 @@ const createRedisStore = async (config: ConfigService): Promise<RedisClientStore
       port: config.get<number>("REDIS_PORT"),
     },
     password: config.get("REDIS_PASSWORD"),
-  });
+  }) as RedisClient;
 
   await client.connect();
 
@@ -26,7 +26,12 @@ const createRedisStore = async (config: ConfigService): Promise<RedisClientStore
     },
     get: async <T>(key: string): Promise<T | undefined> => {
       const value = await client.get(key);
-      return value ? JSON.parse(value) as T : undefined;
+      if (!value) return undefined;
+      try {
+        return JSON.parse(value as string) as T;
+      } catch {
+        return undefined;
+      }
     },
     del: async (key: string) => {
       await client.del(key);

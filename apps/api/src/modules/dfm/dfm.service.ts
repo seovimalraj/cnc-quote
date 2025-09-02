@@ -11,6 +11,11 @@ import {
   InjectionMoldingDfmParams,
 } from "@cnc-quote/shared";
 
+// Convert a strongly typed params object to a loose record type for expr-eval
+function toDfmParams<T>(params: T): Record<string, number> {
+  return params as unknown as Record<string, number>;
+}
+
 @Injectable()
 export class DfmService {
   private readonly logger = new Logger(DfmService.name);
@@ -49,7 +54,7 @@ export class DfmService {
     for (const rule of rules) {
       try {
         const expr = this.parser.parse(rule.condition);
-        const result = expr.evaluate(params);
+        const result = expr.evaluate(toDfmParams(params));
 
         if (result === true) {
           issues.push({
@@ -83,7 +88,7 @@ export class DfmService {
     for (const rule of rules) {
       try {
         const expr = this.parser.parse(rule.condition);
-        const result = expr.evaluate(params);
+        const result = expr.evaluate(toDfmParams(params));
 
         if (result === true) {
           issues.push({
@@ -117,7 +122,7 @@ export class DfmService {
     for (const rule of rules) {
       try {
         const expr = this.parser.parse(rule.condition);
-        const result = expr.evaluate(params);
+        const result = expr.evaluate(toDfmParams(params));
 
         if (result === true) {
           issues.push({

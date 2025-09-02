@@ -3,16 +3,37 @@ import { Parser } from "expr-eval";
 import { SupabaseService } from "../../lib/supabase/supabase.service";
 import { CacheService } from "../../lib/cache/cache.service";
 import { ManualReviewService } from "../manual-review/manual-review.service";
+import { PricingProfile } from "@cnc-quote/shared";
 import {
-  PricingProfile,
-  PriceResponse,
-  CncPriceRequest,
-  SheetMetalPriceRequest,
-  InjectionMoldingPriceRequest,
-} from "@cnc-quote/shared";
+  PricingResponse,
+  CncPricingRequest,
+  SheetMetalPricingRequest,
+  InjectionMoldingPricingRequest,
+  PricingBreakdown,
+} from "./price-request.types";
 
 @Injectable()
 export class PricingService {
+  private formatCncFeatures(features: CncPricingRequest["features"]): string[] {
+    return Object.entries(features || {}).flatMap(([key, count]) => 
+      Array(count as number).fill(key)
+    );
+  }
+
+  private formatSheetMetalFeatures(features: SheetMetalPricingRequest["features"]): string[] {
+    return [
+      ...Array(features.holes || 0).fill('hole'),
+      ...Array(features.bends || 0).fill('bend'),
+      ...Array(features.slots || 0).fill('slot'),
+      ...Array(features.corners || 0).fill('corner')
+    ];
+  }
+
+  private formatInjectionMoldingFeatures(features: InjectionMoldingPricingRequest["features"]): string[] {
+    return Object.entries(features || {}).flatMap(([key, count]) => 
+      Array(count as number).fill(key)
+    );
+  }
   private readonly logger = new Logger(PricingService.name);
   private readonly parser = new Parser();
 
@@ -23,7 +44,7 @@ export class PricingService {
   ) {}
 
   // Calculate CNC price
-  async calculateCncPrice(request: CncPriceRequest): Promise<PriceResponse> {
+  async calculateCncPrice(request: CncPricingRequest): Promise<PricingResponse> {
     const {
       machine_id,
       material_id,
@@ -72,7 +93,7 @@ export class PricingService {
 
     const totalPrice = unitPrice * quantity;
 
-    const priceResult: PriceResponse = {
+    const priceResult: PricingResponse = {
       unit_price: unitPrice,
       total_price: totalPrice,
       min_order_qty: profile.min_order_qty,
@@ -93,7 +114,10 @@ export class PricingService {
 
     // Check for manual review triggers
     const needsReview = await this.manualReview.checkQuoteForReview({
-      ...request,
+      process_type: request.process_type,
+      material_id: request.material_id,
+      quantity: request.quantity,
+      features: this.formatCncFeatures(request.features),
       price: totalPrice,
       currency: "USD",
     });
@@ -109,15 +133,19 @@ export class PricingService {
   }
 
   // Calculate Sheet Metal price
-  async calculateSheetMetalPrice(request: SheetMetalPriceRequest): Promise<PriceResponse> {
+  async calculateSheetMetalPrice(request: SheetMetalPricingRequest): Promise<PricingResponse> {
     const {
       machine_id,
       material_id,
       quantity,
       thickness_mm,
       cut_length_mm,
-      pierces,
-      bends,
+      features: {
+        holes = 0,
+        bends = 0,
+        slots = 0,
+        corners = 0
+      } = {},
       nest_utilization,
       is_rush,
     } = request;
@@ -129,9 +157,9 @@ export class PricingService {
     const sheetArea = await this.calculateSheetArea(thickness_mm, cut_length_mm, nest_utilization);
     const materialCost = await this.calculateMaterialCost(material_id, sheetArea * thickness_mm);
 
-    // Calculate machine time
-    const cutTime = cut_length_mm / profile.cutting_speed_mm_min + (pierces * profile.pierce_time_s) / 60;
-    const bendTime = bends ? (bends * profile.bend_time_s) / 60 : 0;
+    // Calculate machine time based on features
+    const cutTime = cut_length_mm / profile.cutting_speed_mm_min + (holes * profile.pierce_time_s) / 60;
+    const bendTime = bends * profile.bend_time_s / 60;
     const machineCost = ((cutTime + bendTime) * profile.machine_rate_per_hour) / 60;
 
     // Rest of calculations
@@ -147,7 +175,7 @@ export class PricingService {
 
     const totalPrice = unitPrice * quantity;
 
-    const priceResult: PriceResponse = {
+    const priceResult: PricingResponse = {
       unit_price: unitPrice,
       total_price: totalPrice,
       min_order_qty: profile.min_order_qty,
@@ -168,7 +196,10 @@ export class PricingService {
 
     // Check for manual review triggers
     const needsReview = await this.manualReview.checkQuoteForReview({
-      ...request,
+      process_type: request.process_type,
+      material_id: request.material_id,
+      quantity: request.quantity,
+      features: this.formatSheetMetalFeatures({ holes, bends, slots, corners }),
       price: totalPrice,
       currency: "USD",
     });
@@ -184,7 +215,7 @@ export class PricingService {
   }
 
   // Calculate Injection Molding price
-  async calculateInjectionMoldingPrice(request: InjectionMoldingPriceRequest): Promise<PriceResponse> {
+  async calculateInjectionMoldingPrice(request: InjectionMoldingPricingRequest): Promise<PricingResponse> {
     const {
       machine_id,
       material_id,
@@ -195,6 +226,11 @@ export class PricingService {
       cavity_count,
       tonnage_required,
       cooling_time_s,
+      features: {
+        undercuts = 0,
+        side_actions = 0,
+        textures = 0
+      } = {},
       is_rush,
     } = request;
 
@@ -227,7 +263,7 @@ export class PricingService {
 
     const totalPrice = unitPrice * quantity;
 
-    const priceResult: PriceResponse = {
+    const priceResult: PricingResponse = {
       unit_price: unitPrice,
       total_price: totalPrice,
       min_order_qty: profile.min_order_qty,
@@ -248,7 +284,10 @@ export class PricingService {
 
     // Check for manual review triggers
     const needsReview = await this.manualReview.checkQuoteForReview({
-      ...request,
+      process_type: request.process_type,
+      material_id: request.material_id,
+      quantity: request.quantity,
+      features: this.formatInjectionMoldingFeatures({ undercuts, side_actions, textures }),
       price: totalPrice,
       currency: "USD",
     });
@@ -306,7 +345,7 @@ export class PricingService {
   private calculateMachineCost(
     removedMaterial: number,
     surfaceArea: number,
-    features: CncPriceRequest["features"],
+    features: CncPricingRequest["features"],
     complexityMultiplier: number,
     profile: PricingProfile,
   ): number {

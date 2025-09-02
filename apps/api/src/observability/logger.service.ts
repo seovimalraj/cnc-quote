@@ -1,5 +1,6 @@
-import { Injectable, LoggerService } from "@nestjs/common";
+import { Injectable } from "@nestjs/common";
 import pino from "pino";
+import { LoggerParams, LoggerService } from "./logger.types";
 
 @Injectable()
 export class ApiLogger implements LoggerService {

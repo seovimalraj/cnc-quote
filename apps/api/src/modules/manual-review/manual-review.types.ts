@@ -14,10 +14,47 @@ export enum ReviewTaskStatus {
   REJECTED = "rejected",
 }
 
+export interface ReviewNotification {
+  quoteId: string;
+  ruleId: string;
+  dueAt: Date;
+  recipientEmail?: string;
+  slackChannel?: string;
+}
+
 export class ManualReviewRule {
   @ApiProperty()
   @IsString()
   id: string;
+
+  @ApiProperty()
+  @IsString()
+  name: string;
+
+  @ApiProperty()
+  @IsString()
+  description: string;
+
+  @ApiProperty({ enum: ManualReviewRuleType })
+  @IsEnum(ManualReviewRuleType)
+  type: ManualReviewRuleType;
+
+  @ApiProperty({ required: false })
+  @IsString()
+  @IsOptional()
+  slack_channel?: string;
+
+  @ApiProperty()
+  @IsNumber()
+  sla_hours: number;
+
+  @ApiProperty()
+  @IsObject()
+  conditions: {
+    sla_hours?: number;
+    threshold?: number;
+    [key: string]: any;
+  };
 
   @ApiProperty()
   @IsString()

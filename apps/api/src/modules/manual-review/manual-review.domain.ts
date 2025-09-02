@@ -2,11 +2,11 @@ import { ApiProperty } from "@nestjs/swagger";
 import { IsString, IsNumber, IsOptional } from "class-validator";
 
 export interface Quote {
-  id: string;
-  org_id: string;
-  user_id: string;
-  status: string;
-  process?: string;
+  id?: string;
+  org_id?: string;
+  user_id?: string;
+  status?: string;
+  process_type?: string;
   features?: string[];
   quantity?: number;
   dimensions?: {
@@ -14,16 +14,17 @@ export interface Quote {
     width?: number;
     height?: number;
   };
-  material?: string;
+  material_id?: string;
+  price?: number;
+  currency?: string;
 }
 
 export interface ReviewNotification {
-  type: string;
-  org_id: string;
-  title: string;
-  message: string;
-  quote_id: string;
-  user_id: string;
+  quoteId: string;
+  ruleId: string;
+  dueAt: Date;
+  recipientEmail?: string;
+  slackChannel?: string;
 }
 
 export interface SlackMessage {

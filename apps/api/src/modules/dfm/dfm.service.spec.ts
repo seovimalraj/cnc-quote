@@ -78,9 +78,14 @@ describe("DfmService", () => {
   });
 
   it("should handle empty rules gracefully", async () => {
-    jest.spyOn(supabase.client, "from").mockReturnThis();
-    jest.spyOn(supabase.client, "select").mockReturnThis();
-    jest.spyOn(supabase.client, "eq").mockResolvedValue({ data: [] });
+    // Mock the private _client property
+    Object.defineProperty(supabase, '_client', {
+      get: () => ({
+        from: jest.fn().mockReturnThis(),
+        select: jest.fn().mockReturnThis(),
+        eq: jest.fn().mockResolvedValue({ data: [] }),
+      }),
+    });
 
     const params = {
       min_wall_thickness: 2.0,

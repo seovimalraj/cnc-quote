@@ -4,7 +4,7 @@ export * from './types/feature';
 export * from './types/quotes';
 
 // Pricing types
-export type {
+export {
   PricingProfile,
   PriceResponse,
   PriceBreakdown,
@@ -15,10 +15,7 @@ export type {
   Material,
   Finish,
   Tolerance,
-  Quote,
-  QuoteFile,
-  QuoteItem
-} from './types/quotes';
+} from "./types/quotes.core";
 
 // DFM types
 export * from './dfm.types';

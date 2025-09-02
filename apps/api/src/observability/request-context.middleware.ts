@@ -1,4 +1,9 @@
-import { Injectable, NestMiddleware } from "@nestjs/common";
+import { Injecta  extractUserContext(req: Request): RequestContext {
+    const user = req.user as { id?: string; orgId?: string } | undefined;
+    return {
+      userId: user?.id,
+      orgId: user?.orgId,
+    };le, NestMiddleware } from "@nestjs/common";
 import { Request, Response, NextFunction } from "express";
 import { v4 as uuidv4 } from "uuid";
 import { ApiLogger } from "./logger.service";
