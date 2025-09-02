@@ -15,7 +15,7 @@ interface QapDocument {
 
 export function QapDocumentsList() {
   const params = useParams();
-  const orderId = params.id as string;
+  const orderId = params?.id as string;
   const { data: documents, error } = useSWR<QapDocument[]>(`/api/orders/${orderId}/qap`, fetcher);
   const [downloading, setDownloading] = useState<string | null>(null);
 

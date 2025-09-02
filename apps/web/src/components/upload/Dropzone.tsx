@@ -7,7 +7,7 @@ import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { toast } from '@/components/ui/use-toast';
-import type { FileUpload, UploadError } from '@/types/upload';
+import type { UploadError } from '@/types/upload';
 
 const supabase = createClient();
 

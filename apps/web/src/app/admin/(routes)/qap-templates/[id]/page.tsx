@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select } from '@/components/ui/select';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import type { QapTemplate, QapPreviewData } from '@/types/qap';
 
 // Load Monaco editor dynamically to avoid SSR issues
@@ -139,15 +139,19 @@ export default function QapTemplateEditor() {
               <div>
                 <Label htmlFor="process">Process Type</Label>
                 <Select
-                  id="process"
                   value={template.process_type}
-                  onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
-                    setTemplate({ ...template, process_type: e.target.value as 'cnc' | 'sheet' | 'im' })
+                  onValueChange={(value: string) =>
+                    setTemplate({ ...template, process_type: value as 'cnc' | 'sheet' | 'im' })
                   }
                 >
-                  <option value="cnc">CNC Machining</option>
-                  <option value="sheet_metal">Sheet Metal</option>
-                  <option value="injection_molding">Injection Molding</option>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="cnc">CNC Machining</SelectItem>
+                    <SelectItem value="sheet_metal">Sheet Metal</SelectItem>
+                    <SelectItem value="injection_molding">Injection Molding</SelectItem>
+                  </SelectContent>
                 </Select>
               </div>
             </div>
@@ -222,14 +226,14 @@ export default function QapTemplateEditor() {
                 dangerouslySetInnerHTML={{
                   __html: template.template_html.replace(
                     /{{([^}]+)}}/g,
-                    (match: string, key: string) => {
+                    (match: string, key: string): string => {
                       const value = key.split('.').reduce<unknown>((obj, k) => {
                         if (obj && typeof obj === 'object') {
                           return (obj as Record<string, unknown>)[k];
                         }
                         return undefined;
                       }, previewData);
-                      return value ?? match;
+                      return String(value ?? match);
                     }
                   ),
                 }}

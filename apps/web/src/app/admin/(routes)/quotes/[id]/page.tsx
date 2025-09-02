@@ -127,15 +127,15 @@ export default async function AdminQuotePage({ params }: Props) {
             <dl className="space-y-2">
               <div>
                 <dt className="text-sm text-gray-500">Name</dt>
-                <dd>{quote.customer.name}</dd>
+                <dd>{quote.customer?.name || 'N/A'}</dd>
               </div>
               <div>
                 <dt className="text-sm text-gray-500">Email</dt>
-                <dd>{quote.customer.email}</dd>
+                <dd>{quote.customer?.email || 'N/A'}</dd>
               </div>
               <div>
                 <dt className="text-sm text-gray-500">Address</dt>
-                <dd className="whitespace-pre-wrap">{quote.customer.address}</dd>
+                <dd className="whitespace-pre-wrap">{quote.customer?.address || 'N/A'}</dd>
               </div>
             </dl>
           </Card>
@@ -148,11 +148,15 @@ export default async function AdminQuotePage({ params }: Props) {
             <div>
               <dt className="text-sm text-gray-500">Price Profile</dt>
               <dd>
-                {quote.price_profile.name}
-                {' '}
-                <span className="text-gray-500">
-                  ({quote.price_profile.machine.name})
-                </span>
+                {quote.price_profile?.name || 'N/A'}
+                {quote.price_profile?.machine?.name && (
+                  <>
+                    {' '}
+                    <span className="text-gray-500">
+                      ({quote.price_profile.machine.name})
+                    </span>
+                  </>
+                )}
               </dd>
             </div>
             {quote.dfm_ruleset && (
@@ -182,9 +186,9 @@ export default async function AdminQuotePage({ params }: Props) {
               <tbody>
                 {quote.items.map((item) => (
                   <tr key={item.id} className="border-b">
-                    <td className="py-2">{item.file.name}</td>
+                    <td className="py-2">{item.file?.name || 'Unknown file'}</td>
                     <td className="py-2">{item.process_type}</td>
-                    <td className="py-2">{item.material.name}</td>
+                    <td className="py-2">{item.material?.name || 'Unknown material'}</td>
                     <td className="text-right py-2">{item.quantity}</td>
                     <td className="text-right py-2">
                       {quote.currency} {item.unit_price.toFixed(2)}

@@ -1,9 +1,10 @@
+import React from 'react';
 import { createClient } from '@/lib/supabase/server'
 import { cookies } from 'next/headers'
 import { notFound } from 'next/navigation'
 import type { Material } from '@cnc-quote/shared'
 
-interface MaterialCosting {
+interface UIMaterialCosting {
   id: string;
   costing_type: string;
   min_quantity: number;
@@ -130,7 +131,8 @@ export default async function MaterialDetailPage({
             <div>
               <h3 className="text-lg font-medium text-gray-900">Material Costing</h3>
               <div className="mt-4 space-y-4">
-                {material.material_costing?.map((cost: MaterialCosting, index: number) => (
+                {material.material_costing && (material.material_costing as unknown as UIMaterialCosting[]).map((cost, index) => {
+                  return (
                   <div key={cost.id} className="grid grid-cols-1 gap-4 sm:grid-cols-4 items-end">
                     <div>
                       <label className="block text-sm font-medium text-gray-700">
@@ -181,8 +183,15 @@ export default async function MaterialDetailPage({
                       />
                     </div>
                   </div>
-                ))}
+                  );
+                })}
                 <button
+                  type="button"
+                  className="rounded bg-white px-2 py-1 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
+                >
+                  Add Cost Tier
+                </button>
+              </div>
                   type="button"
                   className="rounded bg-white px-2 py-1 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
                 >

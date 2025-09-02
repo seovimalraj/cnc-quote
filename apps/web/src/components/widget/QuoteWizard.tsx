@@ -8,7 +8,6 @@ import { MaterialSelector } from '@/components/widget/MaterialSelector'
 import { FinishSelector } from '@/components/widget/FinishSelector'
 import { ToleranceSelector } from '@/components/widget/ToleranceSelector'
 import { QuantitySelector } from '@/components/widget/QuantitySelector'
-import { QuoteStatusDisplay } from '@/components/widget/QuoteStatusDisplay'
 import { useQuote } from '@/lib/hooks/use-quote'
 
 interface Props {
@@ -75,27 +74,27 @@ export const QuoteWizard = ({ clientOrigin, theme: _theme }: Props) => {
       component: (
         <div className="space-y-6">
           <MaterialSelector
-            onChange={(material: any) => {
-              updateQuote({ material: material.id || material })
+            onChange={(material: { id?: string } | string) => {
+              updateQuote({ material: typeof material === 'object' ? material.id : material })
               postToParent('material:selected', { material })
             }}
           />
           <FinishSelector
-            onChange={(finish: any) => {
-              updateQuote({ finish: finish.id || finish })
+            onChange={(finish: { id?: string } | string) => {
+              updateQuote({ finish: typeof finish === 'object' ? finish.id : finish })
               postToParent('finish:selected', { finish })
             }}
           />
           <ToleranceSelector
-            onChange={(tolerance: any) => {
-              updateQuote({ tolerance: tolerance.id || tolerance })
+            onChange={(tolerance: { id?: string } | string) => {
+              updateQuote({ tolerance: typeof tolerance === 'object' ? tolerance.id : tolerance })
               postToParent('tolerance:selected', { tolerance })
             }}
           />
           <QuantitySelector
             onChange={(quantity: number) => {
               updateQuote({ quantity })
-              calculatePrice().then((price: any) => {
+              calculatePrice().then((price: unknown) => {
                 postToParent('price:updated', { price })
               })
             }}

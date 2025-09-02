@@ -42,10 +42,10 @@ export default async function QuoteDetailPage({ params }: Props) {
           <Badge
             variant={
               quote.status === 'accepted'
-                ? 'success'
+                ? 'default'
                 : quote.status === 'rejected'
                 ? 'destructive'
-                : 'default'
+                : 'secondary'
             }
           >
             {quote.status}
