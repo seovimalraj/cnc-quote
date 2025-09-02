@@ -192,12 +192,6 @@ export default async function MaterialDetailPage({
                   Add Cost Tier
                 </button>
               </div>
-                  type="button"
-                  className="rounded bg-white px-2 py-1 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
-                >
-                  Add Cost Tier
-                </button>
-              </div>
             </div>
 
             <div className="border-t border-gray-200 pt-6">
