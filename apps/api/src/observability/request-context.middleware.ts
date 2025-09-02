@@ -17,7 +17,7 @@ export class RequestContextMiddleware implements NestMiddleware {
       orgId: user?.orgId,
       requestId: uuidv4(),
     };
-    (req as any).context = context;
+    (req as { context?: RequestContext }).context = context;
     next();
   }
 }
