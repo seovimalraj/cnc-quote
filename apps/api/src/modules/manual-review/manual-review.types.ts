@@ -53,7 +53,7 @@ export class ManualReviewRule {
   conditions: {
     sla_hours?: number;
     threshold?: number;
-    [key: string]: any;
+    [key: string]: number | string | boolean | undefined;
   };
 
   @ApiProperty()

@@ -40,7 +40,7 @@ export class CacheService implements OnModuleDestroy {
     }
   }
 
-  async keys(pattern = '*'): Promise<string[]> {
+  async keys(pattern = "*"): Promise<string[]> {
     if (this.redisCache.store) {
       return this.redisCache.store.keys(pattern);
     }

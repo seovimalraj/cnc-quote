@@ -9,30 +9,25 @@ import {
   CncPricingRequest,
   SheetMetalPricingRequest,
   InjectionMoldingPricingRequest,
-  PricingBreakdown,
 } from "./price-request.types";
 
 @Injectable()
 export class PricingService {
   private formatCncFeatures(features: CncPricingRequest["features"]): string[] {
-    return Object.entries(features || {}).flatMap(([key, count]) => 
-      Array(count as number).fill(key)
-    );
+    return Object.entries(features || {}).flatMap(([key, count]) => Array(count as number).fill(key));
   }
 
   private formatSheetMetalFeatures(features: SheetMetalPricingRequest["features"]): string[] {
     return [
-      ...Array(features.holes || 0).fill('hole'),
-      ...Array(features.bends || 0).fill('bend'),
-      ...Array(features.slots || 0).fill('slot'),
-      ...Array(features.corners || 0).fill('corner')
+      ...Array(features.holes || 0).fill("hole"),
+      ...Array(features.bends || 0).fill("bend"),
+      ...Array(features.slots || 0).fill("slot"),
+      ...Array(features.corners || 0).fill("corner"),
     ];
   }
 
   private formatInjectionMoldingFeatures(features: InjectionMoldingPricingRequest["features"]): string[] {
-    return Object.entries(features || {}).flatMap(([key, count]) => 
-      Array(count as number).fill(key)
-    );
+    return Object.entries(features || {}).flatMap(([key, count]) => Array(count as number).fill(key));
   }
   private readonly logger = new Logger(PricingService.name);
   private readonly parser = new Parser();
@@ -140,12 +135,7 @@ export class PricingService {
       quantity,
       thickness_mm,
       cut_length_mm,
-      features: {
-        holes = 0,
-        bends = 0,
-        slots = 0,
-        corners = 0
-      } = {},
+      features: { holes = 0, bends = 0, slots = 0, corners = 0 } = {},
       nest_utilization,
       is_rush,
     } = request;
@@ -159,7 +149,7 @@ export class PricingService {
 
     // Calculate machine time based on features
     const cutTime = cut_length_mm / profile.cutting_speed_mm_min + (holes * profile.pierce_time_s) / 60;
-    const bendTime = bends * profile.bend_time_s / 60;
+    const bendTime = (bends * profile.bend_time_s) / 60;
     const machineCost = ((cutTime + bendTime) * profile.machine_rate_per_hour) / 60;
 
     // Rest of calculations
@@ -226,11 +216,7 @@ export class PricingService {
       cavity_count,
       tonnage_required,
       cooling_time_s,
-      features: {
-        undercuts = 0,
-        side_actions = 0,
-        textures = 0
-      } = {},
+      features: { undercuts = 0, side_actions = 0, textures = 0 } = {},
       is_rush,
     } = request;
 

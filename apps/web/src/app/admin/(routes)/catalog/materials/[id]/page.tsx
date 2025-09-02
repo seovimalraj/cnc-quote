@@ -9,7 +9,7 @@ export default async function MaterialDetailPage({
   params: { id: string }
 }) {
   const supabase = createClient(cookies())
-  const { data: material } = await supabase
+  const { data: material }: { data: Material | null } = await supabase
     .from('materials')
     .select(`
       *,

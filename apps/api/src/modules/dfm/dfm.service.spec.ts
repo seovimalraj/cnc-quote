@@ -79,7 +79,7 @@ describe("DfmService", () => {
 
   it("should handle empty rules gracefully", async () => {
     // Mock the private _client property
-    Object.defineProperty(supabase, '_client', {
+    Object.defineProperty(supabase, "_client", {
       get: () => ({
         from: jest.fn().mockReturnThis(),
         select: jest.fn().mockReturnThis(),

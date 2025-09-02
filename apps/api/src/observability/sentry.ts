@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { Injectable, OnModuleInit } from '@nestjs/common';
+import { Injectable, OnModuleInit } from "@nestjs/common";
 
 @Injectable()
 export class SentryService implements OnModuleInit {
@@ -11,16 +11,16 @@ export class SentryService implements OnModuleInit {
     console.error(error, context);
   }
 }
-      import * as Sentry from '@sentry/node';
-import { Injectable, OnModuleInit } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
+import * as Sentry from "@sentry/node";
+import { Injectable, OnModuleInit } from "@nestjs/common";
+import { ConfigService } from "@nestjs/config";
 
 @Injectable()
 export class SentryService implements OnModuleInit {
   constructor(private readonly configService: ConfigService) {}
 
   onModuleInit() {
-    const dsn = this.configService.get<string>('SENTRY_DSN');
+    const dsn = this.configService.get<string>("SENTRY_DSN");
     if (dsn) {
       this.init(dsn);
     }
@@ -31,7 +31,7 @@ export class SentryService implements OnModuleInit {
       dsn,
       tracesSampleRate: 1.0,
       profilesSampleRate: 1.0,
-      environment: this.configService.get<string>('NODE_ENV', 'development'),
+      environment: this.configService.get<string>("NODE_ENV", "development"),
     });
   }
 
@@ -57,11 +57,9 @@ export class SentryService implements OnModuleInit {
       description: context.description,
     });
   }
-  
+
   configureScope(callback: (scope: Sentry.Scope) => void) {
     Sentry.configureScope(callback);
-  }
-}
   }
 
   captureMessage(message: string, level: Sentry.SeverityLevel = "info") {
@@ -73,7 +71,7 @@ export class SentryService implements OnModuleInit {
       finish: () => {},
       setTag: () => {},
       setData: () => {},
-      ...context
+      ...context,
     };
   }
 }

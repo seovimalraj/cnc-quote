@@ -1,113 +1,106 @@
 import { Injectable } from "@nestjs/common";
-import * as PDFKit from "pdfkit";
-import { ConfigService } from "@nestjs/config";
-import { join } from "path";
-import { DocumentData, ContentItem } from "./pdf.types";
+import PDFDocument from "pdfkit";
+
+interface _TextOptions {
+  align?: "left" | "center" | "right";
+  underline?: boolean;
+}
 
 @Injectable()
 export class PdfService {
-  private readonly templatesPath: string;
+  async generateQuotePDF(data: {
+    quote_number: string;
+    date: string;
+    customer: {
+      name: string;
+      email: string;
+      address?: string;
+    };
+    items: Array<{
+      description: string;
+      quantity: number;
+      unit_price: number;
+      total: number;
+    }>;
+    totals: {
+      subtotal: number;
+      tax: number;
+      total: number;
+    };
+  }): Promise<PDFDocument> {
+    const doc = new PDFDocument();
 
-  constructor(private readonly configService: ConfigService) {
-    this.templatesPath = join(process.cwd(), "templates", "pdf");
-  }
+    // Header
+    doc.fontSize(24).text("Quote", { align: "center" });
+    doc.moveDown();
 
-  async generatePdf(data: DocumentData): Promise<Buffer> {
-    const doc = new PDFKit(data.options);
+    // Quote details
+    doc.fontSize(12).text(`Quote Number: ${data.quote_number}`).text(`Date: ${data.date}`);
 
-    // Convert the PDF to a buffer
-    return new Promise((resolve, reject) => {
-      const chunks: Buffer[] = [];
+    doc.moveDown();
 
-      doc.on("data", (chunk) => chunks.push(chunk));
-      doc.on("end", () => resolve(Buffer.concat(chunks)));
-      doc.on("error", (err) => reject(err));
+    // Customer details
+    doc.fontSize(14).text("Customer Information");
+    doc.fontSize(12).text(`Name: ${data.customer.name}`).text(`Email: ${data.customer.email}`);
 
-      // Add header if present
-      if (data.header) {
-        this.addContentItems(doc, data.header);
-      }
-
-      // Add main content
-      this.addContentItems(doc, data.content);
-
-      // Add footer if present
-      if (data.footer) {
-        this.addContentItems(doc, data.footer);
-      }
-
-      doc.end();
-    });
-  }
-
-  private addContentItems(doc: PDFKit.PDFDocument, items: ContentItem[]): void {
-    for (const item of items) {
-      switch (item.type) {
-        case "text":
-          if (item.content && typeof item.content === "string") {
-            const options: PDFKit.Mixins.TextOptions = {
-              width: item.style?.width,
-              align: item.style?.alignment as PDFKit.Mixins.TextAlignment,
-              lineBreak: true,
-            };
-
-            if (item.style?.fontSize) {
-              doc.fontSize(item.style.fontSize);
-            }
-            if (item.style?.font) {
-              doc.font(item.style.font);
-            }
-            if (item.style?.color) {
-              doc.fillColor(item.style.color);
-            }
-
-            if (item.position) {
-              doc.text(item.content, item.position.x || 0, item.position.y || 0, options);
-            } else {
-              doc.text(item.content, options);
-            }
-          }
-          break;
-        case "line":
-          if (item.position && item.dimensions) {
-            doc.moveTo(item.position.x || 0, item.position.y || 0)
-               .lineTo((item.position.x || 0) + (item.dimensions.width || 0), 
-                      (item.position.y || 0) + (item.dimensions.height || 0))
-               .stroke();
-          }
-          break;
-        case "space":
-          doc.moveDown();
-          break;
-      }
-    }
-  }
+    if (data.customer.address) {
+      doc.text(`Address: ${data.customer.address}`);
     }
 
-    // Add items
-    if (data.items && data.items.length > 0) {
-      doc.text("Items:").moveDown();
+    doc.moveDown();
 
-      data.content.forEach((item: ContentItem, index: number) => {
-        doc
-          .text(`${index + 1}. ${item.name}`)
-          .text(`   Quantity: ${item.quantity}`)
-          .text(`   Unit Price: $${item.unit_price.toFixed(2)}`)
-          .text(`   Subtotal: $${item.subtotal.toFixed(2)}`)
-          .moveDown();
-      });
-    }
+    // Items table
+    doc.fontSize(14).text("Items");
+    doc.moveDown();
 
-    // Add totals
-    if (data.totals) {
+    // Table headers
+    const tableTop = doc.y;
+    const descriptionX = 50;
+    const quantityX = 300;
+    const priceX = 400;
+    const totalX = 500;
+
+    doc
+      .fontSize(12)
+      .text("Description", descriptionX, tableTop)
+      .text("Qty", quantityX, tableTop)
+      .text("Price", priceX, tableTop)
+      .text("Total", totalX, tableTop);
+
+    doc.moveDown();
+
+    // Table rows
+    let yPos = doc.y;
+    data.items.forEach((item) => {
       doc
-        .moveDown()
-        .text(`Subtotal: $${data.totals.subtotal.toFixed(2)}`)
-        .text(`Tax: $${data.totals.tax.toFixed(2)}`)
-        .text(`Total: $${data.totals.total.toFixed(2)}`);
-    }
+        .fontSize(12)
+        .text(item.description, descriptionX, yPos)
+        .text(item.quantity.toString(), quantityX, yPos)
+        .text(`$${item.unit_price.toFixed(2)}`, priceX, yPos)
+        .text(`$${item.total.toFixed(2)}`, totalX, yPos);
 
-    // Add footer
-    doc.moveDown().fontSize(10).text("Thank you for your business!", { align: "center" });
+      yPos = doc.y + 20;
+    });
+
+    doc.moveDown();
+
+    // Totals
+    const totalsX = 400;
+    doc
+      .fontSize(12)
+      .text("Totals", { underline: true })
+      .moveDown()
+      .text("Subtotal:", totalsX)
+      .text(`$${data.totals.subtotal.toFixed(2)}`, { align: "right" })
+      .text("Tax:", totalsX)
+      .text(`$${data.totals.tax.toFixed(2)}`, { align: "right" })
+      .text("Total:", totalsX)
+      .text(`$${data.totals.total.toFixed(2)}`, { align: "right" });
+
+    // Footer
+    doc.moveDown(2).fontSize(10).text("Thank you for your business!", { align: "center" });
+
+    doc.end();
+    return doc;
   }
 }

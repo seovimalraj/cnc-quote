@@ -3,16 +3,23 @@ import { PricingService } from "./pricing.service";
 import { SupabaseService } from "../../lib/supabase/supabase.service";
 import { ManualReviewService } from "../manual-review/manual-review.service";
 import { CacheService } from "../../lib/cache/cache.service";
-import { 
-  InjectionMoldingPricingRequest,
-  CncPricingRequest,
-  SheetMetalPricingRequest 
-} from "./price-request.types";
+import { InjectionMoldingPricingRequest, CncPricingRequest, SheetMetalPricingRequest } from "./price-request.types";
 
 describe("PricingService", () => {
   let service: PricingService;
   let _supabase: SupabaseService;
-  let mockProfile: any;
+  const _mockProfile = {
+    id: "123",
+    machine_id: "456",
+    setup_cost: 100,
+    machine_rate_per_hour: 150,
+    min_order_qty: 1,
+    min_order_value: 100,
+    min_price_per_part: 10,
+    margin: 0.3,
+    overhead: 0.1,
+    quantity_breaks: [],
+  };
 
   const mockPricingProfile = {
     id: "123",
@@ -31,7 +38,7 @@ describe("PricingService", () => {
     surface_finish_rate_cm2_min: 10.0,
     feature_times: { hole: 30, pocket: 60, slot: 45, face: 20 },
     qa_cost_per_part: 5,
-    max_tonnage: 100,  // For injection molding
+    max_tonnage: 100, // For injection molding
     cutting_speed_mm_min: 1000, // For sheet metal
     pierce_time_s: 2, // For sheet metal
     bend_time_s: 5, // For sheet metal
@@ -135,7 +142,7 @@ describe("PricingService", () => {
         holes: 6,
         bends: 4,
         slots: 2,
-        corners: 8
+        corners: 8,
       },
       nest_utilization: 0.8,
       finish_ids: ["finish1", "finish2"],
@@ -180,8 +187,8 @@ describe("PricingService", () => {
         textures: 1,
       },
       complexity_multiplier: 1.3,
-      volume_cc: 75,  // Total volume including runners and gates
-      is_rush: false
+      volume_cc: 75, // Total volume including runners and gates
+      is_rush: false,
     };
 
     const result = await service.calculateInjectionMoldingPrice(request);
@@ -189,13 +196,13 @@ describe("PricingService", () => {
     expect(result.unit_price).toBeGreaterThan(0);
     expect(result.total_price).toBe(result.unit_price * request.quantity);
     expect(result.breakdown).toMatchObject({
-        setup_cost: expect.any(Number),
-        machine_cost: expect.any(Number),
-        material_cost: expect.any(Number),
-        qa_cost: expect.any(Number),
-        margin: expect.any(Number),
-        overhead: expect.any(Number),
-        finish_cost: expect.any(Number),
+      setup_cost: expect.any(Number),
+      machine_cost: expect.any(Number),
+      material_cost: expect.any(Number),
+      qa_cost: expect.any(Number),
+      margin: expect.any(Number),
+      overhead: expect.any(Number),
+      finish_cost: expect.any(Number),
     });
   });
 
@@ -215,7 +222,7 @@ describe("PricingService", () => {
       },
       complexity_multiplier: 1.0,
       quantity: 5,
-      is_rush: false
+      is_rush: false,
     };
 
     const result = await service.calculateCncPrice(request);
@@ -249,7 +256,7 @@ describe("PricingService", () => {
       },
       complexity_multiplier: 1.0,
       quantity: 1,
-      is_rush: false
+      is_rush: false,
     };
 
     const normalResult = await service.calculateCncPrice(baseRequest);

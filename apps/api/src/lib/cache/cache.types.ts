@@ -1,7 +1,7 @@
-import { Cache } from 'cache-manager';
-import { RedisClientType, RedisClientOptions } from '@redis/client';
+import { Cache } from "cache-manager";
+import { RedisClientType, RedisClientOptions } from "@redis/client";
 
-export type RedisClient = RedisClientType<Record<string, any>, Record<string, any>>;
+export type RedisClient = RedisClientType<Record<string, unknown>, Record<string, unknown>>;
 
 export interface RedisCache extends Cache {
   store: RedisClientStore;

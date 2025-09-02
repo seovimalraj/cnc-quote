@@ -13,9 +13,9 @@ interface Props {
 }
 
 export default async function QuoteDetailPage({ params }: Props) {
-  const supabase = createServerComponentClient({ cookies })
+  const supabase = createClient(cookies())
   
-  const { data: quote } = await supabase
+  const { data: quote }: { data: Quote | null } = await supabase
     .from('quotes')
     .select(`
       *,

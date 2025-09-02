@@ -11,7 +11,7 @@ import {
   GetTasksParams,
   UpdateTaskDto,
 } from "./manual-review.types";
-import { Quote, ReviewNotification, SlackMessage, RuleConditions } from "./manual-review.domain";
+import { Quote, SlackMessage, RuleConditions } from "./manual-review.domain";
 
 @Injectable()
 export class ManualReviewService {

@@ -10,7 +10,7 @@ export interface PricingRequest {
 
 /** CNC machining price request */
 export interface CncPricingRequest extends PricingRequest {
-  process_type: 'milling' | 'turning';
+  process_type: "milling" | "turning";
   volume_cc: number;
   surface_area_cm2: number;
   removed_material_cc: number;
@@ -25,7 +25,7 @@ export interface CncPricingRequest extends PricingRequest {
 
 /** Sheet metal price request */
 export interface SheetMetalPricingRequest extends PricingRequest {
-  process_type: 'laser_cutting' | 'press_brake';
+  process_type: "laser_cutting" | "press_brake";
   thickness_mm: number;
   sheet_area_cm2: number;
   cut_length_mm: number;
@@ -42,7 +42,7 @@ export interface SheetMetalPricingRequest extends PricingRequest {
 
 /** Injection molding price request */
 export interface InjectionMoldingPricingRequest extends PricingRequest {
-  process_type: 'injection';
+  process_type: "injection";
   volume_cc: number;
   part_volume_cc: number;
   shot_weight_g: number;
@@ -80,5 +80,5 @@ export interface PricingResponse {
   currency: string;
   lead_time_days: number;
   rush_surcharge?: number;
-  status?: 'quoted' | 'tbd_pending';
+  status?: "quoted" | "tbd_pending";
 }

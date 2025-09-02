@@ -7,7 +7,7 @@ export default async function FeaturesPage() {
   const supabase = createClient(cookies())
   
   // Get all feature types with their rules
-  const { data: featureTypes } = await supabase
+  const { data: featureTypes }: { data: (FeatureType & { machine_feature_rules: (FeatureRule & { machine: any })[] })[] | null } = await supabase
     .from('feature_types')
     .select(`
       *,

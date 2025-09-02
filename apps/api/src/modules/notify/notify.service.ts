@@ -2,7 +2,13 @@ import { Injectable } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import * as nodemailer from "nodemailer";
 import { WebClient } from "@slack/web-api";
-import { ReviewNotification, NotificationMessage, OrderDetails, ReviewDetails, NotificationTemplate } from "./notify.types";
+import {
+  ReviewNotification,
+  NotificationMessage,
+  OrderDetails,
+  ReviewDetails,
+  NotificationTemplate,
+} from "./notify.types";
 
 @Injectable()
 export class NotifyService {
