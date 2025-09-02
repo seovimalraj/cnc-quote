@@ -19,7 +19,7 @@ export interface DfmValidationIssue {
   name: string;
   severity: Severity;
   message: string;
-  details?: any;
+  details?: Record<string, unknown>;
   location?: {
     x: number;
     y: number;

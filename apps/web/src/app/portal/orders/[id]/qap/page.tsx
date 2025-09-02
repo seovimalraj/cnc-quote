@@ -8,7 +8,7 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import type { QapDocument } from '@/types/qap-document';
 
-export function QapDocumentsList() {
+function QapDocumentsList() {
   const params = useParams();
   const [documents, setDocuments] = useState<QapDocument[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -83,4 +83,8 @@ export function QapDocumentsList() {
       ))}
     </div>
   );
+}
+
+export default function QapDocumentsPage() {
+  return <QapDocumentsList />;
 }

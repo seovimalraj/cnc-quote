@@ -1,7 +1,23 @@
 import { createClient } from '@/lib/supabase/server'
 import { cookies } from 'next/headers'
 import { notFound } from 'next/navigation'
-import type { Material, MaterialCosting } from '@cnc-quote/shared'
+import type { Material } from '@cnc-quote/shared'
+
+interface MaterialCosting {
+  id: string;
+  costing_type: string;
+  min_quantity: number;
+  max_quantity: number;
+}
+
+interface MachineMaterial {
+  id: string;
+  machine_id: string;
+  machine: {
+    name: string;
+    process_type: string;
+  };
+}
 
 export default async function MaterialDetailPage({
   params: { id }
@@ -112,7 +128,7 @@ export default async function MaterialDetailPage({
             <div>
               <h3 className="text-lg font-medium text-gray-900">Material Costing</h3>
               <div className="mt-4 space-y-4">
-                {material.material_costing?.map((cost: any, index: number) => (
+                {material.material_costing?.map((cost: MaterialCosting, index: number) => (
                   <div key={cost.id} className="grid grid-cols-1 gap-4 sm:grid-cols-4 items-end">
                     <div>
                       <label className="block text-sm font-medium text-gray-700">
@@ -197,7 +213,7 @@ export default async function MaterialDetailPage({
         <div className="px-4 py-5 sm:p-6">
           <h3 className="text-lg font-medium text-gray-900">Machine Mappings</h3>
           <div className="mt-4 divide-y divide-gray-200">
-            {material.machine_materials?.map((machineMaterial: any) => (
+            {material.machine_materials?.map((machineMaterial: MachineMaterial) => (
               <div key={machineMaterial.id} className="py-4">
                 <div className="flex items-center justify-between">
                   <div>

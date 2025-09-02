@@ -43,7 +43,7 @@ export interface MachineMessage {
   type: 'error' | 'warning' | 'info';
   code: string;
   message: string;
-  params?: Record<string, any>;
+  params?: Record<string, unknown>;
   created_at: string;
   updated_at: string;
 }

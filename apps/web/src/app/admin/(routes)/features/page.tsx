@@ -3,6 +3,18 @@ import { cookies } from 'next/headers'
 import { PlusIcon } from '@heroicons/react/20/solid'
 import { FeatureType, FeatureRule } from '@cnc-quote/shared'
 
+interface RuleWithMachine {
+  machine: { name: string; process_type: string };
+  id: string;
+  feature_type_id: string;
+  machine_id: string;
+  complexity_bracket_id: string | null;
+  min_dimension_mm: number | null;
+  max_dimension_mm: number | null;
+  time_minutes: number;
+  multiplier: number;
+}
+
 export default async function FeaturesPage() {
   const supabase = createClient(cookies())
   
@@ -95,7 +107,7 @@ export default async function FeaturesPage() {
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-gray-200 bg-white">
-                            {feature.machine_feature_rules.map((rule: any) => (
+                            {feature.machine_feature_rules.map((rule: RuleWithMachine) => (
                               <tr key={rule.id}>
                                 <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm text-gray-900">
                                   {rule.machine.name}
@@ -149,7 +161,7 @@ export default async function FeaturesPage() {
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-gray-200 bg-white">
-                            {feature.sheet_features.map((rule: any) => (
+                            {feature.sheet_features.map((rule: RuleWithMachine) => (
                               <tr key={rule.id}>
                                 <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm text-gray-900">
                                   {rule.machine.name}
@@ -203,7 +215,7 @@ export default async function FeaturesPage() {
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-gray-200 bg-white">
-                            {feature.im_features.map((rule: any) => (
+                            {feature.im_features.map((rule: RuleWithMachine) => (
                               <tr key={rule.id}>
                                 <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm text-gray-900">
                                   {rule.machine.name}

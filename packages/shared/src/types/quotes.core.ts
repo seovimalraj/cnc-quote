@@ -103,7 +103,7 @@ export interface Material {
   type: string;
   density: number;
   price_per_kg: number;
-  properties: Record<string, any>;
+  properties: Record<string, unknown>;
 }
 
 export interface Finish {
