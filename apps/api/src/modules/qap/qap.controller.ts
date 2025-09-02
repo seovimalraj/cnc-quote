@@ -2,6 +2,7 @@ import { Body, Controller, Get, Param, Post, Put, UseGuards, ValidationPipe } fr
 import { AuthGuard } from "@nestjs/passport";
 import { OrgGuard } from "../../auth/org.guard";
 import { ReqUser } from "../../auth/req-user.decorator";
+import { User } from "../../types/user";
 import { QapService } from "./qap.service";
 import { CreateQapTemplateDto, UpdateQapTemplateDto, GenerateQapDocumentDto } from "./qap.dto";
 import { ApiTags, ApiOperation, ApiResponse, ApiParam } from "@nestjs/swagger";
@@ -18,11 +19,12 @@ export class QapController {
   @ApiResponse({ status: 201, description: "Template created successfully", type: QapTemplateResponse })
   async createTemplate(
     @Body(ValidationPipe) createQapTemplateDto: CreateQapTemplateDto,
-    @ReqUser() user: { id: string },
+    @ReqUser() user: User,
   ): Promise<QapTemplate> {
     return this.qapService.createTemplate({
       ...createQapTemplateDto,
       userId: user.id,
+      orgId: user.org_id,
     });
   }
 
@@ -33,7 +35,7 @@ export class QapController {
   async updateTemplate(
     @Param("id") id: string,
     @Body(ValidationPipe) updateQapTemplateDto: UpdateQapTemplateDto,
-    @ReqUser() user: { id: string },
+    @ReqUser() user: User,
   ): Promise<QapTemplate> {
     return this.qapService.updateTemplate(id, {
       ...updateQapTemplateDto,
@@ -62,11 +64,12 @@ export class QapController {
   @ApiResponse({ status: 201, description: "Document generation started", type: QapDocumentResponse })
   async generateQapDocument(
     @Body(ValidationPipe) generateQapDocumentDto: GenerateQapDocumentDto,
-    @ReqUser() user: { id: string },
+    @ReqUser() user: User,
   ): Promise<QapDocument> {
     return this.qapService.generateQapDocument({
       ...generateQapDocumentDto,
       userId: user.id,
+      orgId: user.org_id,
     });
   }
 

@@ -1,6 +1,10 @@
-import { OrdersCreateRequest } from "@paypal/checkout-server-sdk/lib/orders/orders-create-request";
+// import { OrdersCreateRequest } from "@paypal/checkout-server-sdk/lib/orders/orders-create-request";
 
-// The PayPal SDK doesn't provide type definitions, so we create our own
+// The PayPal SDK doesn't provide proper type definitions, so we create our own
+interface OrdersCreateRequest {
+  requestBody: (body: Record<string, unknown>) => OrdersCreateRequest;
+}
+
 interface PayPalAmount {
   currency_code: string;
   value: string;
@@ -23,16 +27,11 @@ interface _PayPalPurchaseUnit {
   reference_id?: string;
 }
 
-export interface PayPalOrderRequestBody {
+// PayPal payment types and interfaces
+
+export interface PayPalPaymentIntent {
   intent: "CAPTURE" | "AUTHORIZE";
-  application_context: {
-    brand_name?: string;
-    landing_page?: string;
-    shipping_preference?: string;
-    user_action?: string;
-    return_url?: string;
-    cancel_url?: string;
-  };
+  application_context?: Record<string, unknown>; // PayPal-specific context
   purchase_units: Array<{
     amount: {
       currency_code: string;

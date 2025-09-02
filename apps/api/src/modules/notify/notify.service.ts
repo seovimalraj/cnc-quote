@@ -126,4 +126,19 @@ export class NotifyService {
 
     await this.sendOrderEmail(reviewDetails.itemId, template);
   }
+
+  async sendOrderNotification(notification: {
+    type: string;
+    orderId: string;
+    amount?: number;
+    currency?: string;
+  }): Promise<void> {
+    // Basic order notification - can be expanded as needed
+    const subject = `Order ${notification.type.replace("_", " ").toUpperCase()} - ${notification.orderId}`;
+    const body = `Order ${notification.orderId} has been ${notification.type.replace("_", " ")}.`;
+
+    // Log the notification for now - using console.info instead of logger
+    // eslint-disable-next-line no-console
+    console.info(`Order notification: ${subject} - ${body}`);
+  }
 }

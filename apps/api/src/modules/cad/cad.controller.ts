@@ -31,8 +31,11 @@ export class CadController {
   @ApiOperation({ summary: "Get CAD analysis result" })
   @ApiResponse({
     status: 200,
-    description: "Analysis result retrieved successfully",
-    type: CadAnalysisResult,
+    description: "CAD processing result",
+    schema: {
+      type: "object",
+      properties: { taskId: { type: "string" }, status: { type: "string" } },
+    },
   })
   @ApiResponse({ status: 404, description: "Task not found" })
   async getAnalysisResult(@Param() dto: GetAnalysisResultDto): Promise<CadAnalysisResult> {

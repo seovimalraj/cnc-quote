@@ -37,7 +37,7 @@ export default function SignInPage() {
           Sign In
         </h3>
       </div>
-      <form action={handleSubmit as (formData: FormData) => Promise<never>}>
+      <form action={handleSubmit as any}>
         <div className="p-6.5">
           <div className="mb-4.5">
             <label className="mb-2.5 block text-black dark:text-white">

@@ -1,9 +1,10 @@
+import "reflect-metadata";
 import { NestFactory } from "@nestjs/core";
 import { ValidationPipe, VersioningType } from "@nestjs/common";
 import { SwaggerModule, DocumentBuilder } from "@nestjs/swagger";
 import helmet from "helmet";
 import * as bodyParser from "body-parser";
-import * as timeout from "connect-timeout";
+import timeout from "connect-timeout";
 import * as Sentry from "@sentry/node";
 import { nodeProfilingIntegration } from "@sentry/profiling-node";
 import { AppModule } from "./app.module";

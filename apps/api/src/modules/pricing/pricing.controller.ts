@@ -1,24 +1,24 @@
 import { Controller, Post, Body, UseGuards } from "@nestjs/common";
 import { PricingService } from "./pricing.service";
-import { JwtGuard } from "../../auth/jwt.guard";
+import { JwtAuthGuard } from "../../auth/jwt.guard";
 import { OrgGuard } from "../../auth/org.guard";
 import { ApiTags } from "@nestjs/swagger";
 import type {
-  CncPriceRequest,
-  SheetMetalPriceRequest,
-  InjectionMoldingPriceRequest,
+  CncPricingRequest,
+  SheetMetalPricingRequest,
+  InjectionMoldingPricingRequest,
   PriceResponse,
 } from "@cnc-quote/shared";
 
 @ApiTags("pricing")
 @Controller("price")
-@UseGuards(JwtGuard, OrgGuard)
+@UseGuards(JwtAuthGuard, OrgGuard)
 export class PricingController {
   constructor(private readonly pricingService: PricingService) {}
 
   @Post()
   async calculatePrice(
-    @Body() request: CncPriceRequest | SheetMetalPriceRequest | InjectionMoldingPriceRequest,
+    @Body() request: CncPricingRequest | SheetMetalPricingRequest | InjectionMoldingPricingRequest,
   ): Promise<PriceResponse> {
     switch (request.process_type) {
       case "milling":

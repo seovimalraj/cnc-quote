@@ -98,4 +98,7 @@ export class UpdateQuoteDto {
 
   @IsOptional()
   rejectedAt?: Date;
+
+  @IsOptional()
+  email_sent_at?: Date;
 }

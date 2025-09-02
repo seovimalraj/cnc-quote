@@ -27,7 +27,7 @@ export class PdfService {
       tax: number;
       total: number;
     };
-  }): Promise<PDFDocument> {
+  }): Promise<typeof PDFDocument> {
     const doc = new PDFDocument();
 
     // Header

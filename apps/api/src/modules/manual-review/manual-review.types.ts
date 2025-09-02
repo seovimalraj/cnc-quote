@@ -60,14 +60,6 @@ export class ManualReviewRule {
   @IsString()
   org_id: string;
 
-  @ApiProperty({ enum: ManualReviewRuleType })
-  @IsEnum(ManualReviewRuleType)
-  type: ManualReviewRuleType;
-
-  @ApiProperty()
-  @IsObject()
-  conditions: Record<string, unknown>;
-
   @ApiProperty()
   @IsString()
   message: string;

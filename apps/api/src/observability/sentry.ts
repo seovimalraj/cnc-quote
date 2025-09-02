@@ -1,16 +1,4 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { Injectable, OnModuleInit } from "@nestjs/common";
-
-@Injectable()
-export class SentryService implements OnModuleInit {
-  onModuleInit(): void {
-    // Initialization moved to main.ts
-  }
-
-  logError(error: Error, context?: Record<string, any>): void {
-    console.error(error, context);
-  }
-}
 import * as Sentry from "@sentry/node";
 import { Injectable, OnModuleInit } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
@@ -46,22 +34,6 @@ export class SentryService implements OnModuleInit {
     }
   }
 
-  captureMessage(message: string, level: Sentry.Severity = "info") {
-    Sentry.captureMessage(message, level);
-  }
-
-  startTransaction(context: { name: string; op: string; description?: string }) {
-    return Sentry.startTransaction({
-      name: context.name,
-      op: context.op,
-      description: context.description,
-    });
-  }
-
-  configureScope(callback: (scope: Sentry.Scope) => void) {
-    Sentry.configureScope(callback);
-  }
-
   captureMessage(message: string, level: Sentry.SeverityLevel = "info") {
     return Sentry.captureMessage(message, { level });
   }
@@ -73,5 +45,12 @@ export class SentryService implements OnModuleInit {
       setData: () => {},
       ...context,
     };
+  }
+
+  configureScope(callback: (scope: Sentry.Scope) => void) {
+    if (Sentry.getCurrentScope) {
+      const scope = Sentry.getCurrentScope();
+      callback(scope);
+    }
   }
 }

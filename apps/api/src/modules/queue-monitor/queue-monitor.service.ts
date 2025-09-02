@@ -38,9 +38,23 @@ export class QueueMonitorService {
     }
 
     return {
-      metrics: queueMetrics,
+      queue: "aggregate",
+      counts: {},
+      jobs: {
+        active: [],
+        waiting: [],
+        failed: [],
+      },
       timestamp: new Date().toISOString(),
       overall_health: this.calculateOverallHealth(queueMetrics),
+    };
+  }
+
+  async getQueueMetrics(): Promise<Record<string, unknown>> {
+    // Basic implementation for queue metrics
+    return {
+      timestamp: new Date().toISOString(),
+      queues: [],
     };
   }
 

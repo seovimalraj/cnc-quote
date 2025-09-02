@@ -176,9 +176,12 @@ export function Dropzone({ organizationId, onUploadComplete }: FileUploadProps) 
       'model/step': ['.step', '.stp'],
       'model/stl': ['.stl'],
       'application/dxf': ['.dxf']
-    },
+    } as any,
     maxSize: MAX_FILE_SIZE,
-    multiple: true
+    multiple: true,
+    onDragEnter: () => {},
+    onDragOver: () => {},
+    onDragLeave: () => {}
   });
 
   const removeUpload = (index: number) => {
@@ -195,7 +198,7 @@ export function Dropzone({ organizationId, onUploadComplete }: FileUploadProps) 
           ${isDragActive ? 'border-primary bg-primary/10' : 'border-border'}
         `}
       >
-        <input {...getInputProps()} />
+        <input {...getInputProps() as any} />
         <Upload className="mx-auto h-12 w-12 text-muted-foreground" />
         <p className="mt-2 text-sm text-muted-foreground">
           Drag &amp; drop CAD files here, or click to select

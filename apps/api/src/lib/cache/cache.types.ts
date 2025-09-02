@@ -1,7 +1,7 @@
 import { Cache } from "cache-manager";
-import { RedisClientType, RedisClientOptions } from "@redis/client";
+import type { RedisClientType } from "@redis/client";
 
-export type RedisClient = RedisClientType<Record<string, unknown>, Record<string, unknown>>;
+export type RedisClient = RedisClientType;
 
 export interface RedisCache extends Cache {
   store: RedisClientStore;
@@ -9,7 +9,7 @@ export interface RedisCache extends Cache {
 
 export interface RedisClientStore {
   client: RedisClient;
-  options: RedisClientOptions;
+  options: Record<string, unknown>; // RedisClientOptions;
   name: string;
   getClient(): Promise<RedisClient>;
   set<T>(key: string, value: T, ttl?: number): Promise<void>;

@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common";
-import { CncPriceRequest, SheetMetalPriceRequest, InjectionMoldingPriceRequest } from "@cnc-quote/shared";
 import { z } from "zod";
+import { CncPriceRequest, SheetMetalPriceRequest, InjectionMoldingPriceRequest } from "@cnc-quote/shared";
 
 @Injectable()
 export class ValidationService {

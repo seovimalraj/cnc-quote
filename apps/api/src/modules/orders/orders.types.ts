@@ -1,5 +1,6 @@
-import { User } from "../types/user";
-import { Quote } from "../modules/quotes/quotes.types";
+import { User } from "../../types/user";
+// import { Quote } from "../quotes/quotes.dto"; // Use shared types instead
+import type { QuoteResponse } from "@cnc-quote/shared";
 
 export interface OrderResponse {
   id: string;
@@ -8,7 +9,7 @@ export interface OrderResponse {
   status: string;
   createdAt: Date;
   updatedAt: Date;
-  quote?: Quote;
+  quote?: QuoteResponse;
   user?: User;
 }
 
