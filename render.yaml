@@ -2,7 +2,7 @@
 version: "1"
 services:
   - type: web
-    name: cnc-quote
+    name: cnc-quote-api
     env: node
     repo: https://github.com/seovimalraj/cnc-quote
     plan: free
@@ -19,10 +19,11 @@ services:
       cd packages/shared
       pnpm build
       
-      echo "Building main package..."
-      cd ../..
+      echo "Building API..."
+      cd ../../apps/api
+      pnpm install --no-frozen-lockfile --network-timeout 100000
       pnpm build
-    startCommand: node apps/api/dist/main.js
+    startCommand: cd apps/api && pnpm prod
     healthCheckPath: /api/health
     autoDeployTrigger: commit
     envVars:

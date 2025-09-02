@@ -176,7 +176,7 @@ export function Dropzone({ organizationId, onUploadComplete }: FileUploadProps) 
       'model/step': ['.step', '.stp'],
       'model/stl': ['.stl'],
       'application/dxf': ['.dxf']
-    } as any,
+    } as Record<string, string[]>,
     maxSize: MAX_FILE_SIZE,
     multiple: true,
     onDragEnter: () => {},
