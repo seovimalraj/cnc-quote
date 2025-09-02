@@ -54,9 +54,17 @@ export const QuoteWizard = ({ clientOrigin, theme: _theme }: Props) => {
       title: 'Upload Files',
       component: (
         <Dropzone
+          organizationId="default-org" // TODO: Get from context
           onUploadComplete={(files) => {
-            updateQuote({ files })
-            postToParent('files:uploaded', { files })
+            // Convert file string to QuoteFile array
+            const fileArray = files.split(',').map((filename, index) => ({
+              id: `file-${index}`,
+              name: filename,
+              type: 'application/octet-stream',
+              size: 0
+            }));
+            updateQuote({ files: fileArray })
+            postToParent('files:uploaded', { files: fileArray })
             setStep(1)
           }}
         />
@@ -67,27 +75,27 @@ export const QuoteWizard = ({ clientOrigin, theme: _theme }: Props) => {
       component: (
         <div className="space-y-6">
           <MaterialSelector
-            onChange={(material) => {
-              updateQuote({ material })
+            onChange={(material: any) => {
+              updateQuote({ material: material.id || material })
               postToParent('material:selected', { material })
             }}
           />
           <FinishSelector
-            onChange={(finish) => {
-              updateQuote({ finish })
+            onChange={(finish: any) => {
+              updateQuote({ finish: finish.id || finish })
               postToParent('finish:selected', { finish })
             }}
           />
           <ToleranceSelector
-            onChange={(tolerance) => {
-              updateQuote({ tolerance })
+            onChange={(tolerance: any) => {
+              updateQuote({ tolerance: tolerance.id || tolerance })
               postToParent('tolerance:selected', { tolerance })
             }}
           />
           <QuantitySelector
-            onChange={(quantity) => {
+            onChange={(quantity: number) => {
               updateQuote({ quantity })
-              calculatePrice().then(price => {
+              calculatePrice().then((price: any) => {
                 postToParent('price:updated', { price })
               })
             }}
@@ -105,7 +113,17 @@ export const QuoteWizard = ({ clientOrigin, theme: _theme }: Props) => {
       title: 'Review & Checkout',
       component: (
         <div className="space-y-6">
-          <QuoteStatusDisplay quote={quote} />
+          <div className="text-lg font-semibold">
+            {quote.price ? (
+              <div>
+                ${quote.price.total_price.toFixed(2)}
+              </div>
+            ) : (
+              <div className="text-gray-600">
+                Price calculation in progress...
+              </div>
+            )}
+          </div>
           <Button
             onClick={() => {
               postToParent('checkout:started', { quote })

@@ -48,10 +48,10 @@ export default async function AdminQuotePage({ params }: Props) {
           <Badge
             variant={
               quote.status === 'accepted'
-                ? 'success'
+                ? 'default'
                 : quote.status === 'rejected'
                 ? 'destructive'
-                : 'default'
+                : 'secondary'
             }
           >
             {quote.status}
@@ -99,7 +99,7 @@ export default async function AdminQuotePage({ params }: Props) {
               </div>
               <div>
                 <dt className="text-sm text-gray-500">Expires</dt>
-                <dd>{new Date(quote.expires_at).toLocaleString()}</dd>
+                <dd>{quote.expires_at ? new Date(quote.expires_at).toLocaleString() : 'No expiration'}</dd>
               </div>
               {quote.email_sent_at && (
                 <div>

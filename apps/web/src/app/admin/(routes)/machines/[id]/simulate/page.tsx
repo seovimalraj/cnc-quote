@@ -86,8 +86,7 @@ export default function SimulatePage() {
       setIsLoading(false);
       toast({
         title: 'Error',
-        description: 'Failed to analyze file',
-        variant: 'destructive',
+        description: 'Failed to analyze file'
       });
     }
   };
@@ -103,8 +102,8 @@ export default function SimulatePage() {
 
     let priceRequest;
 
-    // Use type property instead of process_type since that's what's available in Machine
-    switch (machine.type) {
+    // Use technology property instead of type since that's what's available in Machine
+    switch (machine.technology) {
       case 'cnc':
         priceRequest = {
           ...baseRequest,
@@ -154,8 +153,7 @@ export default function SimulatePage() {
       console.error('Error:', error);
       toast({
         title: 'Error',
-        description: 'Failed to calculate price',
-        variant: 'destructive',
+        description: 'Failed to calculate price'
       });
     }
   };

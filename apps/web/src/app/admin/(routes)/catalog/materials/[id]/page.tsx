@@ -8,11 +8,13 @@ interface MaterialCosting {
   costing_type: string;
   min_quantity: number;
   max_quantity: number;
+  unit_cost: number;
 }
 
 interface MachineMaterial {
   id: string;
   machine_id: string;
+  cutting_speed_m_min?: number;
   machine: {
     name: string;
     process_type: string;

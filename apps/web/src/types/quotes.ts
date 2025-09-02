@@ -21,6 +21,7 @@ export interface QuoteFile {
   };
 }
 
+// Local interface for the quote wizard (partial/draft state)
 export interface Quote {
   files: QuoteFile[];
   material?: string;

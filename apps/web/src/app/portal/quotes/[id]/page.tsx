@@ -93,7 +93,7 @@ export default async function QuoteDetailPage({ params }: Props) {
             <div>
               <dt className="text-sm text-gray-500">Expires</dt>
               <dd>
-                {new Date(quote.expires_at).toLocaleDateString()}
+                {quote.expires_at ? new Date(quote.expires_at).toLocaleDateString() : 'No expiration'}
               </dd>
             </div>
           </dl>
@@ -117,9 +117,9 @@ export default async function QuoteDetailPage({ params }: Props) {
               <tbody>
                 {quote.items.map((item) => (
                   <tr key={item.id} className="border-b">
-                    <td className="py-2">{item.file.name}</td>
+                    <td className="py-2">{item.file?.name || 'Unknown file'}</td>
                     <td className="py-2">{item.process_type}</td>
-                    <td className="py-2">{item.material.name}</td>
+                    <td className="py-2">{item.material?.name || 'Unknown material'}</td>
                     <td className="text-right py-2">{item.quantity}</td>
                     <td className="text-right py-2">
                       {quote.currency} {item.unit_price.toFixed(2)}

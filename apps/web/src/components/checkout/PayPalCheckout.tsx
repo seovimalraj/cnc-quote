@@ -32,7 +32,7 @@ export function PayPalCheckout({
       });
 
       return response.data.orderId;
-    } catch (error: Error) {
+    } catch (error: unknown) {
       toast.error('Failed to create PayPal order');
       throw error;
     }
@@ -51,7 +51,7 @@ export function PayPalCheckout({
           router.push(`/portal/orders/${response.data.orderId}`);
         }
       }
-    } catch (error: Error) {
+    } catch (error: unknown) {
       toast.error('Payment failed. Please try again.');
       console.error('PayPal capture error:', error);
     } finally {

@@ -39,7 +39,8 @@ const bracketSchema = z.object({
 });
 
 export default function ComplexityPage() {
-  const { id: machineId } = useParams();
+  const params = useParams();
+  const machineId = params?.id as string;
   const [settings, setSettings] = useState<z.infer<typeof settingsSchema> | null>(null);
   const [brackets, setBrackets] = useState<z.infer<typeof bracketSchema>[]>([]);
   
@@ -51,7 +52,7 @@ export default function ComplexityPage() {
 
   const { register, handleSubmit, formState: { errors } } = useForm<z.infer<typeof settingsSchema>>({
     resolver: zodResolver(settingsSchema),
-    defaultValues: settings
+    defaultValues: settings || undefined
   });
 
   const loadData = useCallback(async () => {
@@ -120,9 +121,9 @@ export default function ComplexityPage() {
 
     // Save new order to database
     const { error } = await supabase.from('complexity_brackets').upsert(
-      updatedBrackets.map(({ id, machine_id, sort_order }) => ({
+      updatedBrackets.map(({ id, sort_order }) => ({
         id,
-        machine_id,
+        machine_id: machineId,
         sort_order
       }))
     );
@@ -130,8 +131,7 @@ export default function ComplexityPage() {
     if (error) {
       toast({
         title: 'Error updating order',
-        description: error.message,
-        variant: 'destructive'
+        description: error.message
       });
     }
   };
@@ -153,8 +153,7 @@ export default function ComplexityPage() {
     if (error) {
       toast({
         title: 'Error adding bracket',
-        description: error.message,
-        variant: 'destructive'
+        description: error.message
       });
     } else {
       loadData();
@@ -170,8 +169,7 @@ export default function ComplexityPage() {
     if (error) {
       toast({
         title: 'Error updating bracket',
-        description: error.message,
-        variant: 'destructive'
+        description: error.message
       });
     } else {
       loadData();
@@ -187,8 +185,7 @@ export default function ComplexityPage() {
     if (error) {
       toast({
         title: 'Error deleting bracket',
-        description: error.message,
-        variant: 'destructive'
+        description: error.message
       });
     } else {
       loadData();
@@ -339,7 +336,7 @@ export default function ComplexityPage() {
                           {...draggableProvided.draggableProps}
                           className="flex items-center gap-4 p-4 mb-2 bg-secondary/50 rounded-lg"
                         >
-                          <div {...provided.dragHandleProps}>
+                          <div {...draggableProvided.dragHandleProps}>
                             <GripVertical className="h-5 w-5 text-muted-foreground" />
                           </div>
                           
@@ -383,7 +380,7 @@ export default function ComplexityPage() {
                       )}
                     </Draggable>
                   ))}
-                  {provided.placeholder}
+                  {droppableProvided.placeholder}
                 </div>
               )}
             </Droppable>

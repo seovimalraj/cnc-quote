@@ -1,9 +1,8 @@
 import { FC } from 'react';
 import { QuoteEtaBadge } from '@/components/ui/quote-eta-badge';
-
 import type { Quote } from '@/types/quote';
 
-export const QuoteStatusDisplay: FC<{ quote: Quote }> = ({ quote }) => {
+export const QuoteStatusDisplay: FC<{ quote: Quote }> = ({ quote }: { quote: Quote }) => {
   return (
     <div className="space-y-2">
       {quote.status === 'tbd_pending' && (

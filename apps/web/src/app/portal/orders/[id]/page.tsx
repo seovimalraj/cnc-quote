@@ -9,18 +9,12 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import type { Order } from '@/types/order';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { QapDocumentsList } from './qap/page';
+import { QapDocumentsList } from './qap/QapDocumentsList';
 
 export default function OrderDetailsPage() {
   const params = useParams();
   const [order, setOrder] = useState<Order | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    if (params?.id) {
-      loadOrder();
-    }
-  }, [params?.id, loadOrder]);
 
   const loadOrder = useCallback(async () => {
     if (!params?.id) return;
@@ -34,7 +28,13 @@ export default function OrderDetailsPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [params.id]);
+  }, [params?.id]);
+
+  useEffect(() => {
+    if (params?.id) {
+      loadOrder();
+    }
+  }, [params?.id, loadOrder]);
 
   if (isLoading) {
     return <div>Loading...</div>;

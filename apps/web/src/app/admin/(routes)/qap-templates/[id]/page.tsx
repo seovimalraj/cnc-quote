@@ -4,7 +4,6 @@ import { useCallback, useEffect, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { useParams, useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
-// import { Editor } from '@monaco-editor/react';
 import { toast } from 'react-hot-toast';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -66,10 +65,13 @@ export default function QapTemplateEditor() {
       loadTemplate();
     } else {
       setTemplate({
+        id: crypto.randomUUID(),
         name: 'New Template',
         process_type: 'cnc',
         template_html: defaultTemplate,
         schema_json: defaultSchema,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
       });
     }
   }, [params.id, loadTemplate]);
@@ -129,7 +131,7 @@ export default function QapTemplateEditor() {
                 <Input
                   id="name"
                   value={template.name}
-                  onChange={(e) =>
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                     setTemplate({ ...template, name: e.target.value })
                   }
                 />
@@ -139,8 +141,8 @@ export default function QapTemplateEditor() {
                 <Select
                   id="process"
                   value={template.process_type}
-                  onChange={(e) =>
-                    setTemplate({ ...template, process_type: e.target.value })
+                  onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
+                    setTemplate({ ...template, process_type: e.target.value as 'cnc' | 'sheet' | 'im' })
                   }
                 >
                   <option value="cnc">CNC Machining</option>
@@ -158,8 +160,8 @@ export default function QapTemplateEditor() {
                 height="100%"
                 defaultLanguage="html"
                 value={template.template_html}
-                onChange={(value) =>
-                  setTemplate({ ...template, template_html: value })
+                onChange={(value: string | undefined) =>
+                  setTemplate({ ...template, template_html: value || '' })
                 }
                 options={{
                   minimap: { enabled: false },
@@ -182,11 +184,11 @@ export default function QapTemplateEditor() {
                     ? template.schema_json
                     : JSON.stringify(template.schema_json, null, 2)
                 }
-                onChange={(value) =>
+                onChange={(value: string | undefined) =>
                   setTemplate(template && value ? {
                     ...template,
                     schema_json: JSON.parse(value)
-                  } : null)
+                  } : template)
                 }
                 options={{
                   minimap: { enabled: false },
@@ -203,7 +205,7 @@ export default function QapTemplateEditor() {
                 height="100%"
                 defaultLanguage="json"
                 value={JSON.stringify(previewData, null, 2)}
-                onChange={(value) => value ? setPreviewData(JSON.parse(value) as QapPreviewData) : null}
+                onChange={(value: string | undefined) => value ? setPreviewData(JSON.parse(value) as QapPreviewData) : null}
                 options={{
                   minimap: { enabled: false },
                   scrollBeyondLastLine: false,

@@ -12,7 +12,7 @@ interface ModelViewerProps {
 }
 
 export function ModelViewer({ url, showWireframe = false }: ModelViewerProps) {
-  const modelRef = useRef();
+  const modelRef = useRef<THREE.Group>(null);
   const [model, setModel] = useState<THREE.Group | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -23,12 +23,12 @@ export function ModelViewer({ url, showWireframe = false }: ModelViewerProps) {
     const loader = new GLTFLoader();
     loader.load(
       url,
-      (gltf) => {
+      (gltf: any) => {
         setModel(gltf.scene);
         setError(null);
       },
       undefined,
-      (err) => {
+      (err: any) => {
         const errorMessage = err instanceof Error ? err.message : 'Failed to load model';
         setError(errorMessage);
       }

@@ -13,6 +13,14 @@ interface RuleWithMachine {
   max_dimension_mm: number | null;
   time_minutes: number;
   multiplier: number;
+  // Additional properties that may exist in the data but not in the type
+  complexity?: string;
+  thickness_range?: string;
+  min_bend_radius?: number;
+  max_bend_angle?: number;
+  min_wall_thickness?: number;
+  max_wall_thickness?: number;
+  draft_angle?: number;
 }
 
 export default async function FeaturesPage() {
@@ -116,13 +124,13 @@ export default async function FeaturesPage() {
                                   {rule.complexity}
                                 </td>
                                 <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                                  {rule.min_dimension}-{rule.max_dimension}mm
+                                  {rule.min_dimension_mm}-{rule.max_dimension_mm}mm
                                 </td>
                                 <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                                  +{rule.setup_time_minutes}m setup, +{rule.cycle_time_minutes}m cycle
+                                  +{rule.time_minutes}m setup, +{rule.time_minutes}m cycle
                                 </td>
                                 <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                                  {rule.cost_multiplier}×
+                                  {rule.multiplier}×
                                 </td>
                                 <td className="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6">
                                   <button
@@ -173,10 +181,10 @@ export default async function FeaturesPage() {
                                   R{rule.min_bend_radius}mm, {rule.max_bend_angle}°
                                 </td>
                                 <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                                  +{rule.setup_time_minutes}m setup, +{rule.cycle_time_minutes}m cycle
+                                  +{rule.time_minutes}m setup, +{rule.time_minutes}m cycle
                                 </td>
                                 <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                                  {rule.cost_multiplier}×
+                                  {rule.multiplier}×
                                 </td>
                                 <td className="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6">
                                   <button
@@ -230,7 +238,7 @@ export default async function FeaturesPage() {
                                   {rule.draft_angle}°
                                 </td>
                                 <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                                  {rule.cost_multiplier}×
+                                  {rule.multiplier}×
                                 </td>
                                 <td className="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6">
                                   <button

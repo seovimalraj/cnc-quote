@@ -14,7 +14,7 @@
     "incremental": true,
     "esModuleInterop": true,
     "module": "esnext",
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",
     "resolveJsonModule": true,
     "isolatedModules": true,
     "jsx": "preserve",
@@ -25,7 +25,7 @@
         "./src/*"
       ],
       "@cnc-quote/shared": [
-        "../../packages/shared/src/types.core"
+        "../../packages/shared/dist/index.d.ts"
       ]
     },
     "plugins": [

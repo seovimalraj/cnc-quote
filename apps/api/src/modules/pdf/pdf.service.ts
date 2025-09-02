@@ -26,7 +26,7 @@ export class PdfService {
       subtotal: number;
       tax: number;
       total: number;
-    };
+  }): Promise<PDFDocumentType> {
   }): Promise<PDFDocument> {
     const doc = new PDFDocument();
 

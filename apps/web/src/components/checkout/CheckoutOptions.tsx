@@ -54,7 +54,7 @@ export function CheckoutOptions({ quoteId, amount, currency }: CheckoutOptionsPr
           <div className="mt-4">
             <PayPalCheckout
               quoteId={quoteId}
-              amount={amount}
+              amount={amount.toString()}
               currency={currency}
               isLoading={isLoading}
               onSuccess={handlePayPalSuccess}

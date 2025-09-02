@@ -35,7 +35,7 @@ interface UploadState {
 }
 
 export function Dropzone({ organizationId, onUploadComplete }: FileUploadProps) {
-  const [uploads, setUploads] = useState<FileUpload[]>([]);
+  const [uploads, setUploads] = useState<UploadState[]>([]);
 
   const onDrop = useCallback(async (acceptedFiles: File[]) => {
     const _storagePath = `uploads/${organizationId}`;
@@ -164,8 +164,7 @@ export function Dropzone({ organizationId, onUploadComplete }: FileUploadProps) 
 
         toast({
           title: 'Upload failed',
-          description: err.message,
-          variant: 'destructive'
+          description: err.message
         });
       }
     }

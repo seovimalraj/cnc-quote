@@ -29,6 +29,13 @@ export interface QuoteItem {
   unit_price: number;
   total_price: number;
   lead_time_days: number;
+  process_type?: string;
+  file?: {
+    name: string;
+  };
+  material?: {
+    name: string;
+  };
   created_at: string;
   updated_at: string;
 }
@@ -36,10 +43,31 @@ export interface QuoteItem {
 export interface Quote {
   id: string;
   organization_id: string;
-  status: 'draft' | 'pending' | 'accepted' | 'rejected';
+  status: 'draft' | 'pending' | 'accepted' | 'rejected' | 'sent';
   currency: string;
   subtotal: number;
   total: number;
+  total_amount: number;
+  expires_at?: string;
+  email_sent_at?: string;
+  accepted_at?: string;
+  rejected_at?: string;
+  terms?: string;
+  notes?: string;
+  customer?: {
+    name: string;
+    email: string;
+    address: string;
+  };
+  price_profile?: {
+    name: string;
+    machine: {
+      name: string;
+    };
+  };
+  dfm_ruleset?: {
+    name: string;
+  };
   items: QuoteItem[];
   created_at: string;
   updated_at: string;
