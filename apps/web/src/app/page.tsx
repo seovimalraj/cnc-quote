@@ -6,8 +6,8 @@ import {
   ClockIcon, 
   CurrencyDollarIcon, 
   UserGroupIcon,
-  TrendingUpIcon,
-  TrendingDownIcon,
+  ArrowTrendingUpIcon,
+  ArrowTrendingDownIcon,
   EyeIcon,
   PencilSquareIcon,
   TrashIcon,
@@ -130,9 +130,9 @@ export default function Dashboard() {
               >
                 {stat.change}
                 {stat.isPositive ? (
-                  <TrendingUpIcon className="w-4 h-4" />
+                  <ArrowTrendingUpIcon className="w-4 h-4" />
                 ) : (
-                  <TrendingDownIcon className="w-4 h-4" />
+                  <ArrowTrendingDownIcon className="w-4 h-4" />
                 )}
               </span>
             </div>

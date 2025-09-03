@@ -55,6 +55,25 @@ export type {
   Tolerance,
 } from "./types/quotes.core";
 
+// Pricing types from pricing.types
+export type {
+  PricingProfile as PricingProfileNew,
+  PriceResponse as PriceResponseNew,
+  PriceBreakdown as PriceBreakdownNew,
+  PriceRequest,
+  CncPriceRequest,
+  SheetMetalPriceRequest,
+  InjectionMoldingPriceRequest,
+  CncPricingRequest,
+  SheetMetalPricingRequest,
+  InjectionMoldingPricingRequest,
+  PricingResponse,
+  PricingRequest,
+  QuoteResponse,
+  OrderDetails,
+  OrderResponse,
+} from "./pricing.types";
+
 // Re-export Machine from quotes.core with different name to avoid conflicts
 export type { Machine as QuoteMachine } from "./types/quotes.core";
 

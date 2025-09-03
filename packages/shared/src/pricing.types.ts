@@ -137,3 +137,58 @@ export interface InjectionMoldingPriceRequest extends PriceRequest {
   };
   complexity_multiplier: number;
 }
+
+// Legacy type aliases for backward compatibility
+export type CncPricingRequest = CncPriceRequest;
+export type SheetMetalPricingRequest = SheetMetalPriceRequest;
+export type InjectionMoldingPricingRequest = InjectionMoldingPriceRequest;
+
+/** Pricing response interface */
+export interface PricingResponse extends PriceResponse {}
+
+/** Base pricing request */
+export interface PricingRequest extends PriceRequest {}
+
+/** Quote response interface */
+export interface QuoteResponse {
+  id: string;
+  customer_id: string;
+  quote_number: string;
+  status: 'pending' | 'processing' | 'quoted' | 'approved' | 'rejected';
+  total_price: number;
+  unit_price: number;
+  quantity: number;
+  material_id: string;
+  finish_ids: string[];
+  lead_time_days: number;
+  valid_until: string;
+  created_at: string;
+  updated_at: string;
+  breakdown: PriceBreakdown;
+}
+
+/** Order details interface */
+export interface OrderDetails {
+  id: string;
+  quote_id: string;
+  customer_id: string;
+  status: 'pending' | 'processing' | 'shipped' | 'delivered';
+  total_amount: number;
+  currency: string;
+  payment_status: 'pending' | 'paid' | 'failed';
+  shipping_address: {
+    name: string;
+    company?: string;
+    address_line_1: string;
+    address_line_2?: string;
+    city: string;
+    state: string;
+    postal_code: string;
+    country: string;
+  };
+  created_at: string;
+  updated_at: string;
+}
+
+/** Order response interface */
+export interface OrderResponse extends OrderDetails {}

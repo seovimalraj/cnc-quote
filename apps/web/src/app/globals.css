@@ -208,10 +208,14 @@ span.flatpickr-weekday,
   background-size: 20px;
 }
 .custom-input-date-1::-webkit-calendar-picker-indicator {
-  background-image: url(./images/icon/icon-calendar.svg);
+  /* background-image: url(./images/icon/icon-calendar.svg); */
+  background-color: #3C50E0;
+  border-radius: 2px;
 }
 .custom-input-date-2::-webkit-calendar-picker-indicator {
-  background-image: url(./images/icon/icon-arrow-down.svg);
+  /* background-image: url(./images/icon/icon-arrow-down.svg); */
+  background-color: #64748B;
+  border-radius: 2px;
 }
 
 [x-cloak] {

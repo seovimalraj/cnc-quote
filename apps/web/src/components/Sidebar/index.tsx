@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useAuth } from '@/contexts/AuthContext';
 import {
   HomeIcon,
   CubeIcon,
@@ -15,6 +16,7 @@ import {
   ArrowLeftOnRectangleIcon,
   Bars3Icon,
   XMarkIcon,
+  UserIcon,
 } from '@heroicons/react/24/outline';
 
 interface SidebarLinkProps {
@@ -45,17 +47,41 @@ interface SidebarProps {
 
 const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen }) => {
   const pathname = usePathname();
+  const { user, logout } = useAuth();
 
-  const menuItems = [
-    { href: '/', icon: HomeIcon, label: 'Dashboard' },
-    { href: '/widget', icon: CubeIcon, label: 'Quote Widget' },
-    { href: '/portal', icon: DocumentTextIcon, label: 'Customer Portal' },
-    { href: '/admin', icon: BuildingOffice2Icon, label: 'Admin Panel' },
-    { href: '/admin/quotes', icon: ClipboardDocumentListIcon, label: 'Quotes Management' },
-    { href: '/admin/catalog', icon: ChartBarIcon, label: 'Catalog Management' },
-    { href: '/admin/users', icon: UserGroupIcon, label: 'User Management' },
-    { href: '/admin/settings', icon: CogIcon, label: 'Settings' },
-  ];
+  // Define menu items based on user role
+  const getMenuItems = () => {
+    if (!user) return [];
+
+    const commonItems = [
+      { href: '/dashboard', icon: HomeIcon, label: 'Dashboard' },
+    ];
+
+    if (user.role === 'admin') {
+      return [
+        { href: '/admin', icon: BuildingOffice2Icon, label: 'Admin Dashboard' },
+        { href: '/admin/quotes', icon: ClipboardDocumentListIcon, label: 'Quote Management' },
+        { href: '/admin/customers', icon: UserGroupIcon, label: 'Customer Management' },
+        { href: '/admin/analytics', icon: ChartBarIcon, label: 'Analytics' },
+        { href: '/admin/settings', icon: CogIcon, label: 'Settings' },
+      ];
+    } else {
+      return [
+        { href: '/dashboard', icon: HomeIcon, label: 'Dashboard' },
+        { href: '/widget', icon: CubeIcon, label: 'Get Quote' },
+        { href: '/quotes', icon: DocumentTextIcon, label: 'My Quotes' },
+        { href: '/orders', icon: ClipboardDocumentListIcon, label: 'My Orders' },
+        { href: '/settings', icon: CogIcon, label: 'Settings' },
+      ];
+    }
+  };
+
+  const menuItems = getMenuItems();
+
+  const handleLogout = async () => {
+    await logout();
+    setSidebarOpen(false);
+  };
 
   return (
     <>
@@ -94,6 +120,32 @@ const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen }) => {
 
         {/* Sidebar Menu */}
         <div className="no-scrollbar flex flex-col overflow-y-auto duration-300 ease-linear">
+          {/* User Profile Section */}
+          {user && (
+            <div className="border-b border-stroke px-6 py-4 dark:border-strokedark">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-full bg-primary flex items-center justify-center">
+                  <UserIcon className="h-5 w-5 text-white" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-black dark:text-white truncate">
+                    {user.name}
+                  </p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                    {user.company || user.email}
+                  </p>
+                  <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
+                    user.role === 'admin' 
+                      ? 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200' 
+                      : 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
+                  }`}>
+                    {user.role === 'admin' ? 'Administrator' : 'Customer'}
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
+
           <nav className="mt-5 py-4 px-4 lg:mt-9 lg:px-6">
             <div>
               <h3 className="mb-4 ml-4 text-sm font-semibold text-bodydark2">MENU</h3>
@@ -104,7 +156,7 @@ const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen }) => {
                       href={item.href}
                       icon={item.icon}
                       label={item.label}
-                      isActive={pathname === item.href}
+                      isActive={pathname === item.href || pathname.startsWith(item.href + '/')}
                       onClick={() => setSidebarOpen(false)}
                     />
                   </li>
@@ -112,20 +164,22 @@ const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen }) => {
               </ul>
             </div>
 
-            <div>
-              <h3 className="mb-4 ml-4 text-sm font-semibold text-bodydark2">OTHERS</h3>
-              <ul className="mb-6 flex flex-col gap-1.5">
-                <li>
-                  <SidebarLink
-                    href="/auth/signin"
-                    icon={ArrowLeftOnRectangleIcon}
-                    label="Authentication"
-                    isActive={pathname.startsWith('/auth')}
-                    onClick={() => setSidebarOpen(false)}
-                  />
-                </li>
-              </ul>
-            </div>
+            {user && (
+              <div>
+                <h3 className="mb-4 ml-4 text-sm font-semibold text-bodydark2">ACCOUNT</h3>
+                <ul className="mb-6 flex flex-col gap-1.5">
+                  <li>
+                    <button
+                      onClick={handleLogout}
+                      className="group relative flex items-center gap-2.5 rounded-sm py-2 px-4 font-medium text-bodydark1 duration-300 ease-in-out hover:bg-graydark dark:hover:bg-meta-4 w-full text-left"
+                    >
+                      <ArrowLeftOnRectangleIcon className="h-5 w-5" />
+                      Sign Out
+                    </button>
+                  </li>
+                </ul>
+              </div>
+            )}
           </nav>
         </div>
       </aside>
