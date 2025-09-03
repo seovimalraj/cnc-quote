@@ -11,7 +11,10 @@
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
     "test": "turbo run test",
     "deploy": "turbo run build && pnpm start",
-    "type-check": "turbo run type-check"
+    "type-check": "turbo run type-check",
+    "clean:web": "cd apps/web && rm -rf .next out",
+    "clean:api": "cd apps/api && rm -rf dist",
+    "clean:all": "pnpm clean:web && pnpm clean:api && rm -rf node_modules && pnpm install"
   },
   "dependencies": {
     "@nestjs/axios": "^4.0.1",

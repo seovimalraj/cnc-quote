@@ -64,9 +64,10 @@ export type {
   CncPriceRequest,
   SheetMetalPriceRequest,
   InjectionMoldingPriceRequest,
-  CncPricingRequest,
-  SheetMetalPricingRequest,
-  InjectionMoldingPricingRequest,
+  // Remove duplicate exports that conflict with exports from quotes.core
+  // CncPricingRequest,
+  // SheetMetalPricingRequest,
+  // InjectionMoldingPricingRequest,
   PricingResponse,
   PricingRequest,
   QuoteResponse,

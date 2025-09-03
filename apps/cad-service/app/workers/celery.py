@@ -1,10 +1,14 @@
+import os
 from celery import Celery
+
+# Get Redis URL from environment or use default
+REDIS_URL = os.getenv('REDIS_URL', 'redis://redis:6379/0')
 
 # Initialize Celery
 celery_app = Celery(
     'cad',
-    broker='redis://redis:6379/0',
-    backend='redis://redis:6379/0'
+    broker=os.getenv('CELERY_BROKER_URL', REDIS_URL),
+    backend=os.getenv('CELERY_RESULT_BACKEND', REDIS_URL)
 )
 
 # Configure Celery

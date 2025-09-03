@@ -288,9 +288,9 @@ span.flatpickr-weekday,
 
 @layer base {
   * {
-    @apply border-border;
+    @apply border-stroke dark:border-strokedark;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-white dark:bg-boxdark text-body dark:text-bodydark;
   }
 }

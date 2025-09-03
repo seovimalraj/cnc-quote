@@ -109,15 +109,17 @@ export class FilesService {
     return { status: "processing" };
   }
 
-  async getFile(fileId: string) {
+  async getFile(fileId: string, userId?: string) {
+    // userId parameter is optional and can be used for permission checks if needed
     const { data: file, error } = await this.supabase.client.from("files").select("*").eq("id", fileId).single();
 
     if (error) throw error;
     return file;
   }
 
-  async getDownloadUrl(fileId: string) {
-    const { data: file } = await this.getFile(fileId);
+  async getDownloadUrl(fileId: string, userId?: string) {
+    // userId parameter is optional and can be used for permission checks if needed
+    const { data: file } = await this.getFile(fileId, userId);
 
     if (file.status !== "clean") {
       throw new Error("File is not available for download");

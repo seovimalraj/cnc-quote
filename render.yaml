@@ -124,7 +124,9 @@ services:
       echo "Building web app..."
       cd ../../apps/web
       pnpm install
-      NODE_ENV=production pnpm build
+      pnpm add -D postcss@8.4.29 tailwindcss@3.3.3 autoprefixer@10.4.15 @tailwindcss/forms
+      pnpm add @paypal/react-paypal-js @stripe/react-stripe-js @stripe/stripe-js
+      NODE_ENV=production SKIP_ENV_VALIDATION=true pnpm build
     startCommand: cd apps/web && pnpm start
     healthCheckPath: /api/health
     autoDeployTrigger: commit

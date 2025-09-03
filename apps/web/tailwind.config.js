@@ -7,6 +7,15 @@ module.exports = {
   ],
   darkMode: 'class',
   theme: {
+    screens: {
+      '2xsm': '375px',
+      'xsm': '425px',
+      'sm': '640px',
+      'md': '768px',
+      'lg': '1024px',
+      'xl': '1280px',
+      '2xl': '1536px',
+    },
     fontFamily: {
       sans: ['Satoshi', 'ui-sans-serif', 'system-ui'],
     },

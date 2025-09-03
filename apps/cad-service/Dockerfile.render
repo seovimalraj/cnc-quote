@@ -73,6 +73,9 @@ ENV LD_LIBRARY_PATH="/opt/conda/lib"
 # Set environment variables
 ENV PYTHONUNBUFFERED=1
 ENV PORT=10001
+ENV REDIS_URL=${REDIS_URL:-redis://redis:6379/0}
+ENV CELERY_BROKER_URL=${REDIS_URL:-redis://redis:6379/0}
+ENV CELERY_RESULT_BACKEND=${REDIS_URL:-redis://redis:6379/0}
 
 # Expose the port
 EXPOSE ${PORT}
