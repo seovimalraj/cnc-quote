@@ -198,7 +198,7 @@ export function Dropzone({ organizationId, onUploadComplete }: FileUploadProps) 
           ${isDragActive ? 'border-primary bg-primary/10' : 'border-border'}
         `}
       >
-        <input {...getInputProps() as any} />
+        <input {...getInputProps()} />
         <Upload className="mx-auto h-12 w-12 text-muted-foreground" />
         <p className="mt-2 text-sm text-muted-foreground">
           Drag &amp; drop CAD files here, or click to select
