@@ -10,10 +10,10 @@ services:
     buildCommand: |
       set -e
       echo "Installing pnpm..."
-      npm install -g pnpm@8.15.4
+      npm install -g pnpm@latest
       
       echo "Installing dependencies..."
-      pnpm install --no-frozen-lockfile --network-timeout 100000
+      pnpm install
       
       echo "Building shared package..."
       cd packages/shared
@@ -21,7 +21,7 @@ services:
       
       echo "Building API..."
       cd ../../apps/api
-      pnpm install --no-frozen-lockfile --network-timeout 100000
+      pnpm install
       pnpm build
     startCommand: cd apps/api && pnpm prod
     healthCheckPath: /api/health
@@ -30,7 +30,7 @@ services:
       - key: NODE_ENV
         value: production
       - key: NODE_VERSION
-        value: "20.11.1"
+        value: "20.15.1"
       - key: PNPM_VERSION
         value: "8.15.4"
       - key: SUPABASE_URL
@@ -110,14 +110,11 @@ services:
     region: oregon
     buildCommand: |
       set -e
-      echo "Setting up environment..."
-      export PATH="/opt/render/project/src/node_modules/.bin:$PATH"
-      
       echo "Installing pnpm..."
-      npm install -g pnpm@8.15.4
+      npm install -g pnpm@latest
       
       echo "Installing project dependencies..."
-      pnpm install --no-frozen-lockfile --network-timeout 100000
+      pnpm install
       
       echo "Building shared package..."
       cd packages/shared
@@ -126,7 +123,7 @@ services:
       
       echo "Building web app..."
       cd ../../apps/web
-      pnpm install --no-frozen-lockfile --network-timeout 100000
+      pnpm install
       NODE_ENV=production pnpm build
     startCommand: cd apps/web && pnpm start
     healthCheckPath: /api/health
@@ -135,7 +132,7 @@ services:
       - key: NODE_ENV
         value: production
       - key: NODE_VERSION
-        value: "18.18.0"
+        value: "20.15.1"
       - key: NEXT_PUBLIC_SUPABASE_URL
         sync: false
       - key: NEXT_PUBLIC_SUPABASE_ANON_KEY
