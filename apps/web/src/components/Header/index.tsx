@@ -1,12 +1,14 @@
 'use client';
 
 import Link from 'next/link';
-import { 
+import { useAuth } from '@/contexts/AuthContext';
+import {
   Bars3Icon,
   MagnifyingGlassIcon,
   BellIcon,
   ChatBubbleLeftRightIcon,
   UserCircleIcon,
+  ArrowRightOnRectangleIcon,
 } from '@heroicons/react/24/outline';
 
 interface HeaderProps {
@@ -15,6 +17,12 @@ interface HeaderProps {
 }
 
 const Header: React.FC<HeaderProps> = ({ sidebarOpen, setSidebarOpen }) => {
+  const { user, logout } = useAuth();
+
+  const handleLogout = async () => {
+    await logout();
+  };
+
   return (
     <header className="sticky top-0 z-999 flex w-full bg-white drop-shadow-1 dark:bg-boxdark dark:drop-shadow-none">
       <div className="flex flex-grow items-center justify-between px-4 py-4 shadow-2 md:px-6 2xl:px-11">
@@ -85,21 +93,54 @@ const Header: React.FC<HeaderProps> = ({ sidebarOpen, setSidebarOpen }) => {
 
           {/* User Area */}
           <div className="relative">
-            <Link
-              className="flex items-center gap-4"
-              href="/profile"
-            >
-              <span className="hidden text-right lg:block">
-                <span className="block text-sm font-medium text-black dark:text-white">
-                  Thomas Anree
-                </span>
-                <span className="block text-xs">UX Designer</span>
-              </span>
+            {user ? (
+              <div className="flex items-center gap-4">
+                <div className="hidden text-right lg:block">
+                  <span className="block text-sm font-medium text-black dark:text-white">
+                    {user.name}
+                  </span>
+                  <span className="block text-xs text-gray-500 dark:text-gray-400">
+                    {user.role === 'admin' ? 'Administrator' : 'Customer'}
+                  </span>
+                </div>
 
-              <span className="h-12 w-12 rounded-full">
-                <UserCircleIcon className="w-12 h-12 text-gray-400" />
-              </span>
-            </Link>
+                <div className="relative">
+                  <button className="flex items-center gap-2">
+                    <div className="h-10 w-10 rounded-full bg-primary flex items-center justify-center">
+                      <span className="text-white font-medium text-sm">
+                        {user.name.charAt(0).toUpperCase()}
+                      </span>
+                    </div>
+                  </button>
+
+                  {/* Dropdown Menu */}
+                  <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-boxdark rounded-md shadow-lg border border-stroke dark:border-strokedark z-50">
+                    <div className="py-1">
+                      <Link
+                        href="/settings"
+                        className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-meta-4"
+                      >
+                        Settings
+                      </Link>
+                      <button
+                        onClick={handleLogout}
+                        className="block w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-meta-4"
+                      >
+                        <ArrowRightOnRectangleIcon className="inline w-4 h-4 mr-2" />
+                        Sign Out
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <Link
+                href="/login"
+                className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-md hover:bg-primary/90"
+              >
+                Sign In
+              </Link>
+            )}
           </div>
         </div>
       </div>

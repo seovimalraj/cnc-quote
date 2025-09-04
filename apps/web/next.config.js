@@ -4,6 +4,8 @@ const nextConfig = {
   experimental: {
     appDir: true,
     serverActions: true,
+    serverComponentsExternalPackages: [],
+    forceSwcTransforms: true,
   },
   typescript: {
     ignoreBuildErrors: true,
@@ -18,6 +20,13 @@ const nextConfig = {
       'cnc-quote-cad.onrender.com'
     ],
   },
+  // Disable static generation completely
+  trailingSlash: false,
+  // Force all pages to be dynamic
+  generateBuildId: async () => {
+    return 'build-' + Date.now()
+  },
+
   async headers() {
     return [
       {

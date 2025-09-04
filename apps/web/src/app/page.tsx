@@ -1,305 +1,217 @@
 'use client';
 
-import DefaultLayout from '@/components/Layouts/DefaultLayout';
-import { 
-  CubeIcon, 
-  ClockIcon, 
-  CurrencyDollarIcon, 
+import Link from 'next/link';
+import { useAuth } from '@/contexts/AuthContext';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  CubeIcon,
+  ClockIcon,
+  CurrencyDollarIcon,
+  ArrowRightIcon,
+  CheckCircleIcon,
   UserGroupIcon,
-  ArrowTrendingUpIcon,
-  ArrowTrendingDownIcon,
-  EyeIcon,
-  PencilSquareIcon,
-  TrashIcon,
+  CogIcon,
+  ShieldCheckIcon
 } from '@heroicons/react/24/outline';
 
-// Demo data
-const stats = [
-  {
-    title: 'Total Quotes',
-    value: '1,234',
-    change: '+12%',
-    isPositive: true,
-    icon: CubeIcon,
-    description: 'From last month',
-  },
-  {
-    title: 'Pending Reviews',
-    value: '45',
-    change: '-8%',
-    isPositive: false,
-    icon: ClockIcon,
-    description: 'Awaiting approval',
-  },
-  {
-    title: 'Revenue',
-    value: '$124,567',
-    change: '+23%',
-    isPositive: true,
-    icon: CurrencyDollarIcon,
-    description: 'This month',
-  },
-  {
-    title: 'Active Customers',
-    value: '892',
-    change: '+15%',
-    isPositive: true,
-    icon: UserGroupIcon,
-    description: 'Total customers',
-  },
-];
+export default function LandingPage() {
+  const { user } = useAuth();
 
-const recentQuotes = [
-  {
-    id: 'Q-2024-001',
-    customer: 'Acme Manufacturing',
-    part: 'Aluminum Housing',
-    quantity: 100,
-    price: '$2,450.00',
-    status: 'Approved',
-    date: '2024-09-01',
-  },
-  {
-    id: 'Q-2024-002',
-    customer: 'TechCorp Industries',
-    part: 'Steel Bracket',
-    quantity: 250,
-    price: '$1,875.00',
-    status: 'Pending',
-    date: '2024-09-02',
-  },
-  {
-    id: 'Q-2024-003',
-    customer: 'Precision Parts Co',
-    part: 'Titanium Component',
-    quantity: 50,
-    price: '$5,200.00',
-    status: 'In Review',
-    date: '2024-09-03',
-  },
-  {
-    id: 'Q-2024-004',
-    customer: 'AutoParts Ltd',
-    part: 'Engine Mount',
-    quantity: 300,
-    price: '$3,600.00',
-    status: 'Approved',
-    date: '2024-09-03',
-  },
-];
+  const features = [
+    {
+      icon: CubeIcon,
+      title: 'Instant CAD Analysis',
+      description: 'Upload your STEP, IGES, or STL files and get instant pricing with detailed feature analysis.'
+    },
+    {
+      icon: ClockIcon,
+      title: 'Fast Turnaround',
+      description: 'Get quotes in minutes, not days. Our automated system processes your parts instantly.'
+    },
+    {
+      icon: CurrencyDollarIcon,
+      title: 'Transparent Pricing',
+      description: 'Clear pricing breakdown with no hidden fees. Know exactly what you\'re paying for.'
+    },
+    {
+      icon: ShieldCheckIcon,
+      title: 'Design for Manufacturability',
+      description: 'Automated DFM analysis helps optimize your designs for better manufacturing results.'
+    }
+  ];
 
-const getStatusColor = (status: string) => {
-  switch (status) {
-    case 'Approved':
-      return 'bg-meta-3 text-white';
-    case 'Pending':
-      return 'bg-meta-6 text-white';
-    case 'In Review':
-      return 'bg-meta-5 text-white';
-    default:
-      return 'bg-gray-200 text-gray-800';
-  }
-};
+  const processSteps = [
+    { step: 1, title: 'Upload CAD', description: 'Drag & drop your files' },
+    { step: 2, title: 'Configure', description: 'Select material, finish, quantity' },
+    { step: 3, title: 'Get Price', description: 'Instant quote with DFM feedback' },
+    { step: 4, title: 'Order', description: 'Secure checkout and tracking' }
+  ];
 
-export default function Dashboard() {
   return (
-    <DefaultLayout>
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-6 xl:grid-cols-4 2xl:gap-7.5">
-        {/* Stats Cards */}
-        {stats.map((stat, index) => (
-          <div
-            key={index}
-            className="rounded-sm border border-stroke bg-white py-6 px-7.5 shadow-default dark:border-strokedark dark:bg-boxdark"
-          >
-            <div className="flex h-11.5 w-11.5 items-center justify-center rounded-full bg-meta-2 dark:bg-meta-4">
-              <stat.icon className="w-6 h-6 text-primary" />
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+      {/* Header */}
+      <header className="bg-white shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center py-4">
+            <div className="flex items-center">
+              <CubeIcon className="h-8 w-8 text-blue-600" />
+              <span className="ml-2 text-xl font-bold text-gray-900">CNC Quote</span>
             </div>
-
-            <div className="mt-4 flex items-end justify-between">
-              <div>
-                <h4 className="text-title-md font-bold text-black dark:text-white">
-                  {stat.value}
-                </h4>
-                <span className="text-sm font-medium">{stat.title}</span>
-              </div>
-
-              <span
-                className={`flex items-center gap-1 text-sm font-medium ${
-                  stat.isPositive ? 'text-meta-3' : 'text-meta-1'
-                }`}
-              >
-                {stat.change}
-                {stat.isPositive ? (
-                  <ArrowTrendingUpIcon className="w-4 h-4" />
-                ) : (
-                  <ArrowTrendingDownIcon className="w-4 h-4" />
-                )}
-              </span>
-            </div>
-            <p className="text-xs text-meta-2">{stat.description}</p>
-          </div>
-        ))}
-      </div>
-
-      <div className="mt-4 grid grid-cols-12 gap-4 md:mt-6 md:gap-6 2xl:mt-7.5 2xl:gap-7.5">
-        {/* Recent Quotes Table */}
-        <div className="col-span-12 xl:col-span-8">
-          <div className="rounded-sm border border-stroke bg-white px-5 pt-6 pb-2.5 shadow-default dark:border-strokedark dark:bg-boxdark sm:px-7.5 xl:pb-1">
-            <h4 className="mb-6 text-xl font-semibold text-black dark:text-white">
-              Recent Quotes
-            </h4>
-
-            <div className="flex flex-col">
-              <div className="grid grid-cols-3 rounded-sm bg-gray-2 dark:bg-meta-4 sm:grid-cols-7">
-                <div className="p-2.5 xl:p-5">
-                  <h5 className="text-sm font-medium uppercase xsm:text-base">
-                    Quote ID
-                  </h5>
-                </div>
-                <div className="p-2.5 text-center xl:p-5">
-                  <h5 className="text-sm font-medium uppercase xsm:text-base">
-                    Customer
-                  </h5>
-                </div>
-                <div className="p-2.5 text-center xl:p-5">
-                  <h5 className="text-sm font-medium uppercase xsm:text-base">
-                    Part
-                  </h5>
-                </div>
-                <div className="hidden p-2.5 text-center sm:block xl:p-5">
-                  <h5 className="text-sm font-medium uppercase xsm:text-base">
-                    Quantity
-                  </h5>
-                </div>
-                <div className="hidden p-2.5 text-center sm:block xl:p-5">
-                  <h5 className="text-sm font-medium uppercase xsm:text-base">
-                    Price
-                  </h5>
-                </div>
-                <div className="hidden p-2.5 text-center sm:block xl:p-5">
-                  <h5 className="text-sm font-medium uppercase xsm:text-base">
-                    Status
-                  </h5>
-                </div>
-                <div className="hidden p-2.5 text-center sm:block xl:p-5">
-                  <h5 className="text-sm font-medium uppercase xsm:text-base">
-                    Actions
-                  </h5>
-                </div>
-              </div>
-
-              {recentQuotes.map((quote, key) => (
-                <div
-                  className={`grid grid-cols-3 sm:grid-cols-7 ${
-                    key === recentQuotes.length - 1
-                      ? ''
-                      : 'border-b border-stroke dark:border-strokedark'
-                  }`}
-                  key={key}
-                >
-                  <div className="flex items-center gap-3 p-2.5 xl:p-5">
-                    <p className="text-black dark:text-white sm:block">
-                      {quote.id}
-                    </p>
-                  </div>
-
-                  <div className="flex items-center justify-center p-2.5 xl:p-5">
-                    <p className="text-black dark:text-white">{quote.customer}</p>
-                  </div>
-
-                  <div className="flex items-center justify-center p-2.5 xl:p-5">
-                    <p className="text-meta-3">{quote.part}</p>
-                  </div>
-
-                  <div className="hidden items-center justify-center p-2.5 sm:flex xl:p-5">
-                    <p className="text-black dark:text-white">{quote.quantity}</p>
-                  </div>
-
-                  <div className="hidden items-center justify-center p-2.5 sm:flex xl:p-5">
-                    <p className="text-meta-5 font-medium">{quote.price}</p>
-                  </div>
-
-                  <div className="hidden items-center justify-center p-2.5 sm:flex xl:p-5">
-                    <span
-                      className={`inline-flex rounded-full px-3 py-1 text-xs font-medium ${getStatusColor(
-                        quote.status
-                      )}`}
-                    >
-                      {quote.status}
-                    </span>
-                  </div>
-
-                  <div className="hidden items-center justify-center p-2.5 sm:flex xl:p-5">
-                    <div className="flex items-center space-x-3.5">
-                      <button className="hover:text-primary">
-                        <EyeIcon className="w-4 h-4" />
-                      </button>
-                      <button className="hover:text-primary">
-                        <PencilSquareIcon className="w-4 h-4" />
-                      </button>
-                      <button className="hover:text-primary">
-                        <TrashIcon className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              ))}
+            <div className="flex items-center space-x-4">
+              {user ? (
+                <Link href="/dashboard">
+                  <Button>Go to Dashboard</Button>
+                </Link>
+              ) : (
+                <>
+                  <Link href="/signin">
+                    <Button variant="ghost">Sign In</Button>
+                  </Link>
+                  <Link href="/widget/quote">
+                    <Button>Get Instant Quote</Button>
+                  </Link>
+                </>
+              )}
             </div>
           </div>
         </div>
+      </header>
 
-        {/* Chart One */}
-        <div className="col-span-12 rounded-sm border border-stroke bg-white px-5 pt-7.5 pb-5 shadow-default dark:border-strokedark dark:bg-boxdark sm:px-7.5 xl:col-span-4">
-          <div className="flex w-full flex-col">
-            <div className="mb-4">
-              <h4 className="text-xl font-semibold text-black dark:text-white">
-                Quote Analytics
-              </h4>
-            </div>
-            
-            <div className="mb-2">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-black dark:text-white">
-                  Approved Quotes
-                </span>
-                <span className="text-sm text-meta-3">75%</span>
-              </div>
-              <div className="mt-1 h-2 w-full rounded-full bg-gray-200">
-                <div className="h-2 rounded-full bg-meta-3" style={{ width: '75%' }}></div>
-              </div>
-            </div>
-
-            <div className="mb-2">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-black dark:text-white">
-                  Pending Review
-                </span>
-                <span className="text-sm text-meta-6">15%</span>
-              </div>
-              <div className="mt-1 h-2 w-full rounded-full bg-gray-200">
-                <div className="h-2 rounded-full bg-meta-6" style={{ width: '15%' }}></div>
-              </div>
-            </div>
-
-            <div className="mb-2">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-black dark:text-white">
-                  In Review
-                </span>
-                <span className="text-sm text-meta-5">10%</span>
-              </div>
-              <div className="mt-1 h-2 w-full rounded-full bg-gray-200">
-                <div className="h-2 rounded-full bg-meta-5" style={{ width: '10%' }}></div>
-              </div>
-            </div>
-
-            <div className="mt-6 text-center">
-              <h5 className="text-2xl font-bold text-black dark:text-white">1,234</h5>
-              <p className="text-sm text-body">Total Quotes This Month</p>
+      {/* Hero Section */}
+      <section className="py-20 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center">
+            <h1 className="text-4xl md:text-6xl font-bold text-gray-900 mb-6">
+              Instant CNC Quotes
+              <span className="block text-blue-600">In Minutes, Not Days</span>
+            </h1>
+            <p className="text-xl text-gray-600 mb-8 max-w-3xl mx-auto">
+              Upload your CAD files, configure your requirements, and get instant pricing with
+              automated design for manufacturability analysis. No more waiting for quotes.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <Link href="/widget/quote">
+                <Button size="lg" className="text-lg px-8 py-3">
+                  Get Instant Quote
+                  <ArrowRightIcon className="ml-2 h-5 w-5" />
+                </Button>
+              </Link>
+              {!user && (
+                <Link href="/login">
+                  <Button variant="outline" size="lg" className="text-lg px-8 py-3">
+                    Sign In
+                  </Button>
+                </Link>
+              )}
             </div>
           </div>
         </div>
-      </div>
-    </DefaultLayout>
+      </section>
+
+      {/* Process Steps */}
+      <section className="py-16 bg-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl font-bold text-gray-900 mb-4">How It Works</h2>
+            <p className="text-lg text-gray-600">Get your quote in 4 simple steps</p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+            {processSteps.map((step, index) => (
+              <div key={index} className="text-center">
+                <div className="w-16 h-16 bg-blue-600 text-white rounded-full flex items-center justify-center text-xl font-bold mx-auto mb-4">
+                  {step.step}
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">{step.title}</h3>
+                <p className="text-gray-600">{step.description}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Features */}
+      <section className="py-16 bg-gray-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl font-bold text-gray-900 mb-4">Why Choose CNC Quote?</h2>
+            <p className="text-lg text-gray-600">Advanced technology for modern manufacturing</p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+            {features.map((feature, index) => (
+              <Card key={index} className="text-center">
+                <CardHeader>
+                  <feature.icon className="h-12 w-12 text-blue-600 mx-auto mb-4" />
+                  <CardTitle className="text-lg">{feature.title}</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <CardDescription>{feature.description}</CardDescription>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* CTA Section */}
+      <section className="py-16 bg-blue-600">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          <h2 className="text-3xl font-bold text-white mb-4">Ready to Get Started?</h2>
+          <p className="text-xl text-blue-100 mb-8">
+            Join thousands of manufacturers who trust CNC Quote for their quoting needs.
+          </p>
+          <Link href="/dashboard">
+            <Button size="lg" variant="secondary" className="text-lg px-8 py-3">
+              Start Your Quote Now
+              <ArrowRightIcon className="ml-2 h-5 w-5" />
+            </Button>
+          </Link>
+        </div>
+      </section>
+
+      {/* Footer */}
+      <footer className="bg-gray-900 text-white py-12">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+            <div>
+              <div className="flex items-center mb-4">
+                <CubeIcon className="h-6 w-6 text-blue-400" />
+                <span className="ml-2 text-lg font-bold">CNC Quote</span>
+              </div>
+              <p className="text-gray-400">
+                Instant CNC quotes with automated DFM analysis for modern manufacturing.
+              </p>
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold mb-4">Product</h3>
+              <ul className="space-y-2 text-gray-400">
+                <li><Link href="/features" className="hover:text-white">Features</Link></li>
+                <li><Link href="/pricing" className="hover:text-white">Pricing</Link></li>
+                <li><Link href="/integrations" className="hover:text-white">Integrations</Link></li>
+              </ul>
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold mb-4">Support</h3>
+              <ul className="space-y-2 text-gray-400">
+                <li><Link href="/docs" className="hover:text-white">Documentation</Link></li>
+                <li><Link href="/help" className="hover:text-white">Help Center</Link></li>
+                <li><Link href="/contact" className="hover:text-white">Contact Us</Link></li>
+              </ul>
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold mb-4">Company</h3>
+              <ul className="space-y-2 text-gray-400">
+                <li><Link href="/about" className="hover:text-white">About</Link></li>
+                <li><Link href="/blog" className="hover:text-white">Blog</Link></li>
+                <li><Link href="/careers" className="hover:text-white">Careers</Link></li>
+              </ul>
+            </div>
+          </div>
+          <div className="border-t border-gray-800 mt-8 pt-8 text-center text-gray-400">
+            <p>&copy; 2024 CNC Quote. All rights reserved.</p>
+          </div>
+        </div>
+      </footer>
+    </div>
   );
 }

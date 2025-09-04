@@ -5,7 +5,7 @@ import { HttpService } from "@nestjs/axios";
 import { FilesService } from "../files/files.service";
 import { firstValueFrom } from "rxjs";
 import { FileNotFoundError, FileNotReadyError, CadServiceError } from "./cad.errors";
-import { CadAnalysisResult, CadJobData, CadJobType } from "./cad.types";
+import { CadAnalysisResult, CadJobData, CadJobType, CadPreviewResult, CadTaskStatus } from "./cad.types";
 import { ConfigService } from "@nestjs/config";
 import { AxiosError } from "axios";
 
@@ -74,7 +74,14 @@ export class CadService {
     } catch (error) {
       if (error instanceof AxiosError) {
         if (error.response?.status === 202) {
-          return { status: "processing" };
+          return {
+            task_id: taskId,
+            file_id: '',
+            status: "Processing" as const,
+            processing_started_at: new Date().toISOString(),
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          };
         }
         if (error.response?.status === 404) {
           throw new FileNotFoundError(taskId);
@@ -128,6 +135,94 @@ export class CadService {
     } catch (error) {
       this.logger.error(`Failed to queue preview generation for file ${fileId}:`, error);
       throw new CadServiceError("Failed to queue preview generation");
+    }
+  }
+
+  async getPreviewData(
+    fileId: string,
+    format: 'gltf' | 'obj' | 'stl' = 'gltf',
+    quality: 'low' | 'medium' | 'high' = 'medium'
+  ): Promise<CadPreviewResult> {
+    this.logger.debug(`Fetching preview data for file ${fileId} (format: ${format}, quality: ${quality})`);
+
+    try {
+      const { data } = await firstValueFrom(
+        this.httpService.get<CadPreviewResult>(
+          `${this.CAD_SERVICE_URL}/preview/${fileId}`,
+          {
+            params: { format, quality }
+          }
+        ),
+      );
+      return data;
+    } catch (error) {
+      if (error instanceof AxiosError) {
+        if (error.response?.status === 202) {
+          return {
+            task_id: '',
+            file_id: fileId,
+            status: 'Processing',
+            format,
+            quality,
+            processing_started_at: new Date().toISOString(),
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          };
+        }
+        if (error.response?.status === 404) {
+          throw new FileNotFoundError(fileId);
+        }
+      }
+      this.logger.error(`Failed to get preview data for file ${fileId}:`, error);
+      throw new CadServiceError("Failed to get preview data");
+    }
+  }
+
+  async getTaskStatus(taskId: string): Promise<CadTaskStatus> {
+    this.logger.debug(`Fetching task status for task ${taskId}`);
+
+    try {
+      // Try to get job from queue first
+      const job = await this.cadQueue.getJob(taskId);
+
+      if (!job) {
+        // If not in queue, check with CAD service
+        const { data } = await firstValueFrom(
+          this.httpService.get<CadTaskStatus>(`${this.CAD_SERVICE_URL}/task/${taskId}/status`),
+        );
+        return data;
+      }
+
+      // Return queue job status
+      const state = await job.getState();
+      const progress = job.progress as number || 0;
+
+      return {
+        task_id: taskId,
+        status: this.mapQueueStateToCadStatus(state),
+        progress,
+        message: `Task is ${state}`,
+        estimated_completion: job.opts.delay ? new Date(Date.now() + job.opts.delay).toISOString() : undefined,
+      };
+    } catch (error) {
+      this.logger.error(`Failed to get task status for task ${taskId}:`, error);
+      throw new CadServiceError("Failed to get task status");
+    }
+  }
+
+  private mapQueueStateToCadStatus(state: string): 'Queued' | 'Processing' | 'Succeeded' | 'Failed' {
+    switch (state) {
+      case 'waiting':
+      case 'delayed':
+        return 'Queued';
+      case 'active':
+        return 'Processing';
+      case 'completed':
+        return 'Succeeded';
+      case 'failed':
+        return 'Failed';
+      default:
+        return 'Queued';
     }
   }
 }

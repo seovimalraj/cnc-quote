@@ -1,10 +1,10 @@
 import { Metadata } from 'next'
 import { headers } from 'next/headers'
-import { QuoteWizard } from '@/components/widget/QuoteWizard'
+import { AdvancedQuotePage } from '@/components/quote/AdvancedQuotePage'
 
 export const metadata: Metadata = {
-  title: 'Get an Instant Quote',
-  description: 'Upload your CAD files and get instant manufacturing quotes',
+  title: 'Get an Instant Quote - CNC, Sheet Metal, Injection Molding',
+  description: 'Upload your CAD files and get instant manufacturing quotes with advanced 3D analysis',
 }
 
 export default async function QuotePage() {
@@ -13,13 +13,9 @@ export default async function QuotePage() {
   const referer = headersList.get('referer')
 
   return (
-    <main className="min-h-screen bg-white">
-      <div className="container mx-auto py-8 px-4">
-        <QuoteWizard 
-          clientOrigin={origin || referer || ''} 
-          theme="#674299"
-        />
-      </div>
-    </main>
+    <AdvancedQuotePage
+      clientOrigin={origin || referer || ''}
+      theme="#674299"
+    />
   )
 }

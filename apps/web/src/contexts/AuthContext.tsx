@@ -6,9 +6,10 @@ export interface User {
   id: string;
   email: string;
   name: string;
-  role: 'admin' | 'customer';
+  role: 'owner' | 'admin' | 'member' | 'reviewer' | 'operator' | 'finance';
   company?: string;
   avatar?: string;
+  organizationId?: string;
 }
 
 interface AuthContextType {
@@ -119,7 +120,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 export function useAuth() {
   const context = useContext(AuthContext);
   if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    // Return default values when AuthProvider is not available (e.g., during static generation)
+    return {
+      user: null,
+      loading: false,
+      login: async () => ({ success: false, error: 'Auth not available' }),
+      register: async () => ({ success: false, error: 'Auth not available' }),
+      logout: async () => {},
+    };
   }
   return context;
 }
