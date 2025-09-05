@@ -13,7 +13,7 @@ export async function middleware(request: NextRequest) {
   // Handle widget endpoints
   if (request.nextUrl.pathname.startsWith('/widget')) {
     const origin = request.headers.get('origin')
-    
+
     if (origin) {
       // Check if origin is allowed
       const { data: widgetOrigin } = await supabase
@@ -28,7 +28,7 @@ export async function middleware(request: NextRequest) {
         res.headers.set('Access-Control-Allow-Origin', origin)
         res.headers.set('Access-Control-Allow-Methods', 'GET, POST')
         res.headers.set('Access-Control-Allow-Headers', 'Content-Type')
-        
+
         // Set CSP headers to allow iframe embedding
         res.headers.set(
           'Content-Security-Policy',
@@ -41,6 +41,45 @@ export async function middleware(request: NextRequest) {
     }
 
     return res
+  }
+
+  // Legacy widget redirects - redirect old widget routes to new instant quote
+  const legacyRoutes = [
+    '/widget/quote',
+    '/widget/instant-quote',
+    '/embed/quote',
+    '/embed/instant-quote'
+  ];
+
+  if (legacyRoutes.includes(request.nextUrl.pathname)) {
+    const url = new URL('/instant-quote', request.url);
+
+    // Preserve query parameters
+    request.nextUrl.searchParams.forEach((value, key) => {
+      url.searchParams.set(key, value);
+    });
+
+    // Add embed parameter if coming from legacy embed routes
+    if (request.nextUrl.pathname.startsWith('/embed/')) {
+      url.searchParams.set('embed', 'true');
+    } else {
+      url.searchParams.set('embed', 'true');
+    }
+
+    return NextResponse.redirect(url);
+  }
+
+  // Legacy help/support redirects
+  if (request.nextUrl.pathname === '/support') {
+    return NextResponse.redirect(new URL('/help', request.url));
+  }
+
+  if (request.nextUrl.pathname === '/help-center') {
+    return NextResponse.redirect(new URL('/help', request.url));
+  }
+
+  if (request.nextUrl.pathname.startsWith('/faq')) {
+    return NextResponse.redirect(new URL('/help', request.url));
   }
 
   // Protect /admin and /portal routes

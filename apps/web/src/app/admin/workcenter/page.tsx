@@ -1,124 +1,702 @@
 'use client';
 
-import React, { useState } from 'react';
-import DefaultLayout from '@/components/Layouts/DefaultLayout';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
+import { Progress } from '@/components/ui/progress';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
-  MagnifyingGlassIcon,
-  FunnelIcon,
+  ArrowPathIcon,
+  ExclamationTriangleIcon,
   CheckCircleIcon,
   ClockIcon,
-  ExclamationTriangleIcon,
-  UserIcon,
-  CogIcon,
-  ArrowPathIcon,
+  XCircleIcon,
+  InformationCircleIcon,
+  PlayIcon,
+  TrashIcon,
   EyeIcon,
-  PencilIcon,
-  ShareIcon
+  QuestionMarkCircleIcon
 } from '@heroicons/react/24/outline';
+import { trackEvent } from '@/lib/analytics/posthog';
 
-// Mock data for admin workcenter
-const mockNeedsReview = [
-  {
-    id: 'Q-2025-001',
-    org: 'Acme Corp',
-    complexity: 'High',
-    dfmBlockers: 2,
-    value: 2500.00,
-    slaAge: '2h',
-    assignee: 'John Doe'
-  },
-  {
-    id: 'Q-2025-002',
-    org: 'TechStart Inc',
-    complexity: 'Medium',
-    dfmBlockers: 0,
-    value: 1200.00,
-    slaAge: '4h',
-    assignee: 'Unassigned'
-  }
+// Time range options
+const TIME_RANGES = [
+  { value: '15m', label: 'Last 15m' },
+  { value: '1h', label: 'Last 1h' },
+  { value: '24h', label: 'Last 24h' },
+  { value: '7d', label: 'Last 7d' }
 ];
 
-const mockPriced = [
-  {
-    id: 'Q-2025-003',
-    org: 'BuildCo LLC',
-    price: 1800.00,
-    speed: 'Standard',
-    updated: '2025-09-03T10:30:00Z'
-  },
-  {
-    id: 'Q-2025-004',
-    org: 'Innovate Ltd',
-    price: 3200.00,
-    speed: 'Expedite',
-    updated: '2025-09-03T09:15:00Z'
-  }
-];
-
-function FiltersToolbar() {
-  const [searchTerm, setSearchTerm] = useState('');
+// Environment badge component
+const EnvironmentBadge = ({ env }: { env: string }) => {
+  const colors = {
+    'Dev': 'bg-blue-100 text-blue-800',
+    'Staging': 'bg-yellow-100 text-yellow-800',
+    'Prod': 'bg-green-100 text-green-800'
+  };
 
   return (
-    <Card className="mb-6">
-      <CardContent className="p-6">
-        <div className="flex flex-col lg:flex-row gap-4">
-          <div className="relative flex-1">
-            <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-            <Input
-              placeholder="Search quotes, customers, files…"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
-            />
-          </div>
-          <div className="flex gap-2">
-            <Select defaultValue="all">
-              <SelectTrigger className="w-32">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="draft">Draft</SelectItem>
-                <SelectItem value="priced">Priced</SelectItem>
-                <SelectItem value="needs_review">Needs Review</SelectItem>
-                <SelectItem value="reviewed">Reviewed</SelectItem>
-                <SelectItem value="sent">Sent</SelectItem>
-                <SelectItem value="accepted">Accepted</SelectItem>
-                <SelectItem value="expired">Expired</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select defaultValue="all">
-              <SelectTrigger className="w-32">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Ages</SelectItem>
-                <SelectItem value="24h">&lt;24h</SelectItem>
-                <SelectItem value="3d">1–3d</SelectItem>
-                <SelectItem value="7d">3–7d</SelectItem>
-                <SelectItem value="older">&gt;7d</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select defaultValue="all">
-              <SelectTrigger className="w-32">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Sources</SelectItem>
-                <SelectItem value="web">Web</SelectItem>
-                <SelectItem value="widget">Widget</SelectItem>
-                <SelectItem value="large_order">Large Order</SelectItem>
-              </SelectContent>
-            </Select>
+    <Badge className={colors[env as keyof typeof colors] || 'bg-gray-100 text-gray-800'}>
+      {env}
+    </Badge>
+  );
+};
+
+// Status badge component
+const StatusBadge = ({ status }: { status: string }) => {
+  const colors = {
+    'OK': 'bg-green-100 text-green-800',
+    'WARN': 'bg-yellow-100 text-yellow-800',
+    'FAIL': 'bg-red-100 text-red-800',
+    'CRITICAL': 'bg-red-100 text-red-800'
+  };
+
+  return (
+    <Badge className={colors[status as keyof typeof colors] || 'bg-gray-100 text-gray-800'}>
+      {status}
+    </Badge>
+  );
+};
+
+export default function WorkcenterDashboardPage() {
+  const [timeRange, setTimeRange] = useState('1h');
+  const [autoRefresh, setAutoRefresh] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [lastRefresh, setLastRefresh] = useState(new Date());
+
+  // Mock data - in real implementation, this would come from API calls
+  const [dashboardData, setDashboardData] = useState({
+    openReviews: {
+      count: 12,
+      new_count: 3,
+      aging_count: 6,
+      breached_count: 3,
+      items: [
+        {
+          quote_id: 'Q41-1742-8058',
+          org: 'Acme Corp',
+          value: 227.98,
+          dfm_blockers: 0,
+          age_min: 35,
+          assignee: 'me@shop.com'
+        },
+        {
+          quote_id: 'Q41-1742-8059',
+          org: 'TechStart Inc',
+          value: 1450.50,
+          dfm_blockers: 2,
+          age_min: 180,
+          assignee: 'Unassigned'
+        }
+      ]
+    },
+    queues: [
+      {
+        name: 'cad:analyze',
+        waiting: 0,
+        active: 2,
+        delayed: 1,
+        failed_24h: 0,
+        oldest_job_age_sec: 120
+      },
+      {
+        name: 'pdf:render',
+        waiting: 10,
+        active: 1,
+        delayed: 0,
+        failed_24h: 2,
+        oldest_job_age_sec: 900
+      },
+      {
+        name: 'pricing:calculate',
+        waiting: 3,
+        active: 0,
+        delayed: 0,
+        failed_24h: 1,
+        oldest_job_age_sec: 45
+      }
+    ],
+    db: {
+      read_p95_ms: 18,
+      write_p95_ms: 22,
+      error_rate_pct: 0.2,
+      timeseries: {
+        t: ['12:01', '12:02', '12:03'],
+        read_ms: [15, 20, 18],
+        write_ms: [18, 25, 22]
+      }
+    },
+    webhooks: {
+      stripe: {
+        status: 'OK',
+        failed_24h: 0,
+        last_event_type: 'checkout.session.completed',
+        last_delivery_age: 42
+      },
+      paypal: {
+        status: 'WARN',
+        failed_24h: 1,
+        last_event_type: 'PAYMENT.CAPTURE.COMPLETED',
+        last_delivery_age: 180
+      }
+    },
+    slos: {
+      first_price_p95_ms: 1450,
+      cad_p95_ms: 18000,
+      payment_to_order_p95_ms: 6200,
+      oldest_job_age_sec: 210
+    },
+    errors: {
+      sentry: [
+        {
+          id: 'err_123',
+          service: 'api',
+          title: 'TypeError: Cannot read property \'x\'',
+          count_1h: 12,
+          first_seen: '2025-09-05T10:22:00Z',
+          last_seen: '2025-09-05T11:10:00Z',
+          users_affected: 3,
+          permalink: 'https://sentry.io/...'
+        }
+      ],
+      jobs: [
+        {
+          when: '2025-09-05T11:08:00Z',
+          queue: 'cad:analyze',
+          jobId: 'a1b2',
+          attempts: 3,
+          reason: 'Timeout'
+        },
+        {
+          when: '2025-09-05T11:05:00Z',
+          queue: 'pdf:render',
+          jobId: 'c3d4',
+          attempts: 2,
+          reason: 'File not found'
+        }
+      ]
+    }
+  });
+
+  const handleRefresh = useCallback(async () => {
+    setRefreshing(true);
+    trackEvent('workcenter_refresh');
+
+    // Mock API calls - in real implementation, these would be actual API calls
+    await new Promise(resolve => setTimeout(resolve, 1000));
+
+    setLastRefresh(new Date());
+    setRefreshing(false);
+  }, []);
+
+  const handleRetryFailed = useCallback(async (queueName: string) => {
+    trackEvent('workcenter_retry_failed', { queue: queueName });
+    // Mock retry action
+    await new Promise(resolve => setTimeout(resolve, 500));
+    // Update local state to reflect changes
+    setDashboardData(prev => ({
+      ...prev,
+      queues: prev.queues.map(q =>
+        q.name === queueName ? { ...q, failed_24h: 0 } : q
+      )
+    }));
+  }, []);
+
+  const handleWebhookReplay = useCallback(async (provider: string) => {
+    trackEvent(`webhook_replay_${provider.toLowerCase()}`);
+    // Mock replay action
+    await new Promise(resolve => setTimeout(resolve, 500));
+    // Update local state
+    setDashboardData(prev => ({
+      ...prev,
+      webhooks: {
+        ...prev.webhooks,
+        [provider.toLowerCase()]: {
+          ...prev.webhooks[provider.toLowerCase() as keyof typeof prev.webhooks],
+          failed_24h: 0,
+          status: 'OK' as const
+        }
+      }
+    }));
+  }, []);
+
+  const handleRetryJob = useCallback(async (queue: string, jobId: string) => {
+    trackEvent('workcenter_retry_one', { queue, jobId });
+    // Mock retry action
+    await new Promise(resolve => setTimeout(resolve, 500));
+    // Remove from failed jobs list
+    setDashboardData(prev => ({
+      ...prev,
+      errors: {
+        ...prev.errors,
+        jobs: prev.errors.jobs.filter(j => j.jobId !== jobId)
+      }
+    }));
+  }, []);
+
+  useEffect(() => {
+    trackEvent('workcenter_load');
+  }, []);
+
+  useEffect(() => {
+    if (!autoRefresh) return;
+
+    const interval = setInterval(() => {
+      handleRefresh();
+    }, 30000); // 30 seconds
+
+    return () => clearInterval(interval);
+  }, [autoRefresh, handleRefresh]);
+
+  const getSLOTileColor = (value: number, target: number, warningThreshold?: number) => {
+    if (value <= target) return 'bg-green-100 text-green-800';
+    if (warningThreshold && value <= warningThreshold) return 'bg-yellow-100 text-yellow-800';
+    return 'bg-red-100 text-red-800';
+  };
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      {/* Header */}
+      <div className="bg-white border-b border-gray-200 sticky top-0 z-10">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16">
+            <div className="flex items-center space-x-4">
+              <h1 className="text-2xl font-bold text-gray-900">Workcenter Dashboard</h1>
+              <EnvironmentBadge env="Prod" />
+              <Select value={timeRange} onValueChange={setTimeRange}>
+                <SelectTrigger className="w-32">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {TIME_RANGES.map(range => (
+                    <SelectItem key={range.value} value={range.value}>
+                      {range.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="flex items-center space-x-4">
+              <span className="text-sm text-gray-500">
+                Last updated: {lastRefresh.toLocaleTimeString()}
+              </span>
+              <div className="flex items-center space-x-2">
+                <Switch
+                  checked={autoRefresh}
+                  onCheckedChange={setAutoRefresh}
+                  id="auto-refresh"
+                />
+                <label htmlFor="auto-refresh" className="text-sm text-gray-600">
+                  Auto-refresh
+                </label>
+              </div>
+              <Button
+                onClick={handleRefresh}
+                disabled={refreshing}
+                variant="outline"
+                size="sm"
+              >
+                <ArrowPathIcon className={`w-4 h-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
+                Refresh
+              </Button>
+              <Button variant="ghost" size="sm">
+                <QuestionMarkCircleIcon className="w-4 h-4 mr-2" />
+                Help
+              </Button>
+            </div>
           </div>
         </div>
-      </CardContent>
-    </Card>
+      </div>
+
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        {/* Alerts */}
+        {dashboardData.openReviews.breached_count > 0 && (
+          <Alert className="mb-6">
+            <ExclamationTriangleIcon className="h-4 w-4" />
+            <AlertDescription>
+              Manual review SLA breached for {dashboardData.openReviews.breached_count} quotes.
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {/* Row 1: Open Reviews, Queue Depth, DB Latency, Webhook Status */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-4 gap-6 mb-6">
+          {/* Open Reviews Card */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg">Open Reviews</CardTitle>
+              <p className="text-sm text-gray-600">SLA: respond &lt; 4h</p>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="text-3xl font-bold">{dashboardData.openReviews.count}</div>
+
+                <div className="flex space-x-2">
+                  <Badge className="bg-green-100 text-green-800">
+                    {dashboardData.openReviews.new_count} New (&lt;1h)
+                  </Badge>
+                  <Badge className="bg-yellow-100 text-yellow-800">
+                    {dashboardData.openReviews.aging_count} Aging (1–4h)
+                  </Badge>
+                  <Badge className="bg-red-100 text-red-800">
+                    {dashboardData.openReviews.breached_count} Breached (&gt;4h)
+                  </Badge>
+                </div>
+
+                <div className="space-y-2">
+                  <Button size="sm" className="w-full">
+                    Open Queue
+                  </Button>
+                  <Button size="sm" variant="outline" className="w-full">
+                    Oldest First
+                  </Button>
+                </div>
+
+                {/* Table Preview */}
+                <div className="border rounded">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="text-xs">Quote ID</TableHead>
+                        <TableHead className="text-xs">Org</TableHead>
+                        <TableHead className="text-xs">Value</TableHead>
+                        <TableHead className="text-xs">Age</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {dashboardData.openReviews.items.slice(0, 3).map((item) => (
+                        <TableRow key={item.quote_id} className="cursor-pointer hover:bg-gray-50">
+                          <TableCell className="text-xs font-mono">{item.quote_id}</TableCell>
+                          <TableCell className="text-xs">{item.org}</TableCell>
+                          <TableCell className="text-xs">${item.value}</TableCell>
+                          <TableCell className="text-xs">{Math.floor(item.age_min / 60)}h</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Queue Depth Card */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg">Queues (BullMQ)</CardTitle>
+              <p className="text-sm text-gray-600">CAD analysis, pricing, PDF generation</p>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="text-xs">Queue</TableHead>
+                      <TableHead className="text-xs">Waiting</TableHead>
+                      <TableHead className="text-xs">Active</TableHead>
+                      <TableHead className="text-xs">Failed</TableHead>
+                      <TableHead className="text-xs">Oldest</TableHead>
+                      <TableHead className="text-xs">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {dashboardData.queues.map((queue) => (
+                      <TableRow key={queue.name}>
+                        <TableCell className="text-xs font-mono">{queue.name}</TableCell>
+                        <TableCell className="text-xs">{queue.waiting}</TableCell>
+                        <TableCell className="text-xs">{queue.active}</TableCell>
+                        <TableCell className="text-xs">{queue.failed_24h}</TableCell>
+                        <TableCell className="text-xs">
+                          {Math.floor(queue.oldest_job_age_sec / 60)}m
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex space-x-1">
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              disabled={queue.failed_24h === 0}
+                              onClick={() => handleRetryFailed(queue.name)}
+                            >
+                              <PlayIcon className="w-3 h-3" />
+                            </Button>
+                            <Button size="sm" variant="ghost">
+                              <TrashIcon className="w-3 h-3" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* DB Latency Card */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg">Database Latency</CardTitle>
+              <p className="text-sm text-gray-600">Median & P95 read/write latency</p>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="grid grid-cols-3 gap-4">
+                  <div>
+                    <div className="text-sm text-gray-600">Read P95</div>
+                    <div className="text-lg font-semibold">{dashboardData.db.read_p95_ms} ms</div>
+                  </div>
+                  <div>
+                    <div className="text-sm text-gray-600">Write P95</div>
+                    <div className="text-lg font-semibold">{dashboardData.db.write_p95_ms} ms</div>
+                  </div>
+                  <div>
+                    <div className="text-sm text-gray-600">Error Rate</div>
+                    <div className="text-lg font-semibold">{dashboardData.db.error_rate_pct}%</div>
+                  </div>
+                </div>
+
+                {/* Simple sparkline placeholder */}
+                <div className="h-16 bg-gray-100 rounded flex items-end justify-between px-2">
+                  {dashboardData.db.timeseries.read_ms.map((value, i) => (
+                    <div
+                      key={i}
+                      className="bg-blue-500 w-2 rounded-t"
+                      style={{ height: `${(value / 30) * 100}%` }}
+                    />
+                  ))}
+                </div>
+
+                <Button size="sm" variant="outline" className="w-full">
+                  Open DB Health
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Webhook Status Card */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg">Webhook Status</CardTitle>
+              <p className="text-sm text-gray-600">Delivery health for payment providers</p>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {/* Stripe */}
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="font-medium">Stripe</div>
+                    <div className="text-sm text-gray-600">
+                      Last: {dashboardData.webhooks.stripe.last_event_type}
+                    </div>
+                    <div className="text-sm text-gray-600">
+                      {dashboardData.webhooks.stripe.last_delivery_age}s ago
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <StatusBadge status={dashboardData.webhooks.stripe.status} />
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      disabled={dashboardData.webhooks.stripe.failed_24h === 0}
+                      onClick={() => handleWebhookReplay('stripe')}
+                    >
+                      <PlayIcon className="w-3 h-3" />
+                    </Button>
+                  </div>
+                </div>
+
+                {/* PayPal */}
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="font-medium">PayPal</div>
+                    <div className="text-sm text-gray-600">
+                      Last: {dashboardData.webhooks.paypal.last_event_type}
+                    </div>
+                    <div className="text-sm text-gray-600">
+                      {dashboardData.webhooks.paypal.last_delivery_age}s ago
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <StatusBadge status={dashboardData.webhooks.paypal.status} />
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      disabled={dashboardData.webhooks.paypal.failed_24h === 0}
+                      onClick={() => handleWebhookReplay('paypal')}
+                    >
+                      <PlayIcon className="w-3 h-3" />
+                    </Button>
+                  </div>
+                </div>
+
+                <Button size="sm" variant="outline" className="w-full">
+                  Open Monitor
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Row 2: SLO Tiles */}
+        <div className="mb-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">SLOs (P95)</CardTitle>
+              <p className="text-sm text-gray-600">Real-time SLO conformance against service objectives</p>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="p-4 border rounded">
+                  <div className="text-sm text-gray-600">Time to First Price</div>
+                  <div className="text-2xl font-bold">{dashboardData.slos.first_price_p95_ms} ms</div>
+                  <div className="text-sm text-gray-600">Target: ≤ 2000 ms</div>
+                  <Badge className={`mt-2 ${getSLOTileColor(dashboardData.slos.first_price_p95_ms, 2000, 2500)}`}>
+                    {dashboardData.slos.first_price_p95_ms <= 2000 ? '✓' : dashboardData.slos.first_price_p95_ms <= 2500 ? '⚠' : '✗'}
+                  </Badge>
+                </div>
+
+                <div className="p-4 border rounded">
+                  <div className="text-sm text-gray-600">CAD Analysis</div>
+                  <div className="text-2xl font-bold">{dashboardData.slos.cad_p95_ms} ms</div>
+                  <div className="text-sm text-gray-600">Target: ≤ 20000 ms</div>
+                  <Badge className={`mt-2 ${getSLOTileColor(dashboardData.slos.cad_p95_ms, 20000, 30000)}`}>
+                    {dashboardData.slos.cad_p95_ms <= 20000 ? '✓' : dashboardData.slos.cad_p95_ms <= 30000 ? '⚠' : '✗'}
+                  </Badge>
+                </div>
+
+                <div className="p-4 border rounded">
+                  <div className="text-sm text-gray-600">Payment → Order</div>
+                  <div className="text-2xl font-bold">{dashboardData.slos.payment_to_order_p95_ms} ms</div>
+                  <div className="text-sm text-gray-600">Target: ≤ 10000 ms</div>
+                  <Badge className={`mt-2 ${getSLOTileColor(dashboardData.slos.payment_to_order_p95_ms, 10000, 15000)}`}>
+                    {dashboardData.slos.payment_to_order_p95_ms <= 10000 ? '✓' : dashboardData.slos.payment_to_order_p95_ms <= 15000 ? '⚠' : '✗'}
+                  </Badge>
+                </div>
+
+                <div className="p-4 border rounded">
+                  <div className="text-sm text-gray-600">Queue Staleness</div>
+                  <div className="text-2xl font-bold">{dashboardData.slos.oldest_job_age_sec} s</div>
+                  <div className="text-sm text-gray-600">Target: ≤ 600 s</div>
+                  <Badge className={`mt-2 ${getSLOTileColor(dashboardData.slos.oldest_job_age_sec, 600, 1800)}`}>
+                    {dashboardData.slos.oldest_job_age_sec <= 600 ? '✓' : dashboardData.slos.oldest_job_age_sec <= 1800 ? '⚠' : '✗'}
+                  </Badge>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Row 3: Recent Errors Panel */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Recent Errors</CardTitle>
+            <p className="text-sm text-gray-600">Latest application exceptions and failing jobs with quick remediation</p>
+          </CardHeader>
+          <CardContent>
+            <Tabs defaultValue="sentry" className="w-full">
+              <TabsList>
+                <TabsTrigger value="sentry">App Errors</TabsTrigger>
+                <TabsTrigger value="jobs">Failed Jobs</TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="sentry">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>When</TableHead>
+                      <TableHead>Service</TableHead>
+                      <TableHead>Error</TableHead>
+                      <TableHead>Count (1h)</TableHead>
+                      <TableHead>Users Affected</TableHead>
+                      <TableHead>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {dashboardData.errors.sentry.map((error) => (
+                      <TableRow key={error.id}>
+                        <TableCell>{new Date(error.last_seen).toLocaleTimeString()}</TableCell>
+                        <TableCell>
+                          <Badge variant="outline">{error.service}</Badge>
+                        </TableCell>
+                        <TableCell className="max-w-xs truncate">{error.title}</TableCell>
+                        <TableCell>{error.count_1h}</TableCell>
+                        <TableCell>{error.users_affected}</TableCell>
+                        <TableCell>
+                          <div className="flex space-x-2">
+                            <Button size="sm" variant="ghost">
+                              <EyeIcon className="w-4 h-4" />
+                            </Button>
+                            <Button size="sm" variant="ghost">
+                              Create Issue
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TabsContent>
+
+              <TabsContent value="jobs">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>When</TableHead>
+                      <TableHead>Queue</TableHead>
+                      <TableHead>Job ID</TableHead>
+                      <TableHead>Attempts</TableHead>
+                      <TableHead>Reason</TableHead>
+                      <TableHead>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {dashboardData.errors.jobs.map((job) => (
+                      <TableRow key={job.jobId}>
+                        <TableCell>{new Date(job.when).toLocaleTimeString()}</TableCell>
+                        <TableCell>
+                          <Badge variant="outline">{job.queue}</Badge>
+                        </TableCell>
+                        <TableCell className="font-mono text-sm">{job.jobId}</TableCell>
+                        <TableCell>{job.attempts}</TableCell>
+                        <TableCell>{job.reason}</TableCell>
+                        <TableCell>
+                          <div className="flex space-x-2">
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => handleRetryJob(job.queue, job.jobId)}
+                            >
+                              <PlayIcon className="w-4 h-4" />
+                            </Button>
+                            <Button size="sm" variant="ghost">
+                              <EyeIcon className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+
+                <div className="flex justify-between items-center mt-4 pt-4 border-t">
+                  <div className="text-sm text-gray-600">
+                    Showing {dashboardData.errors.jobs.length} failed jobs
+                  </div>
+                  <Button size="sm" variant="outline">
+                    Retry All Failed (24h)
+                  </Button>
+                </div>
+              </TabsContent>
+            </Tabs>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
   );
 }
 

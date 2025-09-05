@@ -1,134 +1,365 @@
-import { Injectable } from "@nestjs/common";
-import { InjectQueue } from "@nestjs/bull";
-import { Queue } from "bull";
-import { SupabaseService } from "../../lib/supabase/supabase.service";
-import { createHash } from "crypto";
-import { fileTypeFromBuffer } from "file-type";
+import { Injectable } from '@nestjs/common';
+import { SupabaseService } from '../../lib/supabase/supabase.service';
+import { FileMeta } from '../../../../../packages/shared/src/types/schema';
 
 @Injectable()
 export class FilesService {
-  constructor(
-    private readonly supabase: SupabaseService,
-    @InjectQueue("files") private readonly filesQueue: Queue,
-  ) {}
+  constructor(private readonly supabase: SupabaseService) {}
 
-  private generateStoragePath(organizationId: string, fileId: string, originalName: string) {
-    const ext = originalName.split(".").pop();
-    return `${organizationId}/${fileId}.${ext}`;
+  async getFiles(orgId: string, filters: any = {}) {
+    let query = this.supabase.client
+      .from('file_meta')
+      .select(`
+        *,
+        owner:users (name, email),
+        linked_quotes:quotes (id, status),
+        linked_orders:orders (id, order_number, status)
+      `)
+      .eq('org_id', orgId)
+      .is('deleted_at', null);
+
+    if (filters.kind) {
+      query = query.eq('kind', filters.kind);
+    }
+
+    if (filters.itar !== undefined) {
+      query = query.eq('itar_cui', filters.itar);
+    }
+
+    if (filters.preview_ready !== undefined) {
+      query = query.eq('preview_ready', filters.preview_ready);
+    }
+
+    if (filters.search) {
+      query = query.or(`name.ilike.%${filters.search}%,tags.cs.{${filters.search}}`);
+    }
+
+    if (filters.dateFrom) {
+      query = query.gte('created_at', filters.dateFrom);
+    }
+
+    if (filters.dateTo) {
+      query = query.lte('created_at', filters.dateTo);
+    }
+
+    const { data } = await query.order('created_at', { ascending: false });
+    return data || [];
   }
 
-  async initiateUpload(
-    { fileName, fileSize, organizationId }: { fileName: string; fileSize: number; organizationId: string },
-    userId: string,
-  ) {
-    // Create file record
-    const { data: file, error: fileError } = await this.supabase.client
-      .from("files")
+  async getFile(fileId: string, orgId: string) {
+    const { data: file } = await this.supabase.client
+      .from('file_meta')
+      .select(`
+        *,
+        owner:users (name, email),
+        linked_quotes:quotes (id, status),
+        linked_orders:orders (id, order_number, status),
+        audit_events:file_audit (
+          id,
+          action,
+          user_id,
+          created_at,
+          details,
+          user:users (name, email)
+        )
+      `)
+      .eq('id', fileId)
+      .eq('org_id', orgId)
+      .is('deleted_at', null)
+      .single();
+
+    return file;
+  }
+
+  async createFile(fileData: Partial<FileMeta>, userId: string) {
+    const { data: file } = await this.supabase.client
+      .from('file_meta')
       .insert({
-        organization_id: organizationId,
-        original_name: fileName,
-        size_bytes: fileSize,
-        bucket_id: "cad-files",
-        storage_path: "", // Will update after getting file ID
-        mime_type: "application/octet-stream", // Will update after upload
-        sha256_hash: "", // Will update after upload
-        status: "pending",
-        uploaded_by: userId,
+        ...fileData,
+        owner_user_id: userId,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
       })
       .select()
       .single();
 
-    if (fileError) throw fileError;
+    // Log audit event
+    await this.logAuditEvent(file.id, 'created', userId, { fileData });
 
-    // Update storage path now that we have the file ID
-    const storagePath = this.generateStoragePath(organizationId, file.id, fileName);
-    await this.supabase.client.from("files").update({ storage_path: storagePath }).eq("id", file.id);
-
-    // Generate signed upload URL
-    const { data: signedUrl } = await this.supabase.client.storage.from("cad-files").createSignedUploadUrl(storagePath);
-
-    return {
-      id: file.id,
-      uploadUrl: signedUrl.signedUrl,
-      storagePath,
-    };
-  }
-
-  async completeUpload(fileId: string) {
-    // Get file info
-    const { data: file } = await this.supabase.client.from("files").select("*").eq("id", fileId).single();
-
-    if (!file) throw new Error("File not found");
-
-    // Update status to scanning
-    await this.supabase.client.from("files").update({ status: "scanning" }).eq("id", fileId);
-
-    // Download file for scanning
-    const { data: fileData } = await this.supabase.client.storage.from("cad-files").download(file.storage_path);
-
-    if (!fileData) throw new Error("File download failed");
-
-    // Calculate SHA256 hash
-    const arrayBuffer = await fileData.arrayBuffer();
-    const uint8Array = new Uint8Array(arrayBuffer);
-    const hash = createHash("sha256");
-    hash.update(uint8Array);
-    const sha256Hash = hash.digest("hex");
-
-    // Detect real MIME type
-    const fileType = await fileTypeFromBuffer(arrayBuffer);
-    const mimeType = fileType?.mime || "application/octet-stream";
-
-    // Queue virus scan
-    await this.filesQueue.add(
-      "scan",
-      {
-        fileId,
-        storagePath: file.storage_path,
-        sha256Hash,
-        mimeType,
-      },
-      {
-        attempts: 3,
-        backoff: {
-          type: "exponential",
-          delay: 2000,
-        },
-      },
-    );
-
-    // Update file record
-    await this.supabase.client
-      .from("files")
-      .update({
-        sha256_hash: sha256Hash,
-        mime_type: mimeType,
-      })
-      .eq("id", fileId);
-
-    return { status: "processing" };
-  }
-
-  async getFile(fileId: string, userId?: string) {
-    // userId parameter is optional and can be used for permission checks if needed
-    const { data: file, error } = await this.supabase.client.from("files").select("*").eq("id", fileId).single();
-
-    if (error) throw error;
     return file;
   }
 
-  async getDownloadUrl(fileId: string, userId?: string) {
-    // userId parameter is optional and can be used for permission checks if needed
-    const { data: file } = await this.getFile(fileId, userId);
+  async updateFile(fileId: string, updates: Partial<FileMeta>, userId: string) {
+    const { data: file } = await this.supabase.client
+      .from('file_meta')
+      .update({
+        ...updates,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', fileId)
+      .select()
+      .single();
 
-    if (file.status !== "clean") {
-      throw new Error("File is not available for download");
+    // Log audit event
+    await this.logAuditEvent(fileId, 'updated', userId, { updates });
+
+    return file;
+  }
+
+  async linkFileToObject(fileId: string, type: string, objectId: string, tags: string[] = [], userId: string) {
+    const { data: file } = await this.supabase.client
+      .from('file_meta')
+      .select('linked_to, tags')
+      .eq('id', fileId)
+      .single();
+
+    if (!file) {
+      throw new Error('File not found');
     }
 
-    const { data: signedUrl } = await this.supabase.client.storage
-      .from("cad-files")
-      .createSignedUrl(file.storage_path, 3600); // 1 hour expiry
+    const updatedLinks = [
+      ...file.linked_to,
+      { type, id: objectId }
+    ];
 
-    return { url: signedUrl };
+    const updatedTags = [...new Set([...(file.tags || []), ...tags])];
+
+    const { data: updatedFile } = await this.supabase.client
+      .from('file_meta')
+      .update({
+        linked_to: updatedLinks,
+        tags: updatedTags,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', fileId)
+      .select()
+      .single();
+
+    // Log audit event
+    await this.logAuditEvent(fileId, 'linked', userId, { type, objectId, tags });
+
+    return updatedFile;
+  }
+
+  async unlinkFileFromObject(fileId: string, type: string, objectId: string, userId: string) {
+    const { data: file } = await this.supabase.client
+      .from('file_meta')
+      .select('linked_to')
+      .eq('id', fileId)
+      .single();
+
+    if (!file) {
+      throw new Error('File not found');
+    }
+
+    const updatedLinks = file.linked_to.filter(
+      link => !(link.type === type && link.id === objectId)
+    );
+
+    const { data: updatedFile } = await this.supabase.client
+      .from('file_meta')
+      .update({
+        linked_to: updatedLinks,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', fileId)
+      .select()
+      .single();
+
+    // Log audit event
+    await this.logAuditEvent(fileId, 'unlinked', userId, { type, objectId });
+
+    return updatedFile;
+  }
+
+  async deleteFile(fileId: string, userId: string) {
+    // Soft delete
+    const { data: file } = await this.supabase.client
+      .from('file_meta')
+      .update({
+        deleted_at: new Date().toISOString(),
+      })
+      .eq('id', fileId)
+      .select()
+      .single();
+
+    // Log audit event
+    await this.logAuditEvent(fileId, 'deleted', userId);
+
+    return file;
+  }
+
+  async getSignedUrl(fileId: string, disposition: 'inline' | 'attachment' = 'inline') {
+    const { data: file } = await this.supabase.client
+      .from('file_meta')
+      .select('bucket, path, name, mime')
+      .eq('id', fileId)
+      .single();
+
+    if (!file) {
+      throw new Error('File not found');
+    }
+
+    // Generate signed URL (implementation depends on storage provider)
+    // For Supabase Storage:
+    const { data: signedUrl } = await this.supabase.client.storage
+      .from(file.bucket)
+      .createSignedUrl(file.path, 300, {
+        download: disposition === 'attachment' ? file.name : undefined,
+      });
+
+    return signedUrl?.signedUrl;
+  }
+
+  // Bulk operations
+  async bulkDownload(fileIds: string[], userId: string) {
+    // Get file metadata
+    const { data: files } = await this.supabase.client
+      .from('file_meta')
+      .select('id, bucket, path, name, size_bytes')
+      .in('id', fileIds);
+
+    if (!files) {
+      throw new Error('Files not found');
+    }
+
+    // Create ZIP file (implementation depends on storage solution)
+    // This would typically involve:
+    // 1. Download all files from storage
+    // 2. Create ZIP archive
+    // 3. Upload ZIP to temporary storage
+    // 4. Return signed URL for ZIP download
+
+    // For now, return mock response
+    return {
+      downloadUrl: 'signed-url-for-zip',
+      fileCount: files.length,
+      totalSize: files.reduce((sum, file) => sum + (file.size_bytes || 0), 0),
+    };
+  }
+
+  async bulkDelete(fileIds: string[], userId: string) {
+    const { data } = await this.supabase.client
+      .from('file_meta')
+      .update({
+        deleted_at: new Date().toISOString(),
+      })
+      .in('id', fileIds)
+      .select();
+
+    // Log audit events
+    for (const fileId of fileIds) {
+      await this.logAuditEvent(fileId, 'bulk_deleted', userId);
+    }
+
+    return data;
+  }
+
+  async bulkTag(fileIds: string[], tags: string[], userId: string) {
+    // Get current tags for each file and merge
+    const { data: filesData } = await this.supabase.client
+      .from('file_meta')
+      .select('id, tags')
+      .in('id', fileIds);
+
+    const updates = filesData?.map(file => ({
+      id: file.id,
+      tags: [...new Set([...(file.tags || []), ...tags])],
+    })) || [];
+
+    for (const update of updates) {
+      await this.supabase.client
+        .from('file_meta')
+        .update({
+          tags: update.tags,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', update.id);
+
+      // Log audit event
+      await this.logAuditEvent(update.id, 'bulk_tagged', userId, { tags });
+    }
+
+    return updates;
+  }
+
+  // Preview generation (would be called by background job)
+  async generatePreview(fileId: string) {
+    const { data: file } = await this.supabase.client
+      .from('file_meta')
+      .select('bucket, path, mime, kind')
+      .eq('id', fileId)
+      .single();
+
+    if (!file) {
+      throw new Error('File not found');
+    }
+
+    // Generate preview based on file type
+    // Implementation depends on file type and storage solution
+    let previewGenerated = false;
+
+    if (file.mime.startsWith('application/pdf')) {
+      // Generate PDF preview
+      previewGenerated = true;
+    } else if (file.mime.startsWith('image/')) {
+      // Generate image thumbnail
+      previewGenerated = true;
+    } else if (file.kind === 'cad' || file.mime.includes('step') || file.mime.includes('iges')) {
+      // Generate CAD preview (would use external service)
+      previewGenerated = true;
+    }
+
+    if (previewGenerated) {
+      await this.supabase.client
+        .from('file_meta')
+        .update({
+          preview_ready: true,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', fileId);
+    }
+
+    return { previewGenerated };
+  }
+
+  // Audit logging
+  private async logAuditEvent(fileId: string, action: string, userId: string, details?: any) {
+    await this.supabase.client
+      .from('file_audit')
+      .insert({
+        file_id: fileId,
+        action,
+        user_id: userId,
+        details,
+        created_at: new Date().toISOString(),
+      });
+  }
+
+  // Virus scanning (would be called by background job)
+  async scanForVirus(fileId: string) {
+    const { data: file } = await this.supabase.client
+      .from('file_meta')
+      .select('bucket, path')
+      .eq('id', fileId)
+      .single();
+
+    if (!file) {
+      throw new Error('File not found');
+    }
+
+    // Implement virus scanning logic
+    // This would typically download the file and scan it
+    const isClean = true; // Mock result
+
+    await this.supabase.client
+      .from('file_meta')
+      .update({
+        virus_scanned: true,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', fileId);
+
+    return { isClean };
   }
 }

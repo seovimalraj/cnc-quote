@@ -16,7 +16,20 @@ import { ManualReviewModule } from "./modules/manual-review/manual-review.module
 import { ObservabilityModule } from "./observability/observability.module";
 import { TestModule } from "./modules/test/test.module";
 import { QueueMonitorModule } from "./modules/queue-monitor/queue-monitor.module";
+import { AdminModule } from "./modules/admin/admin.module";
+import { ReviewModule } from "./modules/review/review.module";
 import { RateLimitModule } from "./lib/rate-limit/rate-limit.module";
+import { DocumentsModule } from "./modules/documents/documents.module";
+import { FilesModule } from "./modules/files/files.module";
+import { CatalogModule } from "./modules/catalog/catalog.module";
+import { AdminFilesModule } from "./modules/admin-files/admin-files.module";
+import { FinanceModule } from "./modules/finance/finance.module";
+import { AdminUsersModule } from "./modules/admin-users/admin-users.module";
+import { AdminOrgsModule } from "./modules/admin-orgs/admin-orgs.module";
+import { AdminHealthModule } from "./modules/admin-health/admin-health.module";
+import { AdminMetricsModule } from "./modules/admin-metrics/admin-metrics.module";
+import { AdminErrorsModule } from "./modules/admin-errors/admin-errors.module";
+import { AdminAlertsModule } from "./modules/admin-alerts/admin-alerts.module";
 
 @Module({
   imports: [
@@ -49,6 +62,19 @@ import { RateLimitModule } from "./lib/rate-limit/rate-limit.module";
     ManualReviewModule,
     TestModule,
     QueueMonitorModule,
+    AdminModule,
+    ReviewModule,
+    DocumentsModule,
+    FilesModule,
+    CatalogModule,
+    AdminFilesModule,
+    FinanceModule,
+    AdminUsersModule,
+    AdminOrgsModule,
+    AdminHealthModule,
+    AdminMetricsModule,
+    AdminErrorsModule,
+    AdminAlertsModule,
   ],
 })
 export class AppModule {}

@@ -20,8 +20,8 @@ import {
   ArrowPathIcon,
   XMarkIcon,
   DocumentTextIcon,
-  ReceiptIcon,
-  FileIcon,
+  ReceiptPercentIcon,
+  DocumentIcon,
   ArrowDownTrayIcon
 } from '@heroicons/react/24/outline';
 import { PDFPreview, CADPreview, ImagePreview, FilePreview } from '@/components/ui/file-preview';
@@ -315,8 +315,8 @@ export default function DocumentsPage() {
       Certificate: FileIcon,
       FAIR: DocumentTextIcon,
       Measurement: DocumentTextIcon,
-      Invoice: ReceiptIcon,
-      Receipt: ReceiptIcon,
+      Invoice: ReceiptPercentIcon,
+      Receipt: ReceiptPercentIcon,
       CoC: FileIcon,
       MaterialCert: FileIcon,
     };

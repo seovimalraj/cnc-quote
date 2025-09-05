@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Separator } from '@/components/ui/separator';
-import { EyeIcon, TruckIcon, ReceiptIcon, ArrowDownTrayIcon } from '@heroicons/react/24/outline';
+import { EyeIcon, TruckIcon, ReceiptPercentIcon, ArrowDownTrayIcon } from '@heroicons/react/24/outline';
 import { DatePickerWithRange } from '@/components/ui/date-range-picker';
 import type { Order, OrderFilters, OrdersListResponse, Shipment } from '@/types/order';
 import { trackEvent } from '@/lib/analytics/posthog';

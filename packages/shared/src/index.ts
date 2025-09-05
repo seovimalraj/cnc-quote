@@ -10,6 +10,18 @@ export type {
   MachineMessage,
 } from './types.core';
 
+// Order workcenter types
+export type {
+  Order,
+  OrderTotals,
+  Address,
+  WorkOrder,
+  Package,
+  Shipment,
+  DocRef,
+  AuditEvent,
+} from './types/schema';
+
 // Feature types
 export type {
   FeatureRule,

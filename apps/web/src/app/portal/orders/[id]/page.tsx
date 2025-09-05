@@ -13,8 +13,8 @@ import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
 import {
   ArrowLeftIcon,
-  ReceiptIcon,
-  FileIcon,
+  ReceiptPercentIcon,
+  DocumentIcon,
   ArrowPathIcon,
   LifebuoyIcon,
   PaperAirplaneIcon,
