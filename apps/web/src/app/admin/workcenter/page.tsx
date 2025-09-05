@@ -919,31 +919,3 @@ function SystemHealthRail() {
   );
 }
 
-export default function AdminWorkcenterPage() {
-  return (
-    <DefaultLayout>
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
-        {/* Header */}
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold text-gray-900">Quoting Workcenter</h1>
-        </div>
-
-        {/* Filters Toolbar */}
-        <FiltersToolbar />
-
-        <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
-          {/* Main Content */}
-          <div className="xl:col-span-3 space-y-6">
-            <NeedsReviewQueue />
-            <PricedQueue />
-          </div>
-
-          {/* Right Rail */}
-          <div className="xl:col-span-1">
-            <SystemHealthRail />
-          </div>
-        </div>
-      </div>
-    </DefaultLayout>
-  );
-}

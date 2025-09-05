@@ -88,12 +88,12 @@ export default async function DashboardPage() {
               Welcome back, {user.email?.split('@')[0] || 'User'}!
             </h1>
             <p className="text-xl mb-6">
-              Get instant CNC machining quotes in under 2 minutes
+              Manage your orders, documents, and support tickets
             </p>
-            <Link href="/quotes/new">
+            <Link href="/orders">
               <Button size="lg" className="bg-white text-blue-600 hover:bg-gray-100">
                 <PlusIcon className="w-5 h-5 mr-2" />
-                Start New Quote
+                View Orders
               </Button>
             </Link>
           </div>
@@ -128,16 +128,16 @@ export default async function DashboardPage() {
               </CardContent>
             </Card>
 
-            {/* Recent Quotes */}
+            {/* Recent Orders */}
             <Card>
               <CardHeader>
                 <div className="flex items-center justify-between">
-                  <CardTitle>Recent Quotes</CardTitle>
+                  <CardTitle>Recent Orders</CardTitle>
                   <div className="flex items-center space-x-2">
                     <div className="relative">
                       <MagnifyingGlassIcon className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
                       <Input
-                        placeholder="Search quotes..."
+                        placeholder="Search orders..."
                         className="pl-10 w-64"
                       />
                     </div>
@@ -239,7 +239,7 @@ export default async function DashboardPage() {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-2">
                       <CheckCircleIcon className="w-5 h-5 text-green-600" />
-                      <span className="text-sm">Completed Quotes</span>
+                      <span className="text-sm">Completed Orders</span>
                     </div>
                     <span className="font-semibold">12</span>
                   </div>

@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { EyeIcon } from '@heroicons/react/24/outline'
 import { posthog } from 'posthog-js'
+import { formatDate } from '@/lib/utils'
 
 interface DashboardQuote {
   id: string
@@ -68,14 +69,6 @@ export function RecentActivity({ quotes, orders }: RecentActivityProps) {
         {status}
       </Badge>
     )
-  }
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric'
-    })
   }
 
   return (

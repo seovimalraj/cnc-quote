@@ -1,15 +1,17 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { Dropzone } from '@/components/upload/Dropzone';
-import { ModelViewer } from '@/components/viewer/ModelViewer';
-import { MetricsPanel } from '@/components/viewer/MetricsPanel';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Loader2 } from 'lucide-react';
 import type { FileMetrics } from '@/types/file-metrics';
+
+// Lazy load heavy components
+const ModelViewer = lazy(() => import('@/components/viewer/ModelViewer').then(module => ({ default: module.ModelViewer })));
+const MetricsPanel = lazy(() => import('@/components/viewer/MetricsPanel').then(module => ({ default: module.MetricsPanel })));
 
 const supabase = createClient();
 

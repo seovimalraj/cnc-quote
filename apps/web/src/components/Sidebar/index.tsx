@@ -60,7 +60,6 @@ const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen }) => {
     if (user.role === 'admin') {
       return [
         { href: '/admin', icon: BuildingOffice2Icon, label: 'Admin Dashboard' },
-        { href: '/admin/quotes', icon: ClipboardDocumentListIcon, label: 'Quote Management' },
         { href: '/admin/customers', icon: UserGroupIcon, label: 'Customer Management' },
         { href: '/admin/analytics', icon: ChartBarIcon, label: 'Analytics' },
         { href: '/admin/settings', icon: CogIcon, label: 'Settings' },
@@ -68,8 +67,6 @@ const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen }) => {
     } else {
       return [
         { href: '/dashboard', icon: HomeIcon, label: 'Dashboard' },
-        { href: '/widget', icon: CubeIcon, label: 'Get Quote' },
-        { href: '/quotes', icon: DocumentTextIcon, label: 'My Quotes' },
         { href: '/orders', icon: ClipboardDocumentListIcon, label: 'My Orders' },
         { href: '/settings', icon: CogIcon, label: 'Settings' },
       ];

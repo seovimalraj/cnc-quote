@@ -24,6 +24,7 @@ import {
   ArrowPathIcon,
 } from '@heroicons/react/24/outline';
 import { posthog } from 'posthog-js';
+import { formatDate } from '@/lib/utils';
 
 // Types based on specification
 interface Quote {
@@ -265,14 +266,6 @@ export default function QuotesListPage() {
       style: 'currency',
       currency: currency,
     }).format(amount);
-  };
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-    });
   };
 
   return (

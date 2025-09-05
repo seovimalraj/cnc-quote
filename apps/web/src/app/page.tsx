@@ -21,31 +21,31 @@ export default function LandingPage() {
   const features = [
     {
       icon: CubeIcon,
-      title: 'Instant CAD Analysis',
-      description: 'Upload your STEP, IGES, or STL files and get instant pricing with detailed feature analysis.'
+      title: 'Customer Portal',
+      description: 'Secure portal for managing orders, documents, and support tickets with full order history.'
     },
     {
       icon: ClockIcon,
-      title: 'Fast Turnaround',
-      description: 'Get quotes in minutes, not days. Our automated system processes your parts instantly.'
+      title: 'Order Tracking',
+      description: 'Real-time order status updates and comprehensive order management dashboard.'
     },
     {
       icon: CurrencyDollarIcon,
-      title: 'Transparent Pricing',
-      description: 'Clear pricing breakdown with no hidden fees. Know exactly what you\'re paying for.'
+      title: 'Document Management',
+      description: 'Secure access to all order documents, invoices, and manufacturing specifications.'
     },
     {
       icon: ShieldCheckIcon,
-      title: 'Design for Manufacturability',
-      description: 'Automated DFM analysis helps optimize your designs for better manufacturing results.'
+      title: 'Admin Oversight',
+      description: 'Comprehensive admin panel for operational monitoring, customer management, and analytics.'
     }
   ];
 
   const processSteps = [
-    { step: 1, title: 'Upload CAD', description: 'Drag & drop your files' },
-    { step: 2, title: 'Configure', description: 'Select material, finish, quantity' },
-    { step: 3, title: 'Get Price', description: 'Instant quote with DFM feedback' },
-    { step: 4, title: 'Order', description: 'Secure checkout and tracking' }
+    { step: 1, title: 'Sign Up', description: 'Create your account securely' },
+    { step: 2, title: 'Access Portal', description: 'Login to your customer dashboard' },
+    { step: 3, title: 'Manage Orders', description: 'Track orders and download documents' },
+    { step: 4, title: 'Get Support', description: 'Access help and contact support' }
   ];
 
   return (
@@ -65,11 +65,11 @@ export default function LandingPage() {
                 </Link>
               ) : (
                 <>
-                  <Link href="/signin">
+                  <Link href="/login">
                     <Button variant="ghost">Sign In</Button>
                   </Link>
-                  <Link href="/widget/quote">
-                    <Button>Get Instant Quote</Button>
+                  <Link href="/login">
+                    <Button>Access Portal</Button>
                   </Link>
                 </>
               )}
@@ -83,17 +83,17 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto">
           <div className="text-center">
             <h1 className="text-4xl md:text-6xl font-bold text-gray-900 mb-6">
-              Instant CNC Quotes
-              <span className="block text-blue-600">In Minutes, Not Days</span>
+              Customer Portal
+              <span className="block text-blue-600">& Admin Panel</span>
             </h1>
             <p className="text-xl text-gray-600 mb-8 max-w-3xl mx-auto">
-              Upload your CAD files, configure your requirements, and get instant pricing with
-              automated design for manufacturability analysis. No more waiting for quotes.
+              Secure customer portal for managing orders, documents, and support.
+              Comprehensive admin panel for operational oversight and customer management.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Link href="/widget/quote">
+              <Link href="/login">
                 <Button size="lg" className="text-lg px-8 py-3">
-                  Get Instant Quote
+                  Access Portal
                   <ArrowRightIcon className="ml-2 h-5 w-5" />
                 </Button>
               </Link>
@@ -114,7 +114,7 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
             <h2 className="text-3xl font-bold text-gray-900 mb-4">How It Works</h2>
-            <p className="text-lg text-gray-600">Get your quote in 4 simple steps</p>
+            <p className="text-lg text-gray-600">Access your portal in 4 simple steps</p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
             {processSteps.map((step, index) => (

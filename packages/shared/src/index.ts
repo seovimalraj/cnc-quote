@@ -28,13 +28,6 @@ export type {
   FeatureType,
 } from './types/feature';
 
-// Quote types
-export type {
-  QuoteFile,
-  QuoteItem,
-  Quote,
-} from './types/quotes';
-
 // Material types
 export type {
   MaterialCosting,
@@ -43,56 +36,27 @@ export type {
   Material,
 } from './types/material';
 
-// DFM types
+// Core types
 export type {
-  DfmRule,
-  DfmValidationIssue,
-  DfmValidationResponse,
-  CncDfmParams,
-  SheetMetalDfmParams,
-  InjectionMoldingDfmParams,
-} from './dfm.types';
+  User,
+  Organization,
+  TeamMember,
+  ApiToken,
+  FileUpload,
+  Order,
+  OrderStatus,
+  Payment,
+  Customer,
+  AdminUser,
+} from './types/core';
 
-export { Severity } from './dfm.types';
-
-// Pricing types from quotes.core
+// Feature types
 export type {
-  PricingProfile,
-  PriceResponse,
-  PriceBreakdown,
-  CncPriceRequest as CncPricingRequest,
-  SheetMetalPriceRequest as SheetMetalPricingRequest,
-  InjectionMoldingPriceRequest as InjectionMoldingPricingRequest,
-  Finish,
-  Tolerance,
-} from "./types/quotes.core";
-
-// Pricing types from pricing.types
-export type {
-  PricingProfile as PricingProfileNew,
-  PriceResponse as PriceResponseNew,
-  PriceBreakdown as PriceBreakdownNew,
-  PriceRequest,
-  CncPriceRequest,
-  SheetMetalPriceRequest,
-  InjectionMoldingPriceRequest,
-  // Remove duplicate exports that conflict with exports from quotes.core
-  // CncPricingRequest,
-  // SheetMetalPricingRequest,
-  // InjectionMoldingPricingRequest,
-  PricingResponse,
-  PricingRequest,
-  QuoteResponse,
-  OrderDetails,
-  OrderResponse,
-} from "./pricing.types";
-
-// Re-export Machine from quotes.core with different name to avoid conflicts
-export type { Machine as QuoteMachine } from "./types/quotes.core";
+  FeatureFlag,
+  FeatureToggle,
+} from './types/feature';
 
 // Create a namespace export for easier importing
 export * as Types from './types.core';
 export * as FeatureTypes from './types/feature';
-export * as QuoteTypes from './types/quotes';
 export * as MaterialTypes from './types/material';
-export * as DfmTypes from './dfm.types';

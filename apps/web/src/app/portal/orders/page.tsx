@@ -16,6 +16,7 @@ import { EyeIcon, TruckIcon, ReceiptPercentIcon, ArrowDownTrayIcon } from '@hero
 import { DatePickerWithRange } from '@/components/ui/date-range-picker';
 import type { Order, OrderFilters, OrdersListResponse, Shipment } from '@/types/order';
 import { trackEvent } from '@/lib/analytics/posthog';
+import { formatDate } from '@/lib/utils';
 
 const ITEMS_PER_PAGE = 20;
 
@@ -199,11 +200,6 @@ export default function OrdersPage() {
 
   // Format currency
   const formatCurrency = (amount: number) => `$${amount.toFixed(2)}`;
-
-  // Format date
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString();
-  };
 
   // Get status badge variant
   const getStatusVariant = (status: string) => {
