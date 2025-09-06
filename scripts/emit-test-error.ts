@@ -63,8 +63,7 @@ async function main() {
 
   try {
     // Step 1: Emit test errors
-    console.log('Emitting test errors...');
-    
+
     // API error
     try {
       throw new Error('Test API Error');
@@ -103,8 +102,7 @@ async function main() {
     };
 
     // Step 2: Generate PostHog events
-    console.log('Generating PostHog events...');
-    
+
     posthog.capture({
       distinctId: 'test-user',
       event: 'file_upload',
@@ -124,7 +122,6 @@ async function main() {
     });
 
     // Step 3: Check system health page
-    console.log('Checking system health page...');
 
     const browser = await puppeteer.launch({
       headless: 'new'
@@ -181,14 +178,7 @@ async function main() {
         .join('\n')
     );
 
-    console.log('\nResults:');
-    console.log('========');
-    console.log('Sentry Issues:');
-    console.log(`  API: ${result.sentryIssues.api ? '✓' : '✗'}`);
-    console.log(`  Web: ${result.sentryIssues.web ? '✓' : '✗'}`);
-    console.log('\nHealth Status:');
     Object.entries(result.healthStatus).forEach(([service, status]) => {
-      console.log(`  ${service}: ${status ? '✓' : '✗'}`);
     });
 
   } catch (error) {

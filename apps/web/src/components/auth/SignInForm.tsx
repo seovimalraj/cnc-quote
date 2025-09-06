@@ -55,8 +55,7 @@ export function SignInForm({ action }: SignInFormProps) {
     posthog.capture('sso_click', { provider })
 
     // In a real implementation, this would redirect to the SSO provider
-    // For now, we'll just log it
-    console.log(`SSO login with ${provider}`)
+    // For now, we'll just do nothing
   }
 
   const getErrorMessage = (error: string) => {

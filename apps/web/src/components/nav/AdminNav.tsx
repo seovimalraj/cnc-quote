@@ -14,6 +14,7 @@ const navigation = {
     { name: 'Materials', href: '/admin/catalog/materials' },
     { name: 'Machines', href: '/admin/catalog/machines' },
     { name: 'Finishes', href: '/admin/catalog/finishes' },
+    { name: 'Pricing Engine', href: '/admin/pricing' },
     { name: 'Certifications', href: '/admin/catalog/certifications' },
   ],
   settings: [

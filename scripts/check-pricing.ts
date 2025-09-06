@@ -32,23 +32,11 @@ async function main() {
   await PriceTester.writeResults(results, __dirname);
 
   // Log summary
-  console.log('\nTest Results:');
-  console.log('=============');
-  
-  for (const result of results) {
-    console.log(`\n${result.process}:`);
-    console.log(`  Success: ${result.success}`);
-    console.log(`  Latency: ${result.latency_ms.toFixed(2)}ms`);
-    console.log(`  Unit Price: $${result.unit_price.toFixed(2)}`);
-    console.log(`  Estimate Level: ${result.estimate_level}`);
-    console.log(`  Request ID: ${result.request_id}`);
-    
-    if (!result.success && result.error) {
-      console.log('  Error:', result.error);
-    }
-  }
 
-  // Exit with status based on all tests passing
+  for (const result of results) {
+    if (!result.success && result.error) {
+    }
+  }  // Exit with status based on all tests passing
   const allPassed = results.every(r => r.success);
   process.exit(allPassed ? 0 : 1);
 }

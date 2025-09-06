@@ -183,7 +183,6 @@ export class QapTemplatesService {
   // Cache invalidation helper
   private async publishCacheInvalidation(event: string, data: any) {
     // Publish to Redis pub/sub for cache invalidation
-    console.log(`Publishing cache invalidation: ${event}`, data);
   }
 
   // Audit logging

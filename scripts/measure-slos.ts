@@ -44,15 +44,10 @@ async function main() {
     token: process.env.JWT_TOKEN!
   });
 
-  console.log(`Starting SLO measurements (${config.runs} runs per test)...\n`);
-
   // Run tests
   for (let i = 0; i < config.runs; i++) {
-    console.log(`Run ${i + 1}/${config.runs}`);
-
     try {
       // Test 1: Time to first price
-      console.log('  Testing time to first price...');
       const ttfpStart = Date.now();
       const cadResult = await cadTester.runTest(path.join(__dirname, 'test-files/bracket.step'));
       
@@ -69,7 +64,6 @@ async function main() {
         });
 
         // Test 3: Payment to order time
-        console.log('  Testing payment to order time...');
         const paymentResult = await paymentTester.runTest(cadResult.fileId);
         
         if (paymentResult.success) {
@@ -125,16 +119,9 @@ async function main() {
     JSON.stringify(report, null, 2)
   );
 
-  console.log('\nResults:');
-  console.log('========');
   Object.entries(metrics).forEach(([slo, data]) => {
-    console.log(`\n${slo}:`);
-    console.log(`  P50: ${data.p50.toFixed(2)}ms`);
-    console.log(`  P95: ${data.p95.toFixed(2)}ms`);
-    console.log(`  Success Rate: ${((data.totalRuns - data.failures) / data.totalRuns * 100).toFixed(1)}%`);
   });
 
-  console.log(`\nReport written to: ${path.join(__dirname, 'slos-report.json')}`);
   process.exit(passed ? 0 : 1);
 }
 

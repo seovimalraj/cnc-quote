@@ -75,24 +75,17 @@ function checkEnvironmentVariables(): boolean {
   });
 
   // Print results
-  console.log('🔍 Environment Variables Check\n');
 
   if (allValid) {
-    console.log('✅ All required environment variables are present.\n');
   } else {
-    console.log('❌ Missing environment variables:\n');
-    
+
     Object.entries(missingVars).forEach(([service, vars]) => {
       if (vars.length > 0) {
-        console.log(`[${service.toUpperCase()}] Missing variables:`);
-        vars.forEach(v => console.log(`  - ${v}`));
-        console.log();
+        vars.forEach(v => {});
       }
     });
 
-    console.log('Please add the missing environment variables to the respective .env files:');
-    console.log('- Web:         apps/web/.env.local');
-    console.log('- API:         apps/api/.env');
+  }
     console.log('- CAD Service: apps/cad-service/.env\n');
   }
 

@@ -307,21 +307,6 @@ export const DocRefSchema = z.object({
   updated_at: z.string().datetime(),
 });
 
-// AuditEvent Schema (enhanced for admin workcenter)
-export const AuditEventSchema = z.object({
-  id: z.string().uuid(),
-  actor_user_id: z.string().uuid(),
-  actor_ip: z.string(),
-  org_id: z.string().uuid().nullable(),
-  target_type: z.enum(['user', 'organization', 'membership', 'invite']),
-  target_id: z.string().uuid(),
-  action: z.enum(['create', 'update', 'delete', 'role_change', 'disable', 'enable', 'invite_send', 'invite_resend', 'invite_revoke', 'impersonate_start', 'impersonate_end', 'quota_edit']),
-  before: z.record(z.unknown()).nullable(),
-  after: z.record(z.unknown()).nullable(),
-  ts: z.string().datetime(),
-  created_at: z.string().datetime(),
-});
-
 // Order Schema (expanded)
 export const OrderSchema = z.object({
   id: z.string().uuid(),

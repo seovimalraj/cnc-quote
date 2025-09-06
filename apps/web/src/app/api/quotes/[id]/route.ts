@@ -133,48 +133,43 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
+    const quoteId = params.id;
+
     // In a real implementation, this would fetch from your database
-    // For now, return mock data
-    const quote = mockQuote
+    // For now, we'll return mock data that simulates progress
+    const mockQuote = {
+      id: quoteId,
+      status: 'draft',
+      estimatedPrice: Math.floor(Math.random() * 500) + 100,
+      estimatedTime: `${Math.floor(Math.random() * 14) + 1} days`,
+      lines: [
+        {
+          id: 'line-1',
+          status: 'completed',
+          fileName: 'part1.step',
+          analysis: {
+            volume: 125.5,
+            surfaceArea: 890.2,
+            boundingBox: { x: 50, y: 30, z: 20 }
+          },
+          pricing: {
+            basePrice: 150,
+            materialCost: 25,
+            laborCost: 75,
+            totalPrice: 250
+          }
+        }
+      ],
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
 
-    if (!quote) {
-      return NextResponse.json(
-        { error: 'Quote not found' },
-        { status: 404 }
-      )
-    }
-
-    return NextResponse.json(quote)
+    return NextResponse.json(mockQuote);
   } catch (error) {
-    console.error('Error fetching quote:', error)
+    console.error('Error fetching quote:', error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Failed to fetch quote' },
       { status: 500 }
-    )
-  }
-}
-
-export async function PUT(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
-  try {
-    const body = await request.json()
-
-    // In a real implementation, this would update the quote in your database
-    // For now, just return the mock data with any updates
-    const updatedQuote = {
-      ...mockQuote,
-      ...body,
-      updated_at: new Date().toISOString()
-    }
-
-    return NextResponse.json(updatedQuote)
-  } catch (error) {
-    console.error('Error updating quote:', error)
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
+    );
   }
 }

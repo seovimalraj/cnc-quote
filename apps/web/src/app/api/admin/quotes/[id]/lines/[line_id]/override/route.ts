@@ -21,8 +21,6 @@ export async function PUT(
     // 3. Recalculate dependent values
     // 4. Log the override event with before/after values
 
-    console.log(`Updating pricing breakdown for quote ${params.id}, line ${params.line_id}`)
-
     return NextResponse.json({
       success: true,
       message: 'Pricing breakdown updated successfully',

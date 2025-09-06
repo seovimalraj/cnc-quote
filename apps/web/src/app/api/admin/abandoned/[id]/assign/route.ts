@@ -21,8 +21,6 @@ export async function PUT(
     // 3. Log the assignment event
     // 4. Send notifications if needed
 
-    console.log(`Assigning quote ${params.id} to user ${user_id}`)
-
     return NextResponse.json({
       success: true,
       message: 'Quote assigned successfully',

@@ -1,20 +1,34 @@
 'use client';
 
-import { FC } from 'react';
+import React from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 interface ModelViewerProps {
-  url: string;
-  showWireframe?: boolean;
+  modelUrl?: string;
+  className?: string;
 }
 
-export const ModelViewer: FC<ModelViewerProps> = ({ url, showWireframe = false }) => {
+export function ModelViewer({ modelUrl, className = '' }: ModelViewerProps) {
   return (
-    <div className="w-full h-[500px] bg-background border rounded-lg flex items-center justify-center">
-      <div className="text-center text-muted-foreground">
-        <p>3D Model Viewer</p>
-        <p className="text-sm mt-2">Model: {url}</p>
-        {showWireframe && <p className="text-sm">Wireframe mode enabled</p>}
-      </div>
-    </div>
+    <Card className={className}>
+      <CardHeader>
+        <CardTitle>3D Model Viewer</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="aspect-video bg-gray-100 rounded-lg flex items-center justify-center">
+          {modelUrl ? (
+            <div className="text-center">
+              <p className="text-gray-600">3D Model Preview</p>
+              <p className="text-sm text-gray-500 mt-2">Model: {modelUrl}</p>
+            </div>
+          ) : (
+            <div className="text-center">
+              <p className="text-gray-600">No model loaded</p>
+              <p className="text-sm text-gray-500 mt-2">Upload a CAD file to preview</p>
+            </div>
+          )}
+        </div>
+      </CardContent>
+    </Card>
   );
-};
+}

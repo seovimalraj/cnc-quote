@@ -171,7 +171,6 @@ export class MachinesService {
   private async publishCacheInvalidation(event: string, data: any) {
     // Publish to Redis pub/sub for cache invalidation
     // Implementation depends on your Redis setup
-    console.log(`Publishing cache invalidation: ${event}`, data);
   }
 
   // Audit logging

@@ -32,7 +32,6 @@ export default function CreateOrganizationPage() {
 
       // In a real implementation, you'd create the organization in your database
       // and set up the user's membership
-      console.log('Creating organization:', { name, description, website, userId: user.id })
 
       // For now, redirect to onboarding
       redirect('/onboarding')

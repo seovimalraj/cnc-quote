@@ -10,8 +10,6 @@ export async function PUT(
     // 2. Store a price snapshot
     // 3. Update the quote status if needed
 
-    console.log(`Locking price for quote ${params.id}`)
-
     return NextResponse.json({
       success: true,
       message: 'Quote price locked successfully',

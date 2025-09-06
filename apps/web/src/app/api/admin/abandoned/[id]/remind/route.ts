@@ -21,8 +21,6 @@ export async function POST(
     // 3. Log the reminder event
     // 4. Update any relevant tracking
 
-    console.log(`Sending ${channel} reminder for quote ${params.id} with template ${template}`)
-
     return NextResponse.json({
       success: true,
       message: 'Reminder sent successfully',

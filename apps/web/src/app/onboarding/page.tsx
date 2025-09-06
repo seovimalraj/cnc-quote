@@ -76,7 +76,6 @@ export default function OnboardingPage() {
       })
 
       // In a real implementation, you'd save this data to your database
-      console.log('Onboarding completed with data:', formData)
 
       // Redirect to dashboard
       router.push('/dashboard')

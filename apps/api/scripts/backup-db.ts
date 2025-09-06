@@ -36,10 +36,7 @@ async function backupDatabase() {
 
     const backupFile = path.join(backupDir, `${table.table_name}_${timestamp}.json`);
     fs.writeFileSync(backupFile, JSON.stringify(data, null, 2));
-    console.log(`Backed up table ${table.table_name} to ${backupFile}`);
   }
-
-  console.log("Database backup completed successfully!");
 }
 
 backupDatabase().catch(console.error);

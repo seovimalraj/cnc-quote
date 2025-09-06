@@ -39,17 +39,14 @@ export function AbandonedTimelineDrawer() {
 
   const handleCallBuyer = () => {
     // In a real implementation, this would initiate a phone call
-    console.log('Calling buyer...')
   }
 
   const handleEmailQuote = () => {
     // In a real implementation, this would send an email
-    console.log('Emailing quote...')
   }
 
   const handleDuplicateQuote = () => {
     // In a real implementation, this would duplicate the quote
-    console.log('Duplicating quote...')
   }
 
   const formatEventName = (name: string) => {

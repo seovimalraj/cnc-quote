@@ -10,8 +10,6 @@ export async function POST(
     // 2. Update the quote in the database
     // 3. Log the reprice event
 
-    console.log(`Repricing quote ${params.id}`)
-
     // Mock response - in reality this would return the updated quote
     return NextResponse.json({
       success: true,
