@@ -32,7 +32,6 @@ import type {
   Message
 } from '@/types/order';
 import { trackEvent } from '@/lib/analytics/posthog';
-import { formatDate } from '@/lib/utils';
 
 export default function OrderDetailPage() {
   const params = useParams();
@@ -225,6 +224,7 @@ export default function OrderDetailPage() {
 
   // Helper functions
   const formatCurrency = (amount: number) => `$${amount.toFixed(2)}`;
+  const formatDate = (dateString: string) => new Date(dateString).toLocaleDateString();
   const formatFileSize = (bytes: number) => {
     if (bytes === 0) return '0 Bytes';
     const k = 1024;

@@ -1,7 +1,7 @@
-import { toast as hotToast } from "react-hot-toast"
+import { toast as sonnerToast } from "sonner"
 
 export function toast(props: { title?: string; description?: string }) {
-  return hotToast(props.title || props.description || "", {
-    duration: 4000,
+  return sonnerToast(props.title, {
+    description: props.description
   })
 }
