@@ -1,9 +1,9 @@
-import { Controller, Post, Body, UseGuards, Get, Query } from "@nestjs/common";
+import { Controller, Post, Body, UseGuards, Get, Query, Param } from "@nestjs/common";
 import { DfmService } from "./dfm.service";
 import { JwtAuthGuard } from "../../auth/jwt.guard";
 import { OrgGuard } from "../../auth/org.guard";
 import { User } from "../../auth/user.decorator";
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery } from "@nestjs/swagger";
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery, ApiParam } from "@nestjs/swagger";
 import {
   CncDfmParams,
   SheetMetalDfmParams,
@@ -188,5 +188,138 @@ export class DfmController {
   })
   async validateInjectionMolding(@Body() params: InjectionMoldingDfmParams): Promise<DfmValidationResponse> {
     return this.dfmService.validateInjectionMolding(params);
+  }
+
+  // DFM Analysis Workflow Endpoints
+  @Post("requests")
+  @ApiOperation({
+    summary: "Create DFM analysis request",
+    description: "Create a new DFM analysis request with CAD file and specifications"
+  })
+  @ApiResponse({
+    status: 201,
+    description: "DFM request created successfully",
+    schema: {
+      type: "object",
+      properties: {
+        id: { type: "string" },
+        status: { type: "string", enum: ["Queued", "Analyzing", "Complete", "Error"] },
+        message: { type: "string" }
+      }
+    }
+  })
+  async createDfmRequest(
+    @User('org_id') orgId: string,
+    @User('id') userId: string,
+    @Body() request: {
+      fileId: string;
+      tolerancePack: string;
+      surfaceFinish: string;
+      industry: string;
+      certifications: string[];
+      criticality: string;
+      notes?: string;
+    }
+  ) {
+    return this.dfmService.createDfmRequest(orgId, userId, request);
+  }
+
+  @Post("analyze")
+  @ApiOperation({
+    summary: "Enqueue DFM analysis job",
+    description: "Enqueue a DFM analysis job for processing"
+  })
+  @ApiResponse({
+    status: 200,
+    description: "DFM analysis job enqueued",
+    schema: {
+      type: "object",
+      properties: {
+        task_id: { type: "string" },
+        status: { type: "string" },
+        message: { type: "string" }
+      }
+    }
+  })
+  async enqueueDfmAnalysis(
+    @Body() jobData: {
+      requestId: string;
+      fileId: string;
+      downloadUrl: string;
+    }
+  ) {
+    return this.dfmService.enqueueDfmAnalysis(jobData);
+  }
+
+  @Get("requests/:id/status")
+  @ApiOperation({
+    summary: "Get DFM request status",
+    description: "Get the current status of a DFM analysis request"
+  })
+  @ApiParam({ name: 'id', description: 'DFM request ID' })
+  @ApiResponse({
+    status: 200,
+    description: "DFM request status retrieved",
+    schema: {
+      type: "object",
+      properties: {
+        id: { type: "string" },
+        status: { type: "string", enum: ["Queued", "Analyzing", "Complete", "Error"] },
+        created_at: { type: "string", format: "date-time" },
+        updated_at: { type: "string", format: "date-time" },
+        progress: { type: "number", minimum: 0, maximum: 100 }
+      }
+    }
+  })
+  async getDfmRequestStatus(
+    @Param('id') requestId: string,
+    @User('org_id') orgId: string
+  ) {
+    return this.dfmService.getDfmRequestStatus(requestId, orgId);
+  }
+
+  @Get("requests/:id/result")
+  @ApiOperation({
+    summary: "Get DFM analysis result",
+    description: "Get the complete DFM analysis result for a request"
+  })
+  @ApiParam({ name: 'id', description: 'DFM request ID' })
+  @ApiResponse({
+    status: 200,
+    description: "DFM analysis result retrieved",
+    schema: {
+      type: "object",
+      properties: {
+        id: { type: "string" },
+        request_id: { type: "string" },
+        checks: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              code: { type: "string" },
+              name: { type: "string" },
+              state: { type: "string", enum: ["pass", "warning", "blocker"] },
+              details: { type: "object" },
+              highlights: {
+                type: "array",
+                items: { type: "string" }
+              }
+            }
+          }
+        },
+        summary: { type: "object" },
+        viewer_mesh_id: { type: "string" },
+        report_pdf_id: { type: "string" },
+        qap_pdf_id: { type: "string" },
+        created_at: { type: "string", format: "date-time" }
+      }
+    }
+  })
+  async getDfmResult(
+    @Param('id') requestId: string,
+    @User('org_id') orgId: string
+  ) {
+    return this.dfmService.getDfmResult(requestId, orgId);
   }
 }

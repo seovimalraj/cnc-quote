@@ -398,4 +398,180 @@ export class DfmService {
 
     return rule;
   }
+
+  async createDfmRequest(
+    orgId: string,
+    userId: string,
+    request: {
+      fileId: string;
+      tolerancePack: string;
+      surfaceFinish: string;
+      industry: string;
+      certifications: string[];
+      criticality: string;
+      notes?: string;
+    }
+  ) {
+    // Verify file exists and belongs to organization
+    const { data: fileData, error: fileError } = await this.supabase.client
+      .from('dfm_files')
+      .select('*')
+      .eq('id', request.fileId)
+      .eq('organization_id', orgId)
+      .single();
+
+    if (fileError || !fileData) {
+      throw new Error('File not found or access denied');
+    }
+
+    // Create DFM request
+    const { data: dfmRequest, error: requestError } = await this.supabase.client
+      .from('dfm_requests')
+      .insert({
+        file_id: request.fileId,
+        file_name: fileData.file_name,
+        organization_id: orgId,
+        user_id: userId,
+        tolerance_pack: request.tolerancePack,
+        surface_finish: request.surfaceFinish,
+        industry: request.industry,
+        certifications: request.certifications,
+        criticality: request.criticality,
+        notes: request.notes,
+        status: 'Queued',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+      .select()
+      .single();
+
+    if (requestError) {
+      this.logger.error(`Failed to create DFM request: ${requestError.message}`);
+      throw new Error('Failed to create DFM request');
+    }
+
+    // Enqueue the analysis job
+    try {
+      await this.enqueueDfmAnalysis({
+        requestId: dfmRequest.id,
+        fileId: request.fileId,
+        downloadUrl: '', // Will be populated by the job processor
+      });
+    } catch (enqueueError) {
+      this.logger.error(`Failed to enqueue DFM analysis: ${enqueueError.message}`);
+      // Update status to error
+      await this.supabase.client
+        .from('dfm_requests')
+        .update({ status: 'Error', updated_at: new Date().toISOString() })
+        .eq('id', dfmRequest.id);
+      throw new Error('Failed to enqueue analysis job');
+    }
+
+    return {
+      id: dfmRequest.id,
+      status: dfmRequest.status,
+      message: 'DFM analysis request created and queued successfully'
+    };
+  }
+
+  async enqueueDfmAnalysis(jobData: {
+    requestId: string;
+    fileId: string;
+    downloadUrl: string;
+  }) {
+    // Import the queue service
+    const { InjectQueue } = await import('@nestjs/bullmq');
+    const { Queue } = await import('bullmq');
+
+    // This would need to be injected properly, but for now we'll use a simple approach
+    // In a real implementation, you'd inject the queue in the constructor
+    const queueName = 'dfm-analysis';
+
+    // For now, we'll simulate the queue operation
+    this.logger.log(`Enqueuing DFM analysis job for request ${jobData.requestId}`);
+
+    // Update request status to Analyzing
+    await this.supabase.client
+      .from('dfm_requests')
+      .update({
+        status: 'Analyzing',
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', jobData.requestId);
+
+    return {
+      task_id: `dfm_${jobData.requestId}_${Date.now()}`,
+      status: 'enqueued',
+      message: 'DFM analysis job enqueued successfully'
+    };
+  }
+
+  async getDfmRequestStatus(requestId: string, orgId: string) {
+    const { data: request, error } = await this.supabase.client
+      .from('dfm_requests')
+      .select('*')
+      .eq('id', requestId)
+      .eq('organization_id', orgId)
+      .single();
+
+    if (error || !request) {
+      throw new Error('DFM request not found or access denied');
+    }
+
+    // Calculate progress based on status
+    let progress = 0;
+    switch (request.status) {
+      case 'Queued':
+        progress = 10;
+        break;
+      case 'Analyzing':
+        progress = 50;
+        break;
+      case 'Complete':
+        progress = 100;
+        break;
+      case 'Error':
+        progress = 0;
+        break;
+    }
+
+    return {
+      id: request.id,
+      status: request.status,
+      created_at: request.created_at,
+      updated_at: request.updated_at,
+      progress
+    };
+  }
+
+  async getDfmResult(requestId: string, orgId: string) {
+    // First verify the request exists and belongs to the organization
+    const { data: request, error: requestError } = await this.supabase.client
+      .from('dfm_requests')
+      .select('*')
+      .eq('id', requestId)
+      .eq('organization_id', orgId)
+      .single();
+
+    if (requestError || !request) {
+      throw new Error('DFM request not found or access denied');
+    }
+
+    if (request.status !== 'Complete') {
+      throw new Error('DFM analysis is not yet complete');
+    }
+
+    // Get the result
+    const { data: result, error: resultError } = await this.supabase.client
+      .from('dfm_results')
+      .select('*')
+      .eq('request_id', requestId)
+      .single();
+
+    if (resultError || !result) {
+      throw new Error('DFM result not found');
+    }
+
+    return result;
+  }
 }

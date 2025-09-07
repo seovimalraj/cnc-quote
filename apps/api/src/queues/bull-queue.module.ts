@@ -20,6 +20,10 @@ import { ConfigService } from "@nestjs/config";
       name: "cad",
       prefix: "cnc-quote",
     }),
+    BullModule.registerQueue({
+      name: "dfm-analysis",
+      prefix: "cnc-quote",
+    }),
   ],
   exports: [BullModule],
 })

@@ -413,6 +413,13 @@ const AdminDashboard = () => {
                   <CogIcon className="w-4 h-4 mr-2" />
                   Pricing Engine
                 </Button>
+                <Button
+                  variant={activeTab === 'checkout' ? 'default' : 'outline'}
+                  onClick={() => setActiveTab('checkout')}
+                >
+                  <CurrencyDollarIcon className="w-4 h-4 mr-2" />
+                  Checkout Analytics
+                </Button>
               </div>
             </div>
           </div>
@@ -1067,6 +1074,171 @@ const AdminDashboard = () => {
             )}
           </div>
         )}
+
+        {/* Checkout Analytics Tab */}
+        {activeTab === 'checkout' ? (
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-6 xl:grid-cols-4 2xl:gap-7.5">
+              {/* Checkout Stats Cards */}
+              <div className="rounded-sm border border-stroke bg-white py-6 px-7.5 shadow-default dark:border-strokedark dark:bg-boxdark">
+                <div className="flex h-11.5 w-11.5 items-center justify-center rounded-full bg-meta-2 dark:bg-meta-4">
+                  <CurrencyDollarIcon className="h-6 w-6 text-primary" />
+                </div>
+                <div className="mt-4 flex items-end justify-between">
+                  <div>
+                    <h4 className="text-title-md font-bold text-black dark:text-white">
+                      $12,450
+                    </h4>
+                    <span className="text-sm font-medium">Revenue This Month</span>
+                  </div>
+                  <span className="flex items-center gap-1 text-sm font-medium text-meta-3">
+                    +12.5%
+                  </span>
+                </div>
+              </div>
+
+              <div className="rounded-sm border border-stroke bg-white py-6 px-7.5 shadow-default dark:border-strokedark dark:bg-boxdark">
+                <div className="flex h-11.5 w-11.5 items-center justify-center rounded-full bg-meta-2 dark:bg-meta-4">
+                  <CheckCircleIcon className="h-6 w-6 text-primary" />
+                </div>
+                <div className="mt-4 flex items-end justify-between">
+                  <div>
+                    <h4 className="text-title-md font-bold text-black dark:text-white">
+                      23
+                    </h4>
+                    <span className="text-sm font-medium">Orders Completed</span>
+                  </div>
+                  <span className="flex items-center gap-1 text-sm font-medium text-meta-3">
+                    +8.2%
+                  </span>
+                </div>
+              </div>
+
+              <div className="rounded-sm border border-stroke bg-white py-6 px-7.5 shadow-default dark:border-strokedark dark:bg-boxdark">
+                <div className="flex h-11.5 w-11.5 items-center justify-center rounded-full bg-meta-2 dark:bg-meta-4">
+                  <ClockIcon className="h-6 w-6 text-primary" />
+                </div>
+                <div className="mt-4 flex items-end justify-between">
+                  <div>
+                    <h4 className="text-title-md font-bold text-black dark:text-white">
+                      12
+                    </h4>
+                    <span className="text-sm font-medium">Abandoned Checkouts</span>
+                  </div>
+                  <span className="flex items-center gap-1 text-sm font-medium text-meta-3">
+                    -3.1%
+                  </span>
+                </div>
+              </div>
+
+              <div className="rounded-sm border border-stroke bg-white py-6 px-7.5 shadow-default dark:border-strokedark dark:bg-boxdark">
+                <div className="flex h-11.5 w-11.5 items-center justify-center rounded-full bg-meta-2 dark:bg-meta-4">
+                  <ExclamationTriangleIcon className="h-6 w-6 text-primary" />
+                </div>
+                <div className="mt-4 flex items-end justify-between">
+                  <div>
+                    <h4 className="text-title-md font-bold text-black dark:text-white">
+                      68%
+                    </h4>
+                    <span className="text-sm font-medium">Conversion Rate</span>
+                  </div>
+                  <span className="flex items-center gap-1 text-sm font-medium text-meta-3">
+                    +5.4%
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Checkout Analytics Content */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Checkout Funnel</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm">Checkout Started</span>
+                      <span className="font-medium">100%</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm">Billing Info Completed</span>
+                      <span className="font-medium">85%</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm">Shipping Info Completed</span>
+                      <span className="font-medium">78%</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm">Payment Completed</span>
+                      <span className="font-medium">68%</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm">Order Confirmed</span>
+                      <span className="font-medium">65%</span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Abandoned Checkouts</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm">At Billing Step</span>
+                      <span className="font-medium">15%</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm">At Shipping Step</span>
+                      <span className="font-medium">7%</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm">At Payment Step</span>
+                      <span className="font-medium">10%</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm">Payment Failed</span>
+                      <span className="font-medium">3%</span>
+                    </div>
+                  </div>
+                  <Button className="w-full mt-4" variant="outline">
+                    <ArrowPathIcon className="w-4 h-4 mr-2" />
+                    Run Abandonment Detection
+                  </Button>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Recent Orders */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Recent Orders</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {/* Mock order data - would be fetched from API */}
+                  <div className="flex items-center justify-between p-4 border rounded-lg">
+                    <div>
+                      <p className="font-medium">Order #ORD-2024-001</p>
+                      <p className="text-sm text-gray-600">Quote #Q-12345 • $1,250.00</p>
+                    </div>
+                    <Badge variant="secondary">Completed</Badge>
+                  </div>
+                  <div className="flex items-center justify-between p-4 border rounded-lg">
+                    <div>
+                      <p className="font-medium">Order #ORD-2024-002</p>
+                      <p className="text-sm text-gray-600">Quote #Q-12346 • $3,450.00</p>
+                    </div>
+                    <Badge variant="secondary">Processing</Badge>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        ) : null}
       </div>
     </DefaultLayout>
   );

@@ -56,6 +56,21 @@ export type {
   FeatureToggle,
 } from './types/feature';
 
+// DFM types
+export type {
+  DfmRule,
+  DfmValidationResponse,
+  Severity,
+  CncDfmParams,
+  SheetMetalDfmParams,
+  InjectionMoldingDfmParams,
+  DfmValidationRequest,
+  DfmBatchValidation,
+  DfmBatchValidationResponse,
+  DfmRuleResult,
+  DfmRuleEvaluationContext,
+} from './dfm.types';
+
 // Create a namespace export for easier importing
 export * as Types from './types.core';
 export * as FeatureTypes from './types/feature';
