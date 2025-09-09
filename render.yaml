@@ -1,118 +1,7 @@
-# Combined Render configuration for CNC Quote Platform
+# Render.com Free Plan Configuration for CNC Quote Platform
 version: "1"
 services:
-  - type: web
-    name: cnc-quote-api
-    env: node
-    repo: https://github.com/seovimalraj/cnc-quote
-    plan: free
-    region: oregon
-    buildCommand: |
-      set -e
-      echo "Installing pnpm..."
-      npm install -g pnpm@8.15.4
-      
-      echo "Installing dependencies..."
-      pnpm install --no-frozen-lockfile
-      
-      echo "Building shared package..."
-      cd packages/shared
-      pnpm install --no-frozen-lockfile
-      pnpm build
-      cd ../..
-      
-      echo "Building API..."
-      cd apps/api
-      pnpm install --no-frozen-lockfile
-      ./build-ignore-errors.sh
-      cd ../..
-      
-      echo "Building web application..."
-      cd apps/web
-      pnpm install --no-frozen-lockfile
-      pnpm add -D postcss@8.4.29 tailwindcss@3.3.3 autoprefixer@10.4.15 @tailwindcss/forms
-      pnpm add @paypal/react-paypal-js @stripe/react-stripe-js @stripe/stripe-js apexcharts@3.54.1
-      SKIP_ENV_VALIDATION=true NODE_ENV=production pnpm build
-      cd ../..
-    startCommand: cd apps/api && pnpm prod
-    healthCheckPath: /api/health
-    autoDeployTrigger: commit
-    envVars:
-      - key: NODE_ENV
-        value: production
-      - key: NODE_VERSION
-        value: "20.15.1"
-      - key: PNPM_VERSION
-        value: "8.15.4"
-      - key: SUPABASE_URL
-        sync: false
-      - key: SUPABASE_ANON_KEY
-        sync: false
-      - key: SUPABASE_SERVICE_KEY
-        sync: false
-      - key: STRIPE_SECRET_KEY
-        sync: false
-      - key: STRIPE_WEBHOOK_SECRET
-        sync: false
-      - key: PAYPAL_CLIENT_ID
-        sync: false
-      - key: PAYPAL_CLIENT_SECRET
-        sync: false
-      - key: JWT_SECRET
-        sync: false
-      - key: JWT_AUDIENCE
-        sync: false
-      - key: APP_URL
-        value: "https://cnc-quote-web.onrender.com"
-      - key: APP_NAME
-        value: "CNC Quote Platform"
-      - key: CAD_SERVICE_URL
-        value: "https://cnc-quote-cad.onrender.com"
-      - key: SENTRY_DSN
-        sync: false
-      - key: POSTHOG_API_KEY
-        sync: false
-      - key: PORT
-        value: "10000"
-      - key: REDIS_URL
-        fromService:
-          name: cnc-quote-redis
-          type: redis
-          property: connectionString
-
-  # CAD Service (Python/FastAPI)
-  - type: web
-    name: cnc-quote-cad
-    env: docker
-    repo: https://github.com/seovimalraj/cnc-quote
-    dockerfilePath: ./apps/cad-service/Dockerfile.render
-    dockerContext: .
-    region: oregon
-    plan: free
-    healthCheckPath: /api/health
-    autoDeployTrigger: commit
-    envVars:
-      - key: PYTHONPATH
-        value: "/opt/conda/lib/python3.11/site-packages:/app"
-      - key: LD_LIBRARY_PATH
-        value: "/opt/conda/lib"
-      - key: SUPABASE_URL
-        sync: false
-      - key: SUPABASE_ANON_KEY
-        sync: false
-      - key: PORT
-        value: "10001"
-      - key: PYTHON_VERSION
-        value: "3.11.0"
-      - key: API_URL
-        value: "https://cnc-quote-api.onrender.com"
-      - key: REDIS_URL
-        fromService:
-          name: cnc-quote-redis
-          type: redis
-          property: connectionString
-
-  # Web Frontend (Next.js)
+  # Next.js Web Application
   - type: web
     name: cnc-quote-web
     env: node
@@ -123,24 +12,19 @@ services:
       set -e
       echo "Installing pnpm..."
       npm install -g pnpm@8.15.4
-      
-      echo "Installing project dependencies..."
+
+      echo "Installing dependencies..."
       pnpm install --no-frozen-lockfile
-      
+
       echo "Building shared package..."
-      cd packages/shared
-      pnpm install --no-frozen-lockfile
-      pnpm add -D tsup@7.2.0
-      pnpm build
-      
+      cd packages/shared && pnpm install --no-frozen-lockfile && pnpm build
+
       echo "Building web app..."
-      cd ../../apps/web
+      cd ../apps/web
       pnpm install --no-frozen-lockfile
-      pnpm add -D postcss@8.4.29 tailwindcss@3.3.3 autoprefixer@10.4.15 @tailwindcss/forms
-      pnpm add @paypal/react-paypal-js @stripe/react-stripe-js @stripe/stripe-js apexcharts@3.54.1
-      NODE_ENV=production SKIP_ENV_VALIDATION=true pnpm build
+      SKIP_ENV_VALIDATION=true NODE_ENV=production pnpm build
     startCommand: cd apps/web && pnpm start
-    healthCheckPath: /api/health
+    healthCheckPath: /
     autoDeployTrigger: commit
     envVars:
       - key: NODE_ENV
@@ -152,24 +36,82 @@ services:
       - key: NEXT_PUBLIC_SUPABASE_ANON_KEY
         sync: false
       - key: NEXT_PUBLIC_API_URL
-        value: "https://cnc-quote-api.onrender.com"
+        sync: false
       - key: NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
         sync: false
-      - key: NEXT_PUBLIC_SENTRY_DSN
-        sync: false
-      - key: NEXT_PUBLIC_POSTHOG_KEY
-        sync: false
-      - key: NEXT_PUBLIC_PAYPAL_CLIENT_ID
-        sync: false
       - key: NEXT_PUBLIC_APP_URL
-        value: "https://cnc-quote-web.onrender.com"
+        sync: false
       - key: PORT
         value: "3000"
 
-  # Redis Instance
+  # NestJS API Service
+  - type: web
+    name: cnc-quote-api
+    env: node
+    repo: https://github.com/seovimalraj/cnc-quote
+    plan: free
+    region: oregon
+    buildCommand: |
+      set -e
+      echo "Installing pnpm..."
+      npm install -g pnpm@8.15.4
+
+      echo "Installing dependencies..."
+      pnpm install --no-frozen-lockfile
+
+      echo "Building shared package..."
+      cd packages/shared && pnpm install --no-frozen-lockfile && pnpm build
+
+      echo "Building API..."
+      cd ../apps/api && pnpm install --no-frozen-lockfile && ./build-ignore-errors.sh
+    startCommand: cd apps/api && pnpm prod
+    healthCheckPath: /health
+    autoDeployTrigger: commit
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NODE_VERSION
+        value: "20.15.1"
+      - key: PORT
+        value: "10000"
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_ANON_KEY
+        sync: false
+      - key: SUPABASE_SERVICE_KEY
+        sync: false
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: REDIS_URL
+        sync: false
+
+  # Python CAD Service
+  - type: web
+    name: cnc-quote-cad
+    env: python3
+    repo: https://github.com/seovimalraj/cnc-quote
+    plan: free
+    region: oregon
+    buildCommand: |
+      set -e
+      cd apps/cad-service
+      pip install -r requirements.txt
+    startCommand: cd apps/cad-service && python main.py
+    healthCheckPath: /docs
+    autoDeployTrigger: commit
+    envVars:
+      - key: PYTHONUNBUFFERED
+        value: "1"
+      - key: PORT
+        value: "8001"
+
+  # Redis for background jobs
   - type: redis
     name: cnc-quote-redis
-    ipAllowList: []
     plan: free
     region: oregon
     maxmemoryPolicy: noeviction

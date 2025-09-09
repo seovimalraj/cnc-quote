@@ -13,6 +13,9 @@ try:
     from pydantic import BaseModel
     from typing import List, Dict, Any, Optional
 
+    # Type alias for DFM check data
+    DFMCheckData = Dict[str, Any]
+
     class DFMCheck(BaseModel):
         id: str
         title: str
@@ -23,7 +26,7 @@ try:
         highlights: Dict[str, List[int]]  # face_ids, edge_ids
 
     # Test data with the fixed "passed" status
-    test_check_data = {
+    test_check_data: DFMCheckData = {
         "id": "file_type",
         "title": "File Type",
         "status": "passed",  # Fixed: was "pass" which is a Python keyword
@@ -41,7 +44,7 @@ try:
     print(f"   Title: {check.title}")
 
     # Test with multiple checks
-    mock_checks = [
+    mock_checks: List[DFMCheckData] = [
         {
             "id": "test1",
             "title": "Test Check 1",

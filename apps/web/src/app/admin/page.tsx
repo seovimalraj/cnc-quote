@@ -124,17 +124,7 @@ interface OverheadMarginConfig {
   target_margin_percent: number;
 }
 
-const AdminDashboard = () => {
-  const [activeTab, setActiveTab] = useState('quotes');
-  const [selectedQuote, setSelectedQuote] = useState<Quote | null>(null);
-  const [pricingConfig, setPricingConfig] = useState<PricingConfig | null>(null);
-  const [isLoadingPricing, setIsLoadingPricing] = useState(false);
-  const [isSavingPricing, setIsSavingPricing] = useState(false);
-  const [hasPricingChanges, setHasPricingChanges] = useState(false);
-  const [lastPricingSaved, setLastPricingSaved] = useState<Date | null>(null);
-
-  // Mock data
-  const quotes: Quote[] = [
+interface Quote {
     {
       id: 'Q-2024-001',
       customer: 'John Smith',
@@ -1369,6 +1359,22 @@ const AdminDashboard = () => {
     {
       id: 'Q-2024-002',
       customer: 'Sarah Johnson',
+      email: 'sarah.johnson@techcorp.com',
+      company: 'TechCorp Solutions',
+      phone: '+1 (555) 987-6543',
+      material: 'Stainless Steel 304',
+      quantity: 25,
+      surface: 'Polished',
+      tolerance: 'Standard (±0.005")',
+      leadTime: '3-5 Business Days',
+      files: 2,
+      price: 8750,
+      status: 'approved',
+      createdAt: '2024-01-16T14:20:00Z',
+      updatedAt: '2024-01-16T14:20:00Z',
+    },
+  ];
+
   const updateQuoteStatus = (quoteId: string, newStatus: Quote['status']) => {
     // In a real app, this would make an API call
     console.log(`Updating quote ${quoteId} to status: ${newStatus}`);

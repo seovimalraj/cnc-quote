@@ -7,6 +7,9 @@ import time
 import asyncio
 from datetime import datetime
 
+# Type alias for DFM check data
+DFMCheckData = Dict[str, Any]
+
 app = FastAPI(title="CNC Quote CAD Service", version="1.0.0")
 
 app.add_middleware(
@@ -18,8 +21,8 @@ app.add_middleware(
 )
 
 # In-memory storage for demo purposes
-dfm_tasks = {}
-dfm_results = {}
+dfm_tasks: Dict[str, Any] = {}
+dfm_results: Dict[str, Any] = {}
 
 class DFMAnalysisRequest(BaseModel):
     file_id: str
@@ -49,7 +52,7 @@ class DFMResult(BaseModel):
     geom_props: Optional[Dict[str, Any]] = None
 
 # Mock DFM checks data
-MOCK_CHECKS = [
+MOCK_CHECKS: List[DFMCheckData] = [
     {
         "id": "file_type",
         "title": "File Type",

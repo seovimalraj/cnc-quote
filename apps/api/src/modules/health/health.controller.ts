@@ -20,3 +20,17 @@ export class HealthController {
     return res.json(health);
   }
 }
+
+// Simple health check for Render (no /api prefix)
+@Controller("health")
+export class SimpleHealthController {
+  @Get()
+  @ApiResponse({ status: 200, description: "Service is healthy" })
+  async check() {
+    return {
+      status: "healthy",
+      timestamp: new Date().toISOString(),
+      service: "cnc-quote-api"
+    };
+  }
+}

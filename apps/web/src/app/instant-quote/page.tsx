@@ -6,7 +6,7 @@ i  // Business email validation
     const emailRegex = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
     if (!emailRegex.test(email)) return false;
 
-    const blocklistDomains = ['gmail.com', 'yahoo.com', 'o    if (!leadFormData.businessEmail) {
+    const blocklistDomains = ['gmail.com', 'yahoo.com', 'outlook.com', 'hotmail.com', 'aol.com', 'icloud.com', 'proton.me', 'yopmail.com', 'gmx.com', 'mailinator.com'];
       errors.businessEmail = 'Business email is required';
     } else {
       const emailValidation = validateBusinessEmail(leadFormData.businessEmail);
