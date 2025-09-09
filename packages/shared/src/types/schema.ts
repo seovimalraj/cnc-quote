@@ -1648,4 +1648,10 @@ export const MachineSchema = z.object({
   max_feed_mm_per_min: z.number().positive().optional(),
   fixture_types: z.array(z.string()),
   supported_ops: z.array(z.string()),
-  hourly_rate_usd: z.number().min(10),
+  hourly_rate_usd: z.number().min(10),});
+
+export type Machine = z.infer<typeof MachineSchema>;
+
+});
+
+export type Machine = z.infer<typeof MachineSchema>;

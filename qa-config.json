@@ -1,0 +1,268 @@
+{
+  "version": "prepublish-qa-runner-v1.0",
+  "goal": "Run end-to-end checks for Instant Quote and DFM Analysis. Collect failures, propose/trigger fixes, verify UI/UX accessibility & responsiveness, and gate production publish.",
+  "env": {
+    "web_url": "http://localhost:3000",
+    "api_url": "http://localhost:3001",
+    "cad_url": "http://localhost:8000",
+    "auth": {
+      "admin_email": "admin@example.com",
+      "admin_password_env": "ADMIN_PASSWORD",
+      "customer_email": "qa@company.com",
+      "customer_password_env": "CUSTOMER_PASSWORD"
+    }
+  },
+  "preflight": {
+    "checks": [
+      { "name": "API reachable", "tool": "http", "request": { "method": "GET", "url": "{{api_url}}/health" }, "expect": { "status": 200, "body.includes": "ok" }, "fail_code": "API_DOWN" },
+      { "name": "CAD service reachable", "tool": "http", "request": { "method": "GET", "url": "{{cad_url}}/health" }, "expect": { "status": 200 }, "fail_code": "CAD_DOWN" },
+      { "name": "Storage signed URL roundtrip", "tool": "script", "cmd": "pnpm test:storage-signed-url", "expect": { "exit_code": 0 }, "fail_code": "STORAGE_SIGNED_URL_FAIL" },
+      { "name": "Database migrations applied", "tool": "script", "cmd": "pnpm --filter @cnc-quote/api db:check", "expect": { "exit_code": 0 }, "fail_code": "DB_MIGRATION_OUT_OF_DATE" }
+    ]
+  },
+  "smoke_suites": [
+    {
+      "id": "INSTANT_QUOTE_E2E",
+      "title": "Instant Quote happy path",
+      "steps": [
+        {
+          "name": "Upload STEP file at /instant-quote",
+          "tool": "ui",
+          "action": { "route": "/instant-quote", "upload": { "selector": "[data-test=dropzone]", "file": "fixtures/bracket.step" } },
+          "expect": { "ui.seen": ["file-chip:bracket.step", "skeleton:summary"], "network.any": ["POST /api/quotes", "POST /cad/analyze", "POST /price"] },
+          "fail_code": "IQ_UPLOAD_FAIL"
+        },
+        {
+          "name": "Lead gate modal validation",
+          "tool": "ui",
+          "action": {
+            "fill": [
+              { "selector": "#business_email", "value": "user@gmail.com" },
+              { "selector": "#phone_e164", "value": "123" },
+              { "click": "#continue" }
+            ]
+          },
+          "expect": { "ui.errors": ["business email"], "ui.present": ["#business_email-error", "#phone_e164-error"] },
+          "fail_code": "IQ_LEAD_VALIDATION_BROKEN"
+        },
+        {
+          "name": "Lead gate success and route to /quote/:id",
+          "tool": "ui",
+          "action": {
+            "fill": [
+              { "selector": "#business_email", "value": "buyer@acme.com" },
+              { "selector": "#phone_e164", "value": "+1 415 555 0133" }
+            ],
+            "click": "#continue"
+          },
+          "expect": { "route.startsWith": "/quote/", "ui.seen": ["parts-panel", "viewer", "lead-time-card"] },
+          "fail_code": "IQ_LEAD_GATE_STUCK"
+        },
+        {
+          "name": "Lead option selection locks price",
+          "tool": "ui",
+          "action": { "click": "[data-test=lead-option-USA-Standard]" },
+          "expect": { "ui.seen": ["toast:Price locked"], "api.called": ["PUT /api/quotes/*/lead"], "store.has": ["price_lock.lock_key"] },
+          "fail_code": "IQ_PRICE_LOCK_FAIL"
+        },
+        {
+          "name": "Checkout session created",
+          "tool": "ui",
+          "action": { "click": "[data-test=continue-checkout]" },
+          "expect": { "network.any": ["POST /payments/create-checkout-session"], "redirect.startsWith": "https://checkout.stripe.com/" },
+          "fail_code": "IQ_CHECKOUT_SESSION_FAIL"
+        }
+      ]
+    },
+    {
+      "id": "DFM_ANALYSIS_E2E",
+      "title": "DFM analysis dedicated flow",
+      "steps": [
+        {
+          "name": "Load /dfm-analysis and populate form",
+          "tool": "ui",
+          "action": {
+            "route": "/dfm-analysis",
+            "upload": { "selector": "#cad_files", "file": "fixtures/bracket.step" },
+            "fill": [
+              { "selector": "#tolerance_pack", "value": "Standard" },
+              { "selector": "#surface_finish", "value": "Anodize" },
+              { "selector": "#industry", "value": "Aerospace" },
+              { "selector": "#certifications", "multi": ["AS9100", "CoC"] },
+              { "selector": "#criticality", "value": "High" }
+            ],
+            "click": "#analyze"
+          },
+          "expect": { "route.matches": "/dfm-analysis/*", "ui.seen": ["skeleton:checks"] },
+          "fail_code": "DFM_FORM_FAIL"
+        },
+        {
+          "name": "Gate modal only for new users",
+          "tool": "ui",
+          "action": { "event": "wait_for_complete_or_first_result" },
+          "expect": { "ui.oneOf": [["modal:lead"], ["checks-list"]] },
+          "fail_code": "DFM_GATE_NOT_CONDITIONAL"
+        },
+        {
+          "name": "20 checks present with states and highlights",
+          "tool": "http",
+          "request": { "method": "GET", "url": "{{api_url}}/dfm/requests/:id/result" },
+          "expect": { "status": 200, "json.path": { "checks.length": 20, "checks[*].state.in": ["pass", "warning", "blocker"] } },
+          "fail_code": "DFM_CHECKS_INCOMPLETE"
+        },
+        {
+          "name": "Top CTAs work",
+          "tool": "ui",
+          "action": { "click": "[data-test=btn-get-instant-quote]" },
+          "expect": { "route.startsWith": "/quote/", "ui.seen": ["parts-panel", "viewer"] },
+          "fail_code": "DFM_TO_IQ_BRIDGE_FAIL"
+        },
+        {
+          "name": "QAP download generates signed link",
+          "tool": "ui",
+          "action": { "routeBack": true, "click": "[data-test=btn-download-qap]" },
+          "expect": { "network.any": ["POST /qap/documents", "GET /files/*?token=*"], "file.downloaded": true },
+          "fail_code": "QAP_DOWNLOAD_FAIL"
+        },
+        {
+          "name": "DFM report download",
+          "tool": "ui",
+          "action": { "click": "[data-test=btn-download-dfm]" },
+          "expect": { "network.any": ["POST /dfm/reports/*/pdf", "GET /files/*?token=*"], "file.downloaded": true },
+          "fail_code": "DFM_REPORT_DOWNLOAD_FAIL"
+        }
+      ]
+    }
+  ],
+  "functional_tests": [
+    { "name": "RLS policies", "tool": "script", "cmd": "pnpm check-rls", "expect": { "exit_code": 0 }, "fail_code": "RLS_FAIL" },
+    { "name": "Pricing engine", "tool": "script", "cmd": "pnpm check-pricing", "expect": { "exit_code": 0 }, "fail_code": "PRICING_FAIL" },
+    { "name": "CAD pipeline", "tool": "script", "cmd": "pnpm check-cad", "expect": { "exit_code": 0 }, "fail_code": "CAD_PIPELINE_FAIL" },
+    { "name": "Payment flow", "tool": "script", "cmd": "pnpm check-payment", "expect": { "exit_code": 0 }, "fail_code": "PAYMENT_FAIL" },
+    { "name": "Performance SLOs", "tool": "script", "cmd": "pnpm check-slos", "expect": { "exit_code": 0 }, "fail_code": "SLO_FAIL" },
+    { "name": "Observability wiring", "tool": "script", "cmd": "pnpm check-observability", "expect": { "exit_code": 0 }, "fail_code": "OBSERVABILITY_FAIL" }
+  ],
+  "ui_audit": {
+    "routes": ["/instant-quote", "/quote/:id", "/quote/:id/configure/:line_id", "/checkout/:quote_id", "/dfm-analysis", "/dfm-analysis/:id"],
+    "lighthouse_thresholds": { "performance": 75, "accessibility": 95, "best_practices": 90, "seo": 85 },
+    "axe_checks": ["aria-roles", "color-contrast", "labels", "keyboard-trap", "focus-visible", "name-role-value"],
+    "responsive_breakpoints": ["360x640", "768x1024", "1280x800", "1440x900"],
+    "motion_and_csl": { "respect_reduced_motion": true, "max_cumulative_layout_shift": 0.1 },
+    "touch_targets_min_size_px": 44
+  },
+  "security_suite": [
+    { "name": "CORS/CSP/HSTS headers", "tool": "http", "request": { "method": "GET", "url": "{{web_url}}/" }, "expect": { "headers.exists": ["content-security-policy", "strict-transport-security", "x-frame-options"] }, "fail_code": "SEC_HEADERS_MISSING" },
+    { "name": "Signed file URLs only", "tool": "http", "request": { "method": "GET", "url": "{{api_url}}/files/random" }, "expect": { "status.in": [401,403,404] }, "fail_code": "FILES_PUBLICLY_ACCESSIBLE" },
+    { "name": "Lead rate limit", "tool": "script", "cmd": "node scripts/bomb-leads.js --count 10 --email spam@acme.com", "expect": { "stdout.includes": "429" }, "fail_code": "LEADS_RATE_LIMIT_DISABLED" }
+  ],
+  "result_collection": {
+    "store": "artifacts/qa-results.json",
+    "schema": {
+      "preflight": "array of {name, passed, details}",
+      "smoke": "array of {suite_id, step, passed, error?, traces?}",
+      "functional": "array of {name, passed, logs?}",
+      "ui_audit": "{lighthouse:{route: scores}, axe:{route: issues[]}}",
+      "security": "array of {name, passed, details}",
+      "problems_found": "array of Problem",
+      "autofix_applied": "array of Fix",
+      "publish_gate": "{eligible:boolean, reasons:[]}"
+    }
+  },
+  "problem_classifier": {
+    "rules": [
+      { "when.fail_code": "API_DOWN", "severity": "blocker", "title": "API not reachable", "autofix": ["RESTART_API", "CHECK_PORT_3001"], "owner": "platform" },
+      { "when.fail_code": "CAD_DOWN", "severity": "blocker", "title": "CAD service not reachable", "autofix": ["RESTART_CAD", "CHECK_PORT_8000"], "owner": "cad" },
+      { "when.fail_code": "IQ_UPLOAD_FAIL", "severity": "blocker", "title": "Instant Quote upload broken", "autofix": ["VALIDATE_SIGNED_URL_FLOW", "ALLOWLIST_MIME_TYPES"], "owner": "web" },
+      { "when.fail_code": "IQ_LEAD_VALIDATION_BROKEN", "severity": "major", "title": "Lead modal validation not enforcing business email/phone", "autofix": ["ENABLE_DOMAIN_BLOCKLIST", "E164_LIB_VALIDATE"], "owner": "web" },
+      { "when.fail_code": "IQ_PRICE_LOCK_FAIL", "severity": "major", "title": "Price lock not persisted", "autofix": ["ENSURE_PUT_LEAD_ENDPOINT", "CACHE_WRITE_THROUGH_PRICE_LOCK"], "owner": "api" },
+      { "when.fail_code": "IQ_CHECKOUT_SESSION_FAIL", "severity": "blocker", "title": "Checkout session not created", "autofix": ["VERIFY_STRIPE_KEYS", "WEBHOOK_URLS_CONFIG"], "owner": "payments" },
+      { "when.fail_code": "DFM_CHECKS_INCOMPLETE", "severity": "major", "title": "DFM returned fewer than 20 checks", "autofix": ["SYNC_RULES_VERSION", "WORKER_TIMEOUTS_UP"], "owner": "cad" },
+      { "when.fail_code": "QAP_DOWNLOAD_FAIL", "severity": "major", "title": "QAP generation/download failed", "autofix": ["CHECK_QAP_TEMPLATE", "SIGNED_URL_EXPIRY"], "owner": "qap" },
+      { "when.fail_code": "RLS_FAIL", "severity": "blocker", "title": "RLS policies failing", "autofix": ["RUN_PNPM_CHECK_RLS", "REVIEW_POLICIES"], "owner": "db" },
+      { "when.fail_code": "SLO_FAIL", "severity": "major", "title": "Performance SLOs unmet", "autofix": ["ENABLE_PRICE_CACHE", "BATCH_CAD_TASKS", "PROFILE_HOT_PATHS"], "owner": "platform" },
+      { "when.fail_code": "SEC_HEADERS_MISSING", "severity": "major", "title": "Security headers missing", "autofix": ["ADD_CSP_HSTS_XFO", "VERIFY_REVERSE_PROXY_CFG"], "owner": "web" },
+      { "when.fail_code": "FILES_PUBLICLY_ACCESSIBLE", "severity": "critical", "title": "Files exposed publicly", "autofix": ["DISABLE_PUBLIC_BUCKETS", "FORCE_SIGNED_URLS"], "owner": "storage" }
+    ]
+  },
+  "autofix_recipes": {
+    "RESTART_API": { "tool": "script", "cmd": "pm2 restart api || pnpm --filter @cnc-quote/api dev" },
+    "CHECK_PORT_3001": { "tool": "script", "cmd": "lsof -i :3001 || echo 'port free'" },
+    "RESTART_CAD": { "tool": "script", "cmd": "docker restart cad-service || (cd apps/cad-service && python main.py)" },
+    "VALIDATE_SIGNED_URL_FLOW": { "tool": "doc", "steps": ["Ensure POST /files/upload returns signedUrl", "Front-end PUT to signedUrl with correct Content-Type", "POST metadata to API afterwards"] },
+    "ALLOWLIST_MIME_TYPES": { "tool": "code", "file": "apps/api/src/modules/files/mime.ts", "patch_hint": "Add STEP/IGES/Parasolid; block unknown; return 415 on mismatch" },
+    "ENABLE_DOMAIN_BLOCKLIST": { "tool": "code", "file": "apps/web/src/lib/validation.ts", "patch_hint": "Block free/disposable domains list; tests for gmail/yahoo/etc." },
+    "E164_LIB_VALIDATE": { "tool": "code", "file": "apps/web/src/components/LeadModal.tsx", "patch_hint": "Use libphonenumber-js parse/format; inline errors" },
+    "ENSURE_PUT_LEAD_ENDPOINT": { "tool": "code", "file": "apps/api/src/modules/quotes/lead.controller.ts", "patch_hint": "Persist price_lock and selected lead option atomically in transaction" },
+    "CACHE_WRITE_THROUGH_PRICE_LOCK": { "tool": "code", "file": "apps/api/src/modules/pricing/service.ts", "patch_hint": "Write-through Redis cache with TTL=7d for lock key" },
+    "VERIFY_STRIPE_KEYS": { "tool": "doc", "steps": ["Check STRIPE_SECRET_KEY and webhook secret", "Stripe CLI listen forwarding set to API /payments/webhook"] },
+    "WEBHOOK_URLS_CONFIG": { "tool": "doc", "steps": ["Render/Prod dashboard: set live webhook URL", "Handle idempotency using payment_intent_id"] },
+    "SYNC_RULES_VERSION": { "tool": "code", "file": "apps/cad-service/app/workers/dfm.py", "patch_hint": "Pull latest rules version at task start; fallback to last-known good" },
+    "WORKER_TIMEOUTS_UP": { "tool": "code", "file": "apps/cad-service/celery.py", "patch_hint": "Increase soft/hard time limits to 60s/90s; retry on timeout once" },
+    "CHECK_QAP_TEMPLATE": { "tool": "code", "file": "apps/api/src/modules/qap/templates/*", "patch_hint": "Ensure template variables exist for industry/criticality" },
+    "SIGNED_URL_EXPIRY": { "tool": "code", "file": "apps/api/src/modules/files/signing.ts", "patch_hint": "Set expiry 15m; invalidate after download if needed" },
+    "RUN_PNPM_CHECK_RLS": { "tool": "script", "cmd": "pnpm check-rls --fix" },
+    "REVIEW_POLICIES": { "tool": "doc", "steps": ["Quotes, Files, Orders tables: ensure org_id = auth.org_id in RLS + USING/ WITH CHECK", "Disable anon bypass"] },
+    "ENABLE_PRICE_CACHE": { "tool": "code", "file": "apps/api/src/modules/pricing/cache.ts", "patch_hint": "Key = price:{org}:{geomHash}:{specHash}:{cfg}; TTL=24h; purge on publish" },
+    "BATCH_CAD_TASKS": { "tool": "code", "file": "apps/cad-service/app/workers/queue.py", "patch_hint": "Batch small parts; prioritize blockers; concurrency 4–8" },
+    "PROFILE_HOT_PATHS": { "tool": "script", "cmd": "node scripts/profile-pricing.js" },
+    "ADD_CSP_HSTS_XFO": { "tool": "code", "file": "apps/web/src/middleware.ts", "patch_hint": "Add CSP default-src 'self'; connect-src API/CAD; HSTS max-age=31536000; X-Frame-Options DENY" },
+    "DISABLE_PUBLIC_BUCKETS": { "tool": "doc", "steps": ["Supabase storage: set bucket private", "Serve only via signed URLs"] },
+    "FORCE_SIGNED_URLS": { "tool": "code", "file": "apps/api/src/modules/files/controller.ts", "patch_hint": "Reject requests without signed token" }
+  },
+  "ui_issue_catalog": [
+    { "code": "A11Y_CONTRAST", "detect": "axe color-contrast", "remediation": "Increase Tailwind text/base/primary colors to meet 4.5:1; update tokens" },
+    { "code": "FOCUS_VISIBLE_MISSING", "detect": "axe focus-visible", "remediation": "Add :focus-visible rings to all interactive components" },
+    { "code": "LABELS_MISSING", "detect": "axe label", "remediation": "Ensure form inputs have <label> or aria-label" },
+    { "code": "KEYBOARD_TRAP", "detect": "axe keyboard-trap", "remediation": "Trap focus in modal and allow Esc; return focus on close" },
+    { "code": "TOUCH_TARGET_SMALL", "detect": "custom >=44px rule", "remediation": "Increase hit area for radios, checkboxes, small buttons" },
+    { "code": "CLS_HIGH", "detect": "Lighthouse CLS > 0.1", "remediation": "Reserve image dimensions; avoid late-loading fonts without fallback" },
+    { "code": "REDUCED_MOTION_IGNORED", "detect": "prefers-reduced-motion test", "remediation": "Disable heavy animations when reduced motion" }
+  ],
+  "publish_gate": {
+    "criteria": [
+      "All preflight checks pass",
+      "INSTANT_QUOTE_E2E passes 100%",
+      "DFM_ANALYSIS_E2E passes 100%",
+      "Functional tests exit_code=0",
+      "UI audit: Lighthouse >= thresholds on all routes; axe: no serious/critical",
+      "Security suite: all pass",
+      "No blocker/critical problems_found"
+    ],
+    "on_pass": ["tag_release", "blue_green_deploy", "invalidate_caches"],
+    "on_fail": ["create_blocking_report", "assign_owners", "rerun_subset_after_fixes"]
+  },
+  "output_contract": {
+    "problems_found": [
+      {
+        "id": "PRB-001",
+        "suite": "INSTANT_QUOTE_E2E",
+        "fail_code": "IQ_PRICE_LOCK_FAIL",
+        "route": "/quote/123",
+        "severity": "major",
+        "summary": "Selecting a lead option does not persist price lock.",
+        "evidence": ["network log missing PUT /api/quotes/*/lead", "no lock_key in store"],
+        "suggested_fix": "ENSURE_PUT_LEAD_ENDPOINT",
+        "owner": "api",
+        "status": "open"
+      }
+    ],
+    "autofix_applied": [
+      {
+        "id": "FIX-101",
+        "recipe": "ENSURE_PUT_LEAD_ENDPOINT",
+        "result": "patched",
+        "logs": "Transaction added; integration test green"
+      }
+    ],
+    "ui_issues": [
+      {
+        "code": "A11Y_CONTRAST",
+        "route": "/instant-quote",
+        "nodes": 6,
+        "severity": "serious",
+        "fix": "Adjust --color-primary to #1e3a8a; text-base to #111827"
+      }
+    ],
+    "publish_gate": { "eligible": false, "reasons": ["IQ_PRICE_LOCK_FAIL", "A11Y_CONTRAST on /instant-quote"] }
+  }
+}

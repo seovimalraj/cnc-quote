@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -81,6 +81,7 @@ interface DFMCheck {
 export default function QuotePage() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const quoteId = params.id as string;
 
   const [quote, setQuote] = useState<Quote | null>(null);
@@ -88,6 +89,7 @@ export default function QuotePage() {
   const [dfmChecks, setDfmChecks] = useState<DFMCheck[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isPreparing, setIsPreparing] = useState(false);
 
   // Mock DFM checks for demonstration
   const mockDfmChecks: DFMCheck[] = [
@@ -99,8 +101,50 @@ export default function QuotePage() {
   ];
 
   useEffect(() => {
-    loadQuote();
-  }, [quoteId]);
+    const fromDfm = searchParams.get('from') === 'dfm';
+    const preparing = searchParams.get('preparing') === 'true';
+
+    if (fromDfm && preparing) {
+      setIsPreparing(true);
+      // Poll for pricing completion
+      const pollInterval = setInterval(async () => {
+        try {
+          const response = await fetch(`/api/quotes/${quoteId}`);
+          if (response.ok) {
+            const quoteData = await response.json();
+            setQuote(quoteData);
+
+            // Check if pricing is complete
+            if (quoteData.lines && quoteData.lines.length > 0) {
+              const allPriced = quoteData.lines.every((line: QuoteLine) =>
+                line.status === 'Priced' || line.status === 'Needs_Review'
+              );
+
+              if (allPriced) {
+                setIsPreparing(false);
+                clearInterval(pollInterval);
+
+                // Auto-select first line
+                setSelectedLineId(quoteData.lines[0].id);
+              }
+            }
+          }
+        } catch (error) {
+          console.error('Error polling quote status:', error);
+        }
+      }, 2000); // Poll every 2 seconds
+
+      // Stop polling after 30 seconds as fallback
+      setTimeout(() => {
+        clearInterval(pollInterval);
+        setIsPreparing(false);
+      }, 30000);
+
+      return () => clearInterval(pollInterval);
+    } else {
+      loadQuote();
+    }
+  }, [quoteId, searchParams]);
 
   const loadQuote = async () => {
     try {
@@ -234,6 +278,26 @@ export default function QuotePage() {
             <Button onClick={() => router.push('/instant-quote')}>
               Start New Quote
             </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (isPreparing) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <Card className="w-full max-w-md">
+          <CardContent className="p-8 text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">Preparing Your Quote</h2>
+            <p className="text-gray-600 mb-4">
+              We're analyzing your DFM results and calculating pricing options...
+            </p>
+            <div className="flex items-center justify-center space-x-2">
+              <ArrowPathIcon className="h-4 w-4 animate-spin" />
+              <span className="text-sm text-gray-600">This usually takes 2-5 seconds</span>
+            </div>
           </CardContent>
         </Card>
       </div>

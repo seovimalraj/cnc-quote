@@ -1,9 +1,13 @@
-import { Controller, Post, Body, UseGuards, Get, Query, Param } from "@nestjs/common";
+import { Controller, Post, Body, UseGuards, Get, Query, Param, UnauthorizedException, Inject, Req, Ip } from "@nestjs/common";
 import { DfmService } from "./dfm.service";
-import { JwtAuthGuard } from "../../auth/jwt.guard";
-import { OrgGuard } from "../../auth/org.guard";
+import { DfmAuthGuard } from "../../auth/dfm-auth.guard";
+import { AllowSession } from "../../auth/allow-session.decorator";
 import { User } from "../../auth/user.decorator";
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery, ApiParam } from "@nestjs/swagger";
+import { SupabaseService } from "../../lib/supabase.service";
+import { AnalyticsService } from "../analytics/analytics.service";
+import { RateLimitService } from "../../lib/rate-limit/rate-limit.service";
+import { Request } from "express";
 import {
   CncDfmParams,
   SheetMetalDfmParams,
@@ -17,10 +21,15 @@ import {
 
 @ApiTags("DFM")
 @Controller("dfm")
-@UseGuards(JwtAuthGuard, OrgGuard)
+@UseGuards(DfmAuthGuard)
 @ApiBearerAuth()
 export class DfmController {
-  constructor(private readonly dfmService: DfmService) {}
+  constructor(
+    private readonly dfmService: DfmService,
+    private readonly supabaseService: SupabaseService,
+    private readonly analyticsService: AnalyticsService,
+    private readonly rateLimitService: RateLimitService,
+  ) {}
 
   @Post("validate")
   @ApiOperation({
@@ -219,9 +228,35 @@ export class DfmController {
       certifications: string[];
       criticality: string;
       notes?: string;
-    }
+    },
+    @Req() req: Request,
+    @Ip() ipAddress: string,
   ) {
-    return this.dfmService.createDfmRequest(orgId, userId, request);
+    // Check rate limit for DFM submissions
+    const rateLimitResult = await this.rateLimitService.checkRateLimit(
+      ipAddress,
+      'dfm_submit'
+    );
+
+    if (!rateLimitResult.allowed) {
+      throw new UnauthorizedException('Rate limit exceeded. Please try again later.');
+    }
+
+    const result = await this.dfmService.createDfmRequest(orgId, userId, request);
+
+    // Track analytics
+    await this.analyticsService.trackRequestCreated(result.id, {
+      fileId: request.fileId,
+      tolerancePack: request.tolerancePack,
+      surfaceFinish: request.surfaceFinish,
+      industry: request.industry,
+      criticality: request.criticality,
+      certifications: request.certifications,
+      ipAddress,
+      userAgent: req.headers['user-agent'],
+    });
+
+    return result;
   }
 
   @Post("analyze")
@@ -246,9 +281,22 @@ export class DfmController {
       requestId: string;
       fileId: string;
       downloadUrl: string;
-    }
+    },
+    @User('org_id') orgId: string,
+    @User('id') userId: string,
+    @Req() req: Request,
+    @Ip() ipAddress: string,
   ) {
-    return this.dfmService.enqueueDfmAnalysis(jobData);
+    const result = await this.dfmService.enqueueDfmAnalysis(jobData);
+
+    // Track analytics
+    await this.analyticsService.trackAnalysisStarted(jobData.requestId, {
+      fileId: jobData.fileId,
+      ipAddress,
+      userAgent: req.headers['user-agent'],
+    });
+
+    return result;
   }
 
   @Get("requests/:id/status")
@@ -273,12 +321,24 @@ export class DfmController {
   })
   async getDfmRequestStatus(
     @Param('id') requestId: string,
-    @User('org_id') orgId: string
+    @User('org_id') orgId: string,
+    @Req() req: Request,
+    @Ip() ipAddress: string,
   ) {
-    return this.dfmService.getDfmRequestStatus(requestId, orgId);
+    const result = await this.dfmService.getDfmRequestStatus(requestId, orgId);
+
+    // Track analytics
+    await this.analyticsService.trackStatusChecked(requestId, {
+      status: result.status,
+      ipAddress,
+      userAgent: req.headers['user-agent'],
+    });
+
+    return result;
   }
 
   @Get("requests/:id/result")
+  @AllowSession()
   @ApiOperation({
     summary: "Get DFM analysis result",
     description: "Get the complete DFM analysis result for a request"
@@ -318,8 +378,232 @@ export class DfmController {
   })
   async getDfmResult(
     @Param('id') requestId: string,
-    @User('org_id') orgId: string
+    @User('org_id') orgId: string,
+    @Req() req: Request,
+    @Ip() ipAddress: string,
   ) {
-    return this.dfmService.getDfmResult(requestId, orgId);
+    const result = await this.dfmService.getDfmResult(requestId, orgId);
+
+    // Track analytics
+    await this.analyticsService.trackResultViewed(requestId, {
+      ipAddress,
+      userAgent: req.headers['user-agent'],
+      isSessionAuth: (req as any).isSessionAuth || false,
+    });
+
+    return result;
+  }
+
+  @Get("requests/:id/result/session")
+  @ApiOperation({
+    summary: "Get DFM analysis result with session token",
+    description: "Get the complete DFM analysis result for a request using a session token (for invited users)"
+  })
+  @ApiParam({ name: 'id', description: 'DFM request ID' })
+  @ApiQuery({ name: 'sessionToken', description: 'Session token for access', required: false })
+  @ApiResponse({
+    status: 200,
+    description: "DFM analysis result retrieved",
+    schema: {
+      type: "object",
+      properties: {
+        id: { type: "string" },
+        request_id: { type: "string" },
+        checks: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              code: { type: "string" },
+              name: { type: "string" },
+              state: { type: "string", enum: ["pass", "warning", "blocker"] },
+              details: { type: "object" },
+              highlights: {
+                type: "array",
+                items: { type: "string" }
+              }
+            }
+          }
+        },
+        summary: { type: "object" },
+        viewer_mesh_id: { type: "string" },
+        report_pdf_id: { type: "string" },
+        qap_pdf_id: { type: "string" },
+        created_at: { type: "string", format: "date-time" }
+      }
+    }
+  })
+  async getDfmResultWithSession(
+    @Param('id') requestId: string,
+    @Query('sessionToken') sessionToken?: string,
+    @Req() req: Request,
+  ) {
+    // Validate session token
+    if (!sessionToken) {
+      throw new UnauthorizedException('Session token required');
+    }
+
+    const supabase = this.supabaseService.getClient();
+
+    // Validate session token
+    const { data: session, error } = await supabase
+      .from('user_sessions')
+      .select('user_id, expires_at, user:user_id(*)')
+      .eq('session_token', sessionToken)
+      .gt('expires_at', new Date().toISOString())
+      .single();
+
+    if (error || !session) {
+      throw new UnauthorizedException('Invalid or expired session token');
+    }
+
+    // Check if the DFM request belongs to this user
+    const { data: dfmRequest, error: dfmError } = await supabase
+      .from('dfm_requests')
+      .select('id, user_id')
+      .eq('id', requestId)
+      .eq('user_id', session.user_id)
+      .single();
+
+    if (dfmError || !dfmRequest) {
+      throw new UnauthorizedException('Access denied to this DFM result');
+    }
+
+    const result = await this.dfmService.getDfmResultWithSession(requestId, session.user_id);
+
+    // Track analytics for session-based access
+    await this.analyticsService.trackResultViewed(requestId, {
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'],
+      isSessionAuth: true,
+      sessionToken: sessionToken,
+    });
+
+    return result;
+
+    return result;
+  }
+
+  // ===== PUBLIC DFM OPTIONS ENDPOINTS =====
+
+  @Get("options/tolerances")
+  @ApiOperation({
+    summary: "Get published tolerance options",
+    description: "Retrieve all published tolerance pack options for DFM analysis"
+  })
+  @ApiResponse({
+    status: 200,
+    description: "Published tolerance options retrieved",
+    schema: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          id: { type: "string" },
+          name: { type: "string" },
+          description: { type: "string" }
+        }
+      }
+    }
+  })
+  async getPublishedToleranceOptions() {
+    return this.dfmService.getPublishedOptions('tolerances');
+  }
+
+  @Get("options/finishes")
+  @ApiOperation({
+    summary: "Get published finish options",
+    description: "Retrieve all published surface finish options for DFM analysis"
+  })
+  @ApiResponse({
+    status: 200,
+    description: "Published finish options retrieved",
+    schema: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          id: { type: "string" },
+          name: { type: "string" },
+          description: { type: "string" }
+        }
+      }
+    }
+  })
+  async getPublishedFinishOptions() {
+    return this.dfmService.getPublishedOptions('finishes');
+  }
+
+  @Get("options/industries")
+  @ApiOperation({
+    summary: "Get published industry options",
+    description: "Retrieve all published industry options for DFM analysis"
+  })
+  @ApiResponse({
+    status: 200,
+    description: "Published industry options retrieved",
+    schema: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          id: { type: "string" },
+          name: { type: "string" },
+          description: { type: "string" }
+        }
+      }
+    }
+  })
+  async getPublishedIndustryOptions() {
+    return this.dfmService.getPublishedOptions('industries');
+  }
+
+  @Get("options/certifications")
+  @ApiOperation({
+    summary: "Get published certification options",
+    description: "Retrieve all published certification options for DFM analysis"
+  })
+  @ApiResponse({
+    status: 200,
+    description: "Published certification options retrieved",
+    schema: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          id: { type: "string" },
+          name: { type: "string" },
+          description: { type: "string" }
+        }
+      }
+    }
+  })
+  async getPublishedCertificationOptions() {
+    return this.dfmService.getPublishedOptions('certifications');
+  }
+
+  @Get("options/criticality")
+  @ApiOperation({
+    summary: "Get published criticality options",
+    description: "Retrieve all published criticality level options for DFM analysis"
+  })
+  @ApiResponse({
+    status: 200,
+    description: "Published criticality options retrieved",
+    schema: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          id: { type: "string" },
+          name: { type: "string" },
+          value: { type: "string" },
+          description: { type: "string" }
+        }
+      }
+    }
+  })
+  async getPublishedCriticalityOptions() {
+    return this.dfmService.getPublishedOptions('criticality');
   }
 }

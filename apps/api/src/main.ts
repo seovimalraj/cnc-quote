@@ -8,6 +8,7 @@ import timeout from "connect-timeout";
 import * as Sentry from "@sentry/node";
 import { nodeProfilingIntegration } from "@sentry/profiling-node";
 import { AppModule } from "./app.module";
+import { SecurityMiddleware } from "./middleware/security.middleware";
 
 // Initialize Sentry
 Sentry.init({
@@ -48,13 +49,23 @@ async function bootstrap() {
           connectSrc: ["'self'", "https://cnc-quote-api.onrender.com", "https://cnc-quote-cad.onrender.com"],
           frameSrc: ["'none'"],
           objectSrc: ["'none'"],
+          baseUri: ["'self'"],
+          formAction: ["'self'"],
         },
+      },
+      hsts: {
+        maxAge: 31536000,
+        includeSubDomains: true,
+        preload: true,
       },
       crossOriginEmbedderPolicy: { policy: "require-corp" },
       crossOriginOpenerPolicy: { policy: "same-origin" },
       crossOriginResourcePolicy: { policy: "same-site" },
     }),
   );
+
+  // Apply security middleware globally
+  app.use(SecurityMiddleware);
 
   // Enable CORS with Render.com domains
   app.enableCors({

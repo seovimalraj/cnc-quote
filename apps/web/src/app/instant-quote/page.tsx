@@ -1,7 +1,41 @@
 'use client';
 
 import React, { useState, useCallback, useRef, useEffect } from 'react';
-import { useDropzone } from 'react-dropzone';
+i  // Business email validation
+  const validateBusinessEmailInline = (email: string): boolean => {
+    const emailRegex = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
+    if (!emailRegex.test(email)) return false;
+
+    const blocklistDomains = ['gmail.com', 'yahoo.com', 'o    if (!leadFormData.businessEmail) {
+      errors.businessEmail = 'Business email is required';
+    } else {
+      const emailValidation = validateBusinessEmail(leadFormData.businessEmail);
+      if (!emailValidation.isValid) {
+        errors.businessEmail = emailValidation.error || 'Invalid business email';
+      }
+    }
+
+    if (!leadFormData.phoneE164) {
+      errors.phoneE164 = 'Phone number is required';
+    } else {
+      const phoneValidation = validatePhoneNumber(leadFormData.phoneE164);
+      if (!phoneValidation.isValid) {
+        errors.phoneE164 = phoneValidation.error || 'Invalid phone number';
+      }
+    }, 'hotmail.com', 'aol.com', 'icloud.com', 'proton.me', 'yopmail.com', 'gmx.com', 'mailinator.com'];
+    const allowedTlds = ['com', 'net', 'org', 'io', 'co', 'ai', 'edu', 'gov'];
+
+    const domain = email.split('@')[1].toLowerCase();
+    const tld = domain.split('.').pop();
+
+    return !blocklistDomains.includes(domain) && allowedTlds.includes(tld || '');
+  };
+
+  // Phone validation (E.164 format)
+  const validatePhoneE164 = (phone: string): boolean => {
+    const e164Regex = /^\+[1-9]\d{6,14}$/;
+    return e164Regex.test(phone) && phone.length >= 8 && phone.length <= 15;
+  }; } from 'react-dropzone';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
@@ -24,6 +58,7 @@ import {
   ExclamationTriangleIcon,
   ArrowPathIcon
 } from '@heroicons/react/24/outline';
+import { validateBusinessEmail, validatePhoneNumber } from '@/lib/validation';
 
 interface UploadedFile {
   id: string;
@@ -489,7 +524,7 @@ export default function InstantQuotePage() {
                   {isDragActive ? 'Drop your files here' : 'Drag & drop your CAD files here'}
                 </p>
                 <p className="text-gray-600 mt-2">
-                  or <button className="text-blue-600 hover:text-blue-500 font-medium">browse files</button>
+                  or <button className="text-blue-600 hover:text-blue-500 font-medium px-3 py-2 rounded-md hover:bg-blue-50 transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center">browse files</button>
                 </p>
               </div>
               <div className="text-sm text-gray-500">
@@ -522,9 +557,9 @@ export default function InstantQuotePage() {
                             variant="ghost"
                             size="sm"
                             onClick={() => removeFile(uploadedFile.id)}
-                            className="text-gray-400 hover:text-gray-600"
+                            className="text-gray-400 hover:text-gray-600 min-h-[44px] min-w-[44px] flex items-center justify-center"
                           >
-                            <XMarkIcon className="w-4 h-4" />
+                            <XMarkIcon className="w-5 h-5" />
                           </Button>
                         </div>
                       </div>
@@ -722,7 +757,7 @@ export default function InstantQuotePage() {
                 id="consent"
                 checked={leadFormData.consent}
                 onCheckedChange={(checked) => handleLeadFormChange('consent', !!checked)}
-                className={leadFormErrors.consent ? 'border-red-500' : ''}
+                className={`mt-1 min-h-[44px] min-w-[44px] ${leadFormErrors.consent ? 'border-red-500' : ''}`}
               />
               <div className="grid gap-1.5 leading-none">
                 <Label

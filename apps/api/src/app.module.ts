@@ -6,6 +6,7 @@ import { HealthModule } from "./modules/health/health.module";
 import { MachineModule } from "./modules/machines/machine.module";
 import { PricingModule } from "./modules/pricing/pricing.module";
 import { DfmModule } from "./modules/dfm/dfm.module";
+import { LeadsModule } from "./modules/leads/leads.module";
 import { SupabaseModule } from "./lib/supabase/supabase.module";
 import { CacheModule } from "./lib/cache/cache.module";
 import { PaymentsModule } from "./modules/payments/payments.module";
@@ -30,6 +31,9 @@ import { AdminHealthModule } from "./modules/admin-health/admin-health.module";
 import { AdminMetricsModule } from "./modules/admin-metrics/admin-metrics.module";
 import { AdminErrorsModule } from "./modules/admin-errors/admin-errors.module";
 import { AdminAlertsModule } from "./modules/admin-alerts/admin-alerts.module";
+import { AdminDfmModule } from "./modules/admin-dfm/admin-dfm.module";
+import { MiddlewareModule } from "./middleware/middleware.module";
+import { AuthModule as AuthEndpointsModule } from "./modules/auth/auth.module";
 
 @Module({
   imports: [
@@ -49,12 +53,14 @@ import { AdminAlertsModule } from "./modules/admin-alerts/admin-alerts.module";
     SupabaseModule,
     CacheModule,
     AuthModule,
+    AuthEndpointsModule,
     QueueModule,
     ObservabilityModule,
     HealthModule,
     MachineModule,
     PricingModule,
     DfmModule,
+    LeadsModule,
     PaymentsModule,
     NotifyModule,
     OrdersModule,
@@ -75,6 +81,8 @@ import { AdminAlertsModule } from "./modules/admin-alerts/admin-alerts.module";
     AdminMetricsModule,
     AdminErrorsModule,
     AdminAlertsModule,
+    AdminDfmModule,
+    MiddlewareModule,
   ],
 })
 export class AppModule {}

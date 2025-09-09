@@ -73,3 +73,22 @@ export class GenerateQapDocumentDto {
   @IsObject()
   documentData: Record<string, unknown>;
 }
+
+export class GenerateDfmQapDocumentDto {
+  @ApiProperty()
+  @IsUUID()
+  dfmRequestId: string;
+
+  @ApiProperty()
+  @IsString()
+  criticality: string;
+
+  @ApiProperty()
+  @IsString()
+  industry: string;
+
+  @ApiProperty()
+  @IsOptional()
+  @IsString({ each: true })
+  certifications?: string[];
+}

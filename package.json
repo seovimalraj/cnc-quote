@@ -14,7 +14,17 @@
     "type-check": "turbo run type-check",
     "clean:web": "cd apps/web && rm -rf .next out",
     "clean:api": "cd apps/api && rm -rf dist",
-    "clean:all": "pnpm clean:web && pnpm clean:api && rm -rf node_modules && pnpm install"
+    "clean:all": "pnpm clean:web && pnpm clean:api && rm -rf node_modules && pnpm install",
+    "qa": "node scripts/qa-runner.cjs",
+    "qa:fixes": "cat QA_FIXES_SUMMARY.md",
+    "qa:check-rls": "node scripts/check-rls.js",
+    "qa:check-pricing": "node scripts/check-pricing.js",
+    "qa:check-cad": "node scripts/check-cad.js",
+    "qa:check-payment": "node scripts/check-payment.js",
+    "qa:check-slos": "node scripts/check-slos.js",
+    "qa:check-observability": "node scripts/check-observability.js",
+    "qa:test-storage-signed-url": "node scripts/test-storage-signed-url.js",
+    "qa:bomb-leads": "node scripts/bomb-leads.js"
   },
   "dependencies": {
     "@nestjs/axios": "^4.0.1",

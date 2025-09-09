@@ -36,7 +36,7 @@ class DFMAnalysisResponse(BaseModel):
 class DFMCheck(BaseModel):
     id: str
     title: str
-    status: str  # pass, warning, blocker
+    status: str  # passed, warning, blocker
     message: str
     metrics: Optional[Dict[str, Any]] = None
     suggestions: List[str] = []
@@ -53,7 +53,7 @@ MOCK_CHECKS = [
     {
         "id": "file_type",
         "title": "File Type",
-        "status": "pass",
+        "status": "passed",
         "message": "STEP file format is supported for CNC machining.",
         "metrics": {"file_extension": ".step"},
         "suggestions": [],
@@ -62,7 +62,7 @@ MOCK_CHECKS = [
     {
         "id": "units_and_scale",
         "title": "Units & Scale Check",
-        "status": "pass",
+        "status": "passed",
         "message": "Model dimensions are within acceptable range (100×50×25mm).",
         "metrics": {"bbox_mm": [0, 0, 0, 100, 50, 25]},
         "suggestions": [],
@@ -71,7 +71,7 @@ MOCK_CHECKS = [
     {
         "id": "floating_parts",
         "title": "Floating Parts Check",
-        "status": "pass",
+        "status": "passed",
         "message": "Single solid body detected - no floating parts.",
         "metrics": {"shell_count": 1},
         "suggestions": [],
@@ -80,7 +80,7 @@ MOCK_CHECKS = [
     {
         "id": "model_fidelity",
         "title": "Model Fidelity",
-        "status": "pass",
+        "status": "passed",
         "message": "Model geometry is valid with no self-intersections.",
         "metrics": {"brep_check": "Valid"},
         "suggestions": [],
@@ -89,7 +89,7 @@ MOCK_CHECKS = [
     {
         "id": "self_intersection",
         "title": "Non-Manifold / Self-Intersection Check",
-        "status": "pass",
+        "status": "passed",
         "message": "No self-intersections or non-manifold edges detected.",
         "metrics": {"intersections": 0},
         "suggestions": [],
@@ -98,7 +98,7 @@ MOCK_CHECKS = [
     {
         "id": "shell_count",
         "title": "Model Shell Count",
-        "status": "pass",
+        "status": "passed",
         "message": "Single closed shell - suitable for machining.",
         "metrics": {"shell_count": 1},
         "suggestions": [],
@@ -107,7 +107,7 @@ MOCK_CHECKS = [
     {
         "id": "voids",
         "title": "Void Check",
-        "status": "pass",
+        "status": "passed",
         "message": "No internal voids or trapped volumes detected.",
         "metrics": {"void_count": 0},
         "suggestions": [],
@@ -116,7 +116,7 @@ MOCK_CHECKS = [
     {
         "id": "large_dimension",
         "title": "Large Part Dimension",
-        "status": "pass",
+        "status": "passed",
         "message": "Part dimensions fit within machine travel limits.",
         "metrics": {"max_dimension_mm": 100},
         "suggestions": [],
@@ -125,7 +125,7 @@ MOCK_CHECKS = [
     {
         "id": "finish_capacity",
         "title": "Part Exceeds Maximum Size for This Finish",
-        "status": "pass",
+        "status": "passed",
         "message": "Part size is compatible with anodizing finish.",
         "metrics": {"finish_max_size_mm": 500},
         "suggestions": [],
@@ -161,7 +161,7 @@ MOCK_CHECKS = [
     {
         "id": "thin_web",
         "title": "Thin Web / Fin Slenderness",
-        "status": "pass",
+        "status": "passed",
         "message": "All webs meet minimum thickness requirements.",
         "metrics": {"min_web_ratio": 8.5},
         "suggestions": [],
@@ -170,7 +170,7 @@ MOCK_CHECKS = [
     {
         "id": "min_hole_dia",
         "title": "Minimum Hole Diameter",
-        "status": "pass",
+        "status": "passed",
         "message": "All holes meet minimum diameter requirements.",
         "metrics": {"min_hole_dia_mm": 3.0},
         "suggestions": [],
@@ -179,7 +179,7 @@ MOCK_CHECKS = [
     {
         "id": "hole_depth_ratio",
         "title": "Hole Depth-to-Diameter Ratio",
-        "status": "pass",
+        "status": "passed",
         "message": "All hole depth ratios are within acceptable limits.",
         "metrics": {"max_depth_ratio": 8.5},
         "suggestions": [],
@@ -188,7 +188,7 @@ MOCK_CHECKS = [
     {
         "id": "pocket_ratio",
         "title": "Pocket Depth-to-Width Ratio",
-        "status": "pass",
+        "status": "passed",
         "message": "All pocket ratios are within machining limits.",
         "metrics": {"max_pocket_ratio": 2.5},
         "suggestions": [],
@@ -197,7 +197,7 @@ MOCK_CHECKS = [
     {
         "id": "slot_width",
         "title": "Slot Width vs Cutter Availability",
-        "status": "pass",
+        "status": "passed",
         "message": "All slot widths are compatible with available cutters.",
         "metrics": {"min_slot_width_mm": 2.0},
         "suggestions": [],
@@ -206,7 +206,7 @@ MOCK_CHECKS = [
     {
         "id": "boss_slenderness",
         "title": "Boss/Pin Slenderness",
-        "status": "pass",
+        "status": "passed",
         "message": "All bosses meet slenderness requirements.",
         "metrics": {"max_boss_ratio": 2.8},
         "suggestions": [],
@@ -215,7 +215,7 @@ MOCK_CHECKS = [
     {
         "id": "thread_feasibility",
         "title": "Thread Feasibility",
-        "status": "pass",
+        "status": "passed",
         "message": "All threads are feasible with standard tooling.",
         "metrics": {"thread_count": 2},
         "suggestions": [],
@@ -235,13 +235,16 @@ MOCK_CHECKS = [
 async def process_dfm_analysis(task_id: str, request: DFMAnalysisRequest):
     """Mock DFM analysis processing"""
     try:
+        # Update status to processing when task actually starts
+        dfm_tasks[task_id]["status"] = "Processing"
+
         # Simulate processing time
         await asyncio.sleep(3)
 
         # Calculate summary
         checks = [DFMCheck(**check) for check in MOCK_CHECKS]
         summary = {
-            "passed": len([c for c in checks if c.status == "pass"]),
+            "passed": len([c for c in checks if c.status == "passed"]),
             "warnings": len([c for c in checks if c.status == "warning"]),
             "blockers": len([c for c in checks if c.status == "blocker"])
         }
@@ -265,6 +268,7 @@ async def process_dfm_analysis(task_id: str, request: DFMAnalysisRequest):
         dfm_tasks[task_id]["status"] = "Succeeded"
 
     except Exception as e:
+        print(f"Error processing DFM analysis for task {task_id}: {e}")
         dfm_tasks[task_id]["status"] = "Failed"
         dfm_results[task_id] = DFMResult(status="Failed")
 
@@ -276,15 +280,12 @@ async def start_dfm_analysis(request: DFMAnalysisRequest, background_tasks: Back
     # Store task info
     dfm_tasks[task_id] = {
         "status": "Queued",
-        "request": request.dict(),
+        "request": request.model_dump(),
         "created_at": datetime.now()
     }
 
     # Start background processing
     background_tasks.add_task(process_dfm_analysis, task_id, request)
-
-    # Update status to processing
-    dfm_tasks[task_id]["status"] = "Processing"
 
     return DFMAnalysisResponse(
         task_id=task_id,
@@ -315,3 +316,14 @@ async def root():
 @app.get("/health")
 async def health():
     return {"status": "healthy", "timestamp": datetime.now().isoformat()}
+
+# Server startup code
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(
+        "main:app",
+        host="0.0.0.0",
+        port=8001,
+        reload=True,
+        log_level="info"
+    )

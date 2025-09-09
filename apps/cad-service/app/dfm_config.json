@@ -1,0 +1,64 @@
+{
+  "version": "1.0.0",
+  "materials": {
+    "aluminum": {
+      "name": "aluminum",
+      "min_wall_thickness_mm": 1.0,
+      "min_hole_diameter_mm": 1.0,
+      "max_slenderness_ratio": 15.0,
+      "max_boss_ratio": 4.0,
+      "min_corner_radius_mm": 0.5
+    },
+    "steel": {
+      "name": "steel",
+      "min_wall_thickness_mm": 0.8,
+      "min_hole_diameter_mm": 1.0,
+      "max_slenderness_ratio": 12.0,
+      "max_boss_ratio": 3.0,
+      "min_corner_radius_mm": 0.5
+    },
+    "plastic": {
+      "name": "plastic",
+      "min_wall_thickness_mm": 1.5,
+      "min_hole_diameter_mm": 2.0,
+      "max_slenderness_ratio": 8.0,
+      "max_boss_ratio": 2.0,
+      "min_corner_radius_mm": 1.0
+    }
+  },
+  "processes": {
+    "cnc_milling": {
+      "name": "cnc_milling",
+      "max_travel_mm": {
+        "x": 1000.0,
+        "y": 500.0,
+        "z": 300.0
+      },
+      "max_finish_size_mm": 500.0,
+      "min_tool_diameter_mm": 1.0,
+      "max_hole_depth_ratio": 10.0,
+      "max_pocket_depth_ratio": 4.0,
+      "min_slot_width_mm": 2.0
+    },
+    "cnc_turning": {
+      "name": "cnc_turning",
+      "max_travel_mm": {
+        "x": 500.0,
+        "y": 300.0,
+        "z": 300.0
+      },
+      "max_finish_size_mm": 300.0,
+      "min_tool_diameter_mm": 0.5,
+      "max_hole_depth_ratio": 8.0,
+      "max_pocket_depth_ratio": 3.0,
+      "min_slot_width_mm": 1.5
+    }
+  },
+  "rules": [],
+  "global_thresholds": {
+    "max_shell_count": 2,
+    "min_clamp_area_mm2": 1000,
+    "max_web_slenderness": 20.0,
+    "min_thread_diameter_mm": 3.0
+  }
+}

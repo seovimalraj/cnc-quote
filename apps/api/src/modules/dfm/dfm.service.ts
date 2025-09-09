@@ -574,4 +574,71 @@ export class DfmService {
 
     return result;
   }
+
+  async getDfmResultWithSession(requestId: string, userId: string) {
+    // First verify the request exists and belongs to the user
+    const { data: request, error: requestError } = await this.supabase.client
+      .from('dfm_requests')
+      .select('*')
+      .eq('id', requestId)
+      .eq('user_id', userId)
+      .single();
+
+    if (requestError || !request) {
+      throw new Error('DFM request not found or access denied');
+    }
+
+    if (request.status !== 'Complete') {
+      throw new Error('DFM analysis is not yet complete');
+    }
+
+    // Get the result
+    const { data: result, error: resultError } = await this.supabase.client
+      .from('dfm_results')
+      .select('*')
+      .eq('request_id', requestId)
+      .single();
+
+    if (resultError || !result) {
+      throw new Error('DFM result not found');
+    }
+
+    return result;
+  }
+
+  // ===== PUBLIC DFM OPTIONS METHODS =====
+
+  async getPublishedOptions(optionType: string): Promise<any[]> {
+    const tableName = this.getTableName(optionType);
+
+    const { data, error } = await this.supabase.client
+      .from(tableName)
+      .select('id, name, description' + (optionType === 'criticality' ? ', value' : ''))
+      .eq('published', true)
+      .order('name');
+
+    if (error) {
+      this.logger.error(`Error fetching published ${optionType} options:`, error);
+      throw new Error(`Failed to fetch published ${optionType} options`);
+    }
+
+    return data || [];
+  }
+
+  private getTableName(optionType: string): string {
+    const tableMap = {
+      tolerances: 'dfm_tolerance_options',
+      finishes: 'dfm_finish_options',
+      industries: 'dfm_industry_options',
+      certifications: 'dfm_certification_options',
+      criticality: 'dfm_criticality_options',
+    };
+
+    const tableName = tableMap[optionType];
+    if (!tableName) {
+      throw new Error(`Invalid option type: ${optionType}`);
+    }
+
+    return tableName;
+  }
 }

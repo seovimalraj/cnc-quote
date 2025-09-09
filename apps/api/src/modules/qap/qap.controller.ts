@@ -4,7 +4,7 @@ import { OrgGuard } from "../../auth/org.guard";
 import { ReqUser } from "../../auth/req-user.decorator";
 import { User } from "../../types/user";
 import { QapService } from "./qap.service";
-import { CreateQapTemplateDto, UpdateQapTemplateDto, GenerateQapDocumentDto } from "./qap.dto";
+import { CreateQapTemplateDto, UpdateQapTemplateDto, GenerateQapDocumentDto, GenerateDfmQapDocumentDto } from "./qap.dto";
 import { ApiTags, ApiOperation, ApiResponse, ApiParam } from "@nestjs/swagger";
 import { QapTemplate, QapDocument, QapTemplateResponse, QapDocumentResponse } from "./qap.types";
 
@@ -68,6 +68,20 @@ export class QapController {
   ): Promise<QapDocument> {
     return this.qapService.generateQapDocument({
       ...generateQapDocumentDto,
+      userId: user.id,
+      orgId: user.org_id,
+    });
+  }
+
+  @Post("documents/from-dfm")
+  @ApiOperation({ summary: "Generate a QAP document from DFM analysis" })
+  @ApiResponse({ status: 201, description: "DFM-based QAP document generation started", type: QapDocumentResponse })
+  async generateDfmQapDocument(
+    @Body(ValidationPipe) generateDfmQapDocumentDto: GenerateDfmQapDocumentDto,
+    @ReqUser() user: User,
+  ): Promise<QapDocument> {
+    return this.qapService.generateDfmQapDocument({
+      ...generateDfmQapDocumentDto,
       userId: user.id,
       orgId: user.org_id,
     });

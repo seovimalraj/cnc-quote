@@ -10,9 +10,9 @@ import { CreateQuoteDto, UpdateQuoteDto } from "./quotes.dto";
 export class QuotesController {
   constructor(private readonly quotesService: QuotesService) {}
 
-  @Post()
-  async createQuote(@Body() data: CreateQuoteDto) {
-    return this.quotesService.createQuote(data);
+  @Post("from-dfm")
+  async createQuoteFromDfm(@Body() data: { dfm_request_id: string }) {
+    return this.quotesService.createQuoteFromDfm(data.dfm_request_id);
   }
 
   @Get(":id")
