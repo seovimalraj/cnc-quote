@@ -20,10 +20,11 @@ services:
       cd packages/shared && pnpm install --no-frozen-lockfile && pnpm build
 
       echo "Building web app..."
-      cd ../apps/web
+      cd apps/web
       pnpm install --no-frozen-lockfile
+      pnpm add -D postcss@8.4.29 tailwindcss@3.3.3 autoprefixer@10.4.15 @tailwindcss/forms
       SKIP_ENV_VALIDATION=true NODE_ENV=production pnpm build
-    startCommand: cd apps/web && pnpm start
+    startCommand: pnpm start
     healthCheckPath: /
     autoDeployTrigger: commit
     envVars:
@@ -43,6 +44,8 @@ services:
         sync: false
       - key: PORT
         value: "3000"
+      - key: NEXT_TELEMETRY_DISABLED
+        value: "1"
 
   # NestJS API Service
   - type: web
