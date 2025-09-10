@@ -488,6 +488,9 @@ export default function DFMResultsPage() {
       loadViewerMesh();
     }
   }, [request?.status]);
+
+  const getStatusIcon = (status: string) => {
+    switch (status) {
       case 'completed':
         return <CheckCircleIcon className="h-5 w-5 text-green-600" />;
       case 'failed':

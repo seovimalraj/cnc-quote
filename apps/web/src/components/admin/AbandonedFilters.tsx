@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
 import { useAbandonedQuotes } from '@/components/providers/AbandonedQuotesProvider'
-import { DownloadIcon } from '@heroicons/react/24/outline'
+import { ArrowDownTrayIcon } from '@heroicons/react/24/outline'
 
 export function AbandonedFilters() {
   const { filters, setFilters, quotes } = useAbandonedQuotes()
@@ -127,7 +127,7 @@ export function AbandonedFilters() {
 
             {/* Export Button */}
             <Button variant="outline" onClick={handleExport} className="whitespace-nowrap">
-              <DownloadIcon className="w-4 h-4 mr-2" />
+              <ArrowDownTrayIcon className="w-4 h-4 mr-2" />
               Export CSV
             </Button>
           </div>

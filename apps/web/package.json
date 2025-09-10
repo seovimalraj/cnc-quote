@@ -20,7 +20,7 @@
     "@dnd-kit/utilities": "^3.2.2",
     "@headlessui/react": "^1.7.17",
     "@hello-pangea/dnd": "^18.0.1",
-    "@heroicons/react": "^2.0.18",
+    "@heroicons/react": "^2.2.0",
     "@hookform/resolvers": "^5.2.1",
     "@monaco-editor/react": "^4.7.0",
     "@paypal/react-paypal-js": "^8.9.0",

@@ -356,7 +356,7 @@ importers:
         specifier: ^18.0.1
         version: 18.0.1(@types/react@18.3.24)(react-dom@18.2.0)(react@18.2.0)
       '@heroicons/react':
-        specifier: ^2.0.18
+        specifier: ^2.2.0
         version: 2.2.0(react@18.2.0)
       '@hookform/resolvers':
         specifier: ^5.2.1
@@ -487,6 +487,9 @@ importers:
       sonner:
         specifier: ^2.0.7
         version: 2.0.7(react-dom@18.2.0)(react@18.2.0)
+      stripe:
+        specifier: ^14.0.0
+        version: 14.25.0
       swr:
         specifier: ^2.3.6
         version: 2.3.6(react@18.2.0)
@@ -13631,6 +13634,14 @@ packages:
 
   /stripe@13.11.0:
     resolution: {integrity: sha512-yPxVJxUzP1QHhHeFnYjJl48QwDS1+5befcL7ju7+t+i88D5r0rbsL+GkCCS6zgcU+TiV5bF9eMGcKyJfLf8BZQ==}
+    engines: {node: '>=12.*'}
+    dependencies:
+      '@types/node': 20.6.2
+      qs: 6.14.0
+    dev: false
+
+  /stripe@14.25.0:
+    resolution: {integrity: sha512-wQS3GNMofCXwH8TSje8E1SE8zr6ODiGtHQgPtO95p9Mb4FhKC9jvXR2NUTpZ9ZINlckJcFidCmaTFV4P6vsb9g==}
     engines: {node: '>=12.*'}
     dependencies:
       '@types/node': 20.6.2

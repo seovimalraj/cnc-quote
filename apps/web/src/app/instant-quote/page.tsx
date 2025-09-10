@@ -1,41 +1,7 @@
 'use client';
 
 import React, { useState, useCallback, useRef, useEffect } from 'react';
-i  // Business email validation
-  const validateBusinessEmailInline = (email: string): boolean => {
-    const emailRegex = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
-    if (!emailRegex.test(email)) return false;
-
-    const blocklistDomains = ['gmail.com', 'yahoo.com', 'outlook.com', 'hotmail.com', 'aol.com', 'icloud.com', 'proton.me', 'yopmail.com', 'gmx.com', 'mailinator.com'];
-      errors.businessEmail = 'Business email is required';
-    } else {
-      const emailValidation = validateBusinessEmail(leadFormData.businessEmail);
-      if (!emailValidation.isValid) {
-        errors.businessEmail = emailValidation.error || 'Invalid business email';
-      }
-    }
-
-    if (!leadFormData.phoneE164) {
-      errors.phoneE164 = 'Phone number is required';
-    } else {
-      const phoneValidation = validatePhoneNumber(leadFormData.phoneE164);
-      if (!phoneValidation.isValid) {
-        errors.phoneE164 = phoneValidation.error || 'Invalid phone number';
-      }
-    }, 'hotmail.com', 'aol.com', 'icloud.com', 'proton.me', 'yopmail.com', 'gmx.com', 'mailinator.com'];
-    const allowedTlds = ['com', 'net', 'org', 'io', 'co', 'ai', 'edu', 'gov'];
-
-    const domain = email.split('@')[1].toLowerCase();
-    const tld = domain.split('.').pop();
-
-    return !blocklistDomains.includes(domain) && allowedTlds.includes(tld || '');
-  };
-
-  // Phone validation (E.164 format)
-  const validatePhoneE164 = (phone: string): boolean => {
-    const e164Regex = /^\+[1-9]\d{6,14}$/;
-    return e164Regex.test(phone) && phone.length >= 8 && phone.length <= 15;
-  }; } from 'react-dropzone';
+import { useDropzone } from 'react-dropzone';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';

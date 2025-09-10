@@ -125,40 +125,58 @@ interface OverheadMarginConfig {
 }
 
 interface Quote {
-    {
-      id: 'Q-2024-001',
-      customer: 'John Smith',
-      email: 'john.smith@aerospace.com',
-      company: 'Aerospace Dynamics',
-      phone: '+1 (555) 123-4567',
-      material: 'Aluminum 6061-T6',
-      quantity: 50,
-      surface: 'Anodized',
-      tolerance: 'Tight (±0.002")',
-      leadTime: '5-7 Business Days',
-      files: 3,
-      price: 12450,
-      status: 'pending',
-      createdAt: '2024-01-15T10:30:00Z',
-      updatedAt: '2024-01-15T10:30:00Z',
-    },
-    {
-      id: 'Q-2024-002',
-      customer: 'Sarah Johnson',
-      email: 'sarah.j@medtech.com',
-      company: 'MedTech Solutions',
-      phone: '+1 (555) 987-6543',
-      material: 'Stainless Steel 316',
-      quantity: 25,
-      surface: 'As Machined',
-      tolerance: 'Standard (±0.005")',
-      leadTime: '2-3 Business Days',
-      files: 2,
-      price: 8750,
-      status: 'processing',
-      createdAt: '2024-01-14T14:15:00Z',
-      updatedAt: '2024-01-15T09:45:00Z',
-    },
+  id: string;
+  customer: string;
+  email: string;
+  company: string;
+  phone: string;
+  material: string;
+  quantity: number;
+  surface: string;
+  tolerance: string;
+  leadTime: string;
+  files: number;
+  price: number;
+  status: 'pending' | 'processing' | 'approved' | 'rejected';
+  createdAt: string;
+  updatedAt: string;
+}
+
+const mockQuotes: Quote[] = [
+  {
+    id: 'Q-2024-001',
+    customer: 'John Smith',
+    email: 'john.smith@aerospace.com',
+    company: 'Aerospace Dynamics',
+    phone: '+1 (555) 123-4567',
+    material: 'Aluminum 6061-T6',
+    quantity: 50,
+    surface: 'Anodized',
+    tolerance: 'Tight (±0.002")',
+    leadTime: '5-7 Business Days',
+    files: 3,
+    price: 12450,
+    status: 'pending',
+    createdAt: '2024-01-15T10:30:00Z',
+    updatedAt: '2024-01-15T10:30:00Z',
+  },
+  {
+    id: 'Q-2024-002',
+    customer: 'Sarah Johnson',
+    email: 'sarah.j@medtech.com',
+    company: 'MedTech Solutions',
+    phone: '+1 (555) 987-6543',
+    material: 'Stainless Steel 316',
+    quantity: 25,
+    surface: 'As Machined',
+    tolerance: 'Standard (±0.005")',
+    leadTime: '2-3 Business Days',
+    files: 2,
+    price: 8750,
+    status: 'processing',
+    createdAt: '2024-01-14T14:15:00Z',
+    updatedAt: '2024-01-15T09:45:00Z',
+  },
     {
       id: 'Q-2024-003',
       customer: 'Michael Chen',
@@ -376,7 +394,8 @@ interface Quote {
     setHasPricingChanges(true);
   };
 
-  return (
+  const AdminDashboard = () => {
+    return (
     <DefaultLayout>
       <div className="grid grid-cols-1 gap-9">
         {/* Header with Navigation */}
@@ -441,7 +460,7 @@ interface Quote {
                 <div className="mt-4 flex items-end justify-between">
                   <div>
                     <h4 className="text-title-md font-bold text-black dark:text-white">
-                      {quotes.filter(q => q.status === 'pending').length}
+                      {mockQuotes.filter(q => q.status === 'pending').length}
                     </h4>
                     <span className="text-sm font-medium">Pending Review</span>
                   </div>
@@ -455,7 +474,7 @@ interface Quote {
                 <div className="mt-4 flex items-end justify-between">
                   <div>
                     <h4 className="text-title-md font-bold text-black dark:text-white">
-                      {quotes.filter(q => q.status === 'approved').length}
+                      {mockQuotes.filter(q => q.status === 'approved').length}
                     </h4>
                     <span className="text-sm font-medium">Approved</span>
                   </div>
@@ -469,7 +488,7 @@ interface Quote {
                 <div className="mt-4 flex items-end justify-between">
                   <div>
                     <h4 className="text-title-md font-bold text-black dark:text-white">
-                      {formatCurrency(quotes.reduce((sum, q) => sum + q.price, 0))}
+                      {formatCurrency(mockQuotes.reduce((sum, q) => sum + q.price, 0))}
                     </h4>
                     <span className="text-sm font-medium">Total Value</span>
                   </div>
@@ -519,7 +538,7 @@ interface Quote {
                         </tr>
                       </thead>
                       <tbody>
-                        {quotes.map((quote) => (
+                        {mockQuotes.map((quote) => (
                           <tr key={quote.id}>
                             <td className="border-b border-[#eee] py-5 px-4 dark:border-strokedark">
                               <p className="text-black dark:text-white font-medium">
@@ -1326,14 +1345,7 @@ interface RiskConfig {
   time_multiplier: number;
   risk_percent?: number;
   risk_flat?: number;
-}
 
-interface OverheadMarginConfig {
-  overhead_percent: number;
-  target_margin_percent: number;
-}
-
-const AdminDashboard = () => {
   const [activeTab, setActiveTab] = useState('quotes');
   const [selectedQuote, setSelectedQuote] = useState<Quote | null>(null);
 

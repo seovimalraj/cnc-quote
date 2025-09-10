@@ -9,8 +9,8 @@ import { Separator } from '@/components/ui/separator';
 import {
   CheckCircleIcon,
   TruckIcon,
-  MailIcon,
-  DownloadIcon,
+  EnvelopeIcon,
+  ArrowDownTrayIcon,
   ArrowRightIcon
 } from '@heroicons/react/24/outline';
 
@@ -252,7 +252,7 @@ export default function OrderConfirmationPage() {
                   className="w-full justify-start"
                   onClick={handleDownloadInvoice}
                 >
-                  <DownloadIcon className="h-4 w-4 mr-2" />
+                  <ArrowDownTrayIcon className="h-4 w-4 mr-2" />
                   Download Invoice
                 </Button>
 
@@ -271,7 +271,7 @@ export default function OrderConfirmationPage() {
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center">
-                  <MailIcon className="h-5 w-5 text-blue-600 mr-2" />
+                  <EnvelopeIcon className="h-5 w-5 text-blue-600 mr-2" />
                   Need Help?
                 </CardTitle>
               </CardHeader>
