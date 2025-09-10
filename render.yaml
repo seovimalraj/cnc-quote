@@ -92,7 +92,7 @@ services:
   # Python CAD Service
   - type: web
     name: cnc-quote-cad
-    env: python3
+    env: python
     repo: https://github.com/seovimalraj/cnc-quote
     plan: free
     region: oregon
@@ -115,3 +115,4 @@ services:
     plan: free
     region: oregon
     maxmemoryPolicy: noeviction
+    ipAllowList: []
