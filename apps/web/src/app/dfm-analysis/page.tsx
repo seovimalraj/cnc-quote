@@ -67,7 +67,35 @@ const MAX_FILE_SIZE = 200 * 1024 * 1024; // 200MB
 
 export default function DFMAnalysisPage() {
   const router = useRouter();
-  const [options, setOptions] = useState<DFMOptions | null>(null);
+  const [options, setOptions] = useState<DFMOptions>({
+    tolerances: [
+      { id: 'tight', name: 'Tight (±0.002")', description: 'High precision machining' },
+      { id: 'standard', name: 'Standard (±0.005")', description: 'Standard manufacturing tolerances' },
+      { id: 'loose', name: 'Loose (±0.010")', description: 'Basic manufacturing tolerances' }
+    ],
+    finishes: [
+      { id: 'as_machined', name: 'As Machined', description: 'No additional finishing' },
+      { id: 'bead_blast', name: 'Bead Blast', description: 'Smooth surface finish' },
+      { id: 'anodized', name: 'Anodized', description: 'Corrosion resistant coating' }
+    ],
+    industries: [
+      { id: 'aerospace', name: 'Aerospace', description: 'Aerospace and defense' },
+      { id: 'automotive', name: 'Automotive', description: 'Automotive industry' },
+      { id: 'medical', name: 'Medical', description: 'Medical devices' },
+      { id: 'general', name: 'General', description: 'General manufacturing' }
+    ],
+    certifications: [
+      { id: 'iso_9001', name: 'ISO 9001', description: 'Quality management systems' },
+      { id: 'as9100', name: 'AS9100', description: 'Aerospace quality management' },
+      { id: 'none', name: 'None', description: 'No specific certification required' }
+    ],
+    criticality: [
+      { id: 'low', name: 'Low', description: 'Non-critical component' },
+      { id: 'medium', name: 'Medium', description: 'Standard criticality' },
+      { id: 'high', name: 'High', description: 'Critical component' },
+      { id: 'extreme', name: 'Extreme', description: 'Mission-critical component' }
+    ]
+  });
   const [formData, setFormData] = useState<FormData>({
     cadFile: null,
     tolerancePack: '',
@@ -91,19 +119,52 @@ export default function DFMAnalysisPage() {
     try {
       setIsLoading(true);
       const [tolerancesRes, finishesRes, industriesRes, certificationsRes, criticalityRes] = await Promise.all([
-        fetch('/api/dfm/options/tolerances'),
-        fetch('/api/dfm/options/finishes'),
-        fetch('/api/dfm/options/industries'),
-        fetch('/api/dfm/options/certifications'),
-        fetch('/api/dfm/options/criticality')
+        fetch('/api/dfm/options/tolerances').catch(() => ({ ok: false })),
+        fetch('/api/dfm/options/finishes').catch(() => ({ ok: false })),
+        fetch('/api/dfm/options/industries').catch(() => ({ ok: false })),
+        fetch('/api/dfm/options/certifications').catch(() => ({ ok: false })),
+        fetch('/api/dfm/options/criticality').catch(() => ({ ok: false }))
       ]);
 
+      // Provide fallback mock data if API fails
+      const mockTolerances = [
+        { id: 'tight', name: 'Tight (±0.002")', description: 'High precision machining' },
+        { id: 'standard', name: 'Standard (±0.005")', description: 'Standard manufacturing tolerances' },
+        { id: 'loose', name: 'Loose (±0.010")', description: 'Basic manufacturing tolerances' }
+      ];
+
+      const mockFinishes = [
+        { id: 'as_machined', name: 'As Machined', description: 'No additional finishing' },
+        { id: 'bead_blast', name: 'Bead Blast', description: 'Smooth surface finish' },
+        { id: 'anodized', name: 'Anodized', description: 'Corrosion resistant coating' }
+      ];
+
+      const mockIndustries = [
+        { id: 'aerospace', name: 'Aerospace', description: 'Aerospace and defense' },
+        { id: 'automotive', name: 'Automotive', description: 'Automotive industry' },
+        { id: 'medical', name: 'Medical', description: 'Medical devices' },
+        { id: 'general', name: 'General', description: 'General manufacturing' }
+      ];
+
+      const mockCertifications = [
+        { id: 'iso_9001', name: 'ISO 9001', description: 'Quality management systems' },
+        { id: 'as9100', name: 'AS9100', description: 'Aerospace quality management' },
+        { id: 'none', name: 'None', description: 'No specific certification required' }
+      ];
+
+      const mockCriticality = [
+        { id: 'low', name: 'Low', description: 'Non-critical component' },
+        { id: 'medium', name: 'Medium', description: 'Standard criticality' },
+        { id: 'high', name: 'High', description: 'Critical component' },
+        { id: 'extreme', name: 'Extreme', description: 'Mission-critical component' }
+      ];
+
       const [tolerances, finishes, industries, certifications, criticality] = await Promise.all([
-        tolerancesRes.json(),
-        finishesRes.json(),
-        industriesRes.json(),
-        certificationsRes.json(),
-        criticalityRes.json()
+        tolerancesRes.ok ? tolerancesRes.json() : Promise.resolve(mockTolerances),
+        finishesRes.ok ? finishesRes.json() : Promise.resolve(mockFinishes),
+        industriesRes.ok ? industriesRes.json() : Promise.resolve(mockIndustries),
+        certificationsRes.ok ? certificationsRes.json() : Promise.resolve(mockCertifications),
+        criticalityRes.ok ? criticalityRes.json() : Promise.resolve(mockCriticality)
       ]);
 
       setOptions({
@@ -145,6 +206,13 @@ export default function DFMAnalysisPage() {
     setFormData(prev => ({ ...prev, cadFile: file }));
     setError(null);
   }, []);
+
+  const handleFileInput = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      handleFileSelect(file);
+    }
+  }, [handleFileSelect]);
 
   const handleDrag = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -357,13 +425,13 @@ export default function DFMAnalysisPage() {
                               <span className="mt-2 block text-sm font-medium text-gray-900">
                                 Drop your CAD file here, or{' '}
                                 <span className="text-blue-600 hover:text-blue-500">browse</span>
-                              </span>
-                            </label>
-                            <input
-                              id="cadFile"
-                              name="cadFile"
-                              type="file"
-                              className="sr-only"
+                      <SelectContent>
+                        {(options?.tolerances || []).map((tolerance) => (
+                          <SelectItem key={tolerance.id} value={tolerance.id}>
+                            {tolerance.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>e="sr-only"
                               accept={ACCEPTED_FILE_TYPES.join(',')}
                               onChange={handleFileInput}
                             />
@@ -377,13 +445,13 @@ export default function DFMAnalysisPage() {
                   </div>
 
                   {/* Tolerance Pack */}
-                  <div>
-                    <Label htmlFor="tolerancePack">Part Tolerance *</Label>
-                    <Select
-                      value={formData.tolerancePack}
-                      onValueChange={(value) => setFormData(prev => ({ ...prev, tolerancePack: value }))}
-                    >
-                      <SelectTrigger>
+                      <SelectContent>
+                        {(options?.finishes || []).map((finish) => (
+                          <SelectItem key={finish.id} value={finish.id}>
+                            {finish.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
                         <SelectValue placeholder="Select tolerance pack" />
                       </SelectTrigger>
                       <SelectContent>
@@ -427,7 +495,7 @@ export default function DFMAnalysisPage() {
                         <SelectValue placeholder="Select industry" />
                       </SelectTrigger>
                       <SelectContent>
-                        {options?.industries.map((industry) => (
+                        {(options?.industries || []).map((industry) => (
                           <SelectItem key={industry.id} value={industry.id}>
                             {industry.name}
                           </SelectItem>
@@ -440,7 +508,7 @@ export default function DFMAnalysisPage() {
                   <div>
                     <Label>Required Certifications</Label>
                     <div className="mt-2 space-y-2">
-                      {options?.certifications.map((cert) => (
+                      {(options?.certifications || []).map((cert) => (
                         <div key={cert.id} className="flex items-center space-x-2">
                           <Checkbox
                             id={cert.id}
@@ -468,7 +536,7 @@ export default function DFMAnalysisPage() {
                         <SelectValue placeholder="Select criticality" />
                       </SelectTrigger>
                       <SelectContent>
-                        {options?.criticality.map((level) => (
+                        {(options?.criticality || []).map((level) => (
                           <SelectItem key={level.id} value={level.id}>
                             {level.name}
                           </SelectItem>

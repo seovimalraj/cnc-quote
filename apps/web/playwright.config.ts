@@ -23,7 +23,7 @@ const config: PlaywrightTestConfig = {
   /* Shared settings for all the projects below. */
   use: {
     /* Base URL to use in actions like `await page.goto('/')`. */
-    baseURL: process.env.FRONTEND_URL || 'http://localhost:3000',
+    baseURL: process.env.FRONTEND_URL || 'http://localhost:3002',
 
     /* Collect artifacts on failure */
     trace: 'retain-on-failure',
@@ -34,8 +34,8 @@ const config: PlaywrightTestConfig = {
     screenshot: 'only-on-failure',
   },
   webServer: {
-    command: 'pnpm start',
-    url: 'http://localhost:3000',
+    command: 'npm run dev',
+    url: 'http://localhost:3002',
     reuseExistingServer: !process.env.CI,
   },
 };

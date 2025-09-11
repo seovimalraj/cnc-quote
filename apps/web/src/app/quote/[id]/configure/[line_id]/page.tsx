@@ -15,7 +15,7 @@ import {
   ArrowLeftIcon,
   CubeIcon,
   DocumentIcon,
-  SaveIcon,
+  CheckIcon,
   ArrowPathIcon,
   CheckCircleIcon
 } from '@heroicons/react/24/outline';
@@ -306,7 +306,7 @@ export default function ConfigurePartPage() {
                 </div>
               )}
               <Button onClick={handleSave}>
-                <SaveIcon className="w-4 h-4 mr-2" />
+                <CheckIcon className="w-4 h-4 mr-2" />
                 Save & Return
               </Button>
             </div>
@@ -552,17 +552,17 @@ export default function ConfigurePartPage() {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   <div>
                     <h4 className="font-medium text-gray-900 mb-2">Unit Price</h4>
-                    <p className="text-2xl font-bold text-green-600">${pricePreview.unit_price.toFixed(2)}</p>
+                    <p className="text-2xl font-bold text-green-600">${(pricePreview?.unit_price || 0).toFixed(2)}</p>
                     <p className="text-sm text-gray-600">per part</p>
                   </div>
                   <div>
                     <h4 className="font-medium text-gray-900 mb-2">Total Price</h4>
-                    <p className="text-2xl font-bold">${(pricePreview.unit_price * specs.quantity).toFixed(2)}</p>
+                    <p className="text-2xl font-bold">${((pricePreview?.unit_price || 0) * specs.quantity).toFixed(2)}</p>
                     <p className="text-sm text-gray-600">for {specs.quantity} parts</p>
                   </div>
                   <div>
                     <h4 className="font-medium text-gray-900 mb-2">Cycle Time</h4>
-                    <p className="text-lg font-semibold">{pricePreview.cycle_time_min} min</p>
+                    <p className="text-lg font-semibold">{pricePreview?.cycle_time_min || 0} min</p>
                     <p className="text-sm text-gray-600">per part</p>
                   </div>
                 </div>

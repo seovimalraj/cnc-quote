@@ -19,6 +19,8 @@ import {
   CogIcon,
   ShoppingCartIcon
 } from '@heroicons/react/24/outline';
+import Model3DViewer from '@/components/Model3DViewer';
+import InlinePartConfiguration from '@/components/InlinePartConfiguration';
 
 interface Quote {
   id: string;
@@ -337,7 +339,7 @@ export default function QuotePage() {
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center justify-between">
-                  Parts ({quote.lines.length})
+                  Parts ({quote.lines?.length || 0})
                   <Button size="sm" variant="outline">
                     <DocumentIcon className="w-4 h-4 mr-2" />
                     Add Parts
@@ -345,7 +347,7 @@ export default function QuotePage() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                {quote.lines.map((line) => (
+                {(quote.lines || []).map((line) => (
                   <div
                     key={line.id}
                     className={`p-3 rounded-lg border cursor-pointer transition-colors ${
@@ -396,14 +398,23 @@ export default function QuotePage() {
                   </TabsList>
 
                   <TabsContent value="viewer" className="mt-4">
-                    <div className="bg-gray-100 rounded-lg h-96 flex items-center justify-center">
-                      <div className="text-center">
-                        <CubeIcon className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                        <p className="text-gray-600">3D Viewer</p>
-                        <p className="text-sm text-gray-500 mt-2">
-                          Interactive 3D model viewer will be implemented here
-                        </p>
-                      </div>
+                    <div className="h-96">
+                      {selectedLineId ? (
+                        <Model3DViewer
+                          fileName={quote.lines.find(l => l.id === selectedLineId)?.fileName}
+                          fileType="CAD Model"
+                        />
+                      ) : (
+                        <div className="bg-gray-100 rounded-lg h-full flex items-center justify-center">
+                          <div className="text-center">
+                            <CubeIcon className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                            <p className="text-gray-600">3D Viewer</p>
+                            <p className="text-sm text-gray-500 mt-2">
+                              Select a part to view its 3D model
+                            </p>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </TabsContent>
 
@@ -525,7 +536,7 @@ export default function QuotePage() {
                 <CardContent className="space-y-4">
                   <div className="flex justify-between items-center">
                     <span className="text-gray-600">Subtotal</span>
-                    <span className="text-2xl font-bold">${quote.subtotal.toFixed(2)}</span>
+                    <span className="text-2xl font-bold">${(quote.subtotal || 0).toFixed(2)}</span>
                   </div>
 
                   {hasDfmBlockers && (
@@ -557,6 +568,18 @@ export default function QuotePage() {
             </div>
           </div>
         </div>
+
+        {/* Inline Part Configuration */}
+        {selectedLineId && (
+          <InlinePartConfiguration
+            quoteId={quoteId}
+            lineId={selectedLineId}
+            onSpecsChange={() => {
+              // Refresh quote data when specs change
+              loadQuote();
+            }}
+          />
+        )}
       </div>
     </div>
   );

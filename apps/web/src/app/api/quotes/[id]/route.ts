@@ -135,29 +135,75 @@ export async function GET(
   try {
     const quoteId = params.id;
 
+    // Generate dynamic mock data based on quote ID
+    const seed = quoteId.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    const randomPrice = Math.floor((seed % 400) + 100); // $100-$500 range
+    const randomQty = Math.floor((seed % 20) + 1); // 1-20 quantity
+
+    // Mock file names based on seed
+    const fileNames = ['bracket.step', 'housing.stl', 'mount.iges', 'plate.dxf', 'cover.x_t'];
+    const fileName = fileNames[seed % fileNames.length];
+
     // In a real implementation, this would fetch from your database
-    // For now, we'll return mock data that simulates progress
+    // For now, we'll return dynamic mock data
     const mockQuote = {
       id: quoteId,
-      status: 'draft',
-      estimatedPrice: Math.floor(Math.random() * 500) + 100,
-      estimatedTime: `${Math.floor(Math.random() * 14) + 1} days`,
+      status: 'Priced',
+      subtotal: randomPrice * randomQty,
+      currency: 'USD',
       lines: [
         {
           id: 'line-1',
-          status: 'completed',
-          fileName: 'part1.step',
-          analysis: {
-            volume: 125.5,
-            surfaceArea: 890.2,
-            boundingBox: { x: 50, y: 30, z: 20 }
+          fileId: `file-${quoteId}`,
+          fileName: fileName,
+          process: 'CNC',
+          material: 'Aluminum 6061',
+          finish: 'Anodized',
+          qty: randomQty,
+          status: 'Priced',
+          pricingBreakdown: {
+            setup_time_min: 30,
+            cycle_time_min: 15,
+            machine_rate_per_hr: 75,
+            material_buy_cost: randomPrice * 0.4,
+            material_waste_factor: 1.1,
+            tooling_wear_cost: randomPrice * 0.05,
+            finish_cost: randomPrice * 0.1,
+            inspection_cost: randomPrice * 0.1,
+            risk_adder: randomPrice * 0.05,
+            overhead: randomPrice * 0.2,
+            margin: randomPrice * 0.15,
+            unit_price: randomPrice
           },
-          pricing: {
-            basePrice: 150,
-            materialCost: 25,
-            laborCost: 75,
-            totalPrice: 250
-          }
+          leadTimeOptions: [
+            {
+              id: 'usa-expedite',
+              region: 'USA',
+              speed: 'Expedite',
+              business_days: 3,
+              unit_price: randomPrice * 1.5,
+              msrp: randomPrice * 1.8,
+              savings_text: `Save $${(randomPrice * 0.3).toFixed(2)}`
+            },
+            {
+              id: 'usa-standard',
+              region: 'USA',
+              speed: 'Standard',
+              business_days: 7,
+              unit_price: randomPrice * 1.2,
+              msrp: randomPrice * 1.5,
+              savings_text: `Save $${(randomPrice * 0.3).toFixed(2)}`
+            },
+            {
+              id: 'usa-economy',
+              region: 'USA',
+              speed: 'Economy',
+              business_days: 14,
+              unit_price: randomPrice,
+              msrp: randomPrice * 1.2,
+              savings_text: `Save $${(randomPrice * 0.2).toFixed(2)}`
+            }
+          ]
         }
       ],
       createdAt: new Date().toISOString(),

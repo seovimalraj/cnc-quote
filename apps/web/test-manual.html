@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CNC Quote - Manual Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ccc; border-radius: 5px; }
+        .success { background-color: #d4edda; border-color: #c3e6cb; }
+        .error { background-color: #f8d7da; border-color: #f5c6cb; }
+        .warning { background-color: #fff3cd; border-color: #ffeaa7; }
+        button { padding: 10px 15px; margin: 5px; cursor: pointer; }
+        pre { background: #f5f5f5; padding: 10px; border-radius: 3px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>CNC Quote - Manual Testing</h1>
+
+    <div class="test-section">
+        <h2>1. Page Load Test</h2>
+        <button onclick="testPageLoad()">Test Page Load</button>
+        <div id="pageLoadResult"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>2. File Upload API Test</h2>
+        <button onclick="testFileUploadAPI()">Test File Upload API</button>
+        <div id="fileUploadResult"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>3. Quote Creation API Test</h2>
+        <button onclick="testQuoteCreationAPI()">Test Quote Creation API</button>
+        <div id="quoteCreationResult"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>4. Manual File Upload Test</h2>
+        <p>Open <a href="http://localhost:3004/instant-quote" target="_blank">http://localhost:3004/instant-quote</a> in a new tab</p>
+        <ol>
+            <li>Try uploading a file (any small file)</li>
+            <li>Check browser console for errors</li>
+            <li>Check network tab for failed requests</li>
+            <li>Note any error messages displayed on the page</li>
+        </ol>
+    </div>
+
+    <div class="test-section">
+        <h2>5. Console Output</h2>
+        <div id="consoleOutput"></div>
+    </div>
+
+    <script>
+        // Override console.log to capture output
+        const originalLog = console.log;
+        const originalError = console.error;
+        let consoleOutput = [];
+
+        console.log = function(...args) {
+            consoleOutput.push(['log', ...args]);
+            originalLog.apply(console, args);
+            updateConsoleOutput();
+        };
+
+        console.error = function(...args) {
+            consoleOutput.push(['error', ...args]);
+            originalError.apply(console, args);
+            updateConsoleOutput();
+        };
+
+        function updateConsoleOutput() {
+            const output = document.getElementById('consoleOutput');
+            output.innerHTML = consoleOutput.slice(-10).map(([type, ...args]) =>
+                `<div class="${type === 'error' ? 'error' : ''}">${type.toUpperCase()}: ${args.join(' ')}</div>`
+            ).join('');
+        }
+
+        async function testPageLoad() {
+            const result = document.getElementById('pageLoadResult');
+            result.innerHTML = 'Testing...';
+
+            try {
+                const response = await fetch('http://localhost:3004/instant-quote');
+                if (response.ok) {
+                    const html = await response.text();
+                    const hasUpload = html.includes('upload') || html.includes('file') || html.includes('drop');
+                    const hasErrors = html.includes('error') || html.includes('Error');
+
+                    result.innerHTML = `
+                        <div class="success">
+                            ✅ Page loads successfully<br>
+                            📁 File upload elements: ${hasUpload ? 'Found' : 'Not found'}<br>
+                            ❌ Error messages: ${hasErrors ? 'Found' : 'None'}
+                        </div>
+                    `;
+                } else {
+                    result.innerHTML = `<div class="error">❌ Page failed to load: ${response.status}</div>`;
+                }
+            } catch (error) {
+                result.innerHTML = `<div class="error">❌ Network error: ${error.message}</div>`;
+            }
+        }
+
+        async function testFileUploadAPI() {
+            const result = document.getElementById('fileUploadResult');
+            result.innerHTML = 'Testing...';
+
+            try {
+                const response = await fetch('http://localhost:3004/api/files/upload', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        fileName: 'test.stl',
+                        fileSize: 1024,
+                        contentType: 'model/stl'
+                    })
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    result.innerHTML = `
+                        <div class="success">
+                            ✅ File upload API works<br>
+                            📄 File ID: ${data.fileId || 'N/A'}<br>
+                            🔗 Signed URL: ${data.signedUrl ? 'Generated' : 'Missing'}
+                        </div>
+                    `;
+                } else {
+                    const error = await response.text();
+                    result.innerHTML = `<div class="error">❌ API failed: ${response.status} - ${error}</div>`;
+                }
+            } catch (error) {
+                result.innerHTML = `<div class="error">❌ Network error: ${error.message}</div>`;
+            }
+        }
+
+        async function testQuoteCreationAPI() {
+            const result = document.getElementById('quoteCreationResult');
+            result.innerHTML = 'Testing...';
+
+            try {
+                const response = await fetch('http://localhost:3004/api/quotes', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        source: 'web',
+                        guestEmail: null
+                    })
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    result.innerHTML = `
+                        <div class="success">
+                            ✅ Quote creation API works<br>
+                            🆔 Quote ID: ${data.id || 'N/A'}<br>
+                            💰 Price: ${data.totalValue || 'Not set'}<br>
+                            📊 Status: ${data.status || 'N/A'}
+                        </div>
+                    `;
+                } else {
+                    const error = await response.text();
+                    result.innerHTML = `<div class="error">❌ API failed: ${response.status} - ${error}</div>`;
+                }
+            } catch (error) {
+                result.innerHTML = `<div class="error">❌ Network error: ${error.message}</div>`;
+            }
+        }
+
+        // Auto-run page load test
+        setTimeout(testPageLoad, 1000);
+    </script>
+</body>
+</html>

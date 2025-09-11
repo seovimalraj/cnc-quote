@@ -1281,14 +1281,6 @@ const AdminDashboard = () => {
   const [isSavingPricing, setIsSavingPricing] = useState(false);
   const [hasPricingChanges, setHasPricingChanges] = useState(false);
   const [lastPricingSaved, setLastPricingSaved] = useState<Date | null>(null);
-  materials: Record<string, MaterialConfig>;
-  finishes: Record<string, FinishConfig>;
-  tolerance_packs: Record<string, TolerancePackConfig>;
-  inspection: InspectionConfig;
-  speed_region: Record<string, Record<string, SpeedRegionConfig>>;
-  risk_matrix: Record<string, RiskConfig>;
-  overhead_margin: OverheadMarginConfig;
-}
 
 interface MachineConfig {
   axes: number;
@@ -1345,9 +1337,7 @@ interface RiskConfig {
   time_multiplier: number;
   risk_percent?: number;
   risk_flat?: number;
-
-  const [activeTab, setActiveTab] = useState('quotes');
-  const [selectedQuote, setSelectedQuote] = useState<Quote | null>(null);
+}
 
   // Mock data
   const quotes: Quote[] = [

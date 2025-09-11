@@ -35,7 +35,7 @@
     "bull": "^4.16.5",
     "file-type": "^21.0.0",
     "posthog-node": "^3.1.2",
-    "puppeteer": "^21.1.1",
+    "puppeteer": "^24.20.0",
     "stripe": "^13.5.0",
     "zod": "^3.22.4"
   },
