@@ -10,7 +10,7 @@ importers:
     dependencies:
       '@nestjs/axios':
         specifier: ^4.0.1
-        version: 4.0.1(@nestjs/common@10.4.20)(axios@1.11.0)(rxjs@7.8.2)
+        version: 4.0.1(@nestjs/common@10.4.20)(axios@1.12.0)(rxjs@7.8.2)
       '@nestjs/bull':
         specifier: ^10.2.3
         version: 10.2.3(@nestjs/common@10.4.20)(@nestjs/core@10.4.20)(bull@4.16.5)
@@ -21,8 +21,8 @@ importers:
         specifier: ^2.33.2
         version: 2.57.4
       axios:
-        specifier: ^1.5.0
-        version: 1.11.0
+        specifier: ^1.12.0
+        version: 1.12.0
       bull:
         specifier: ^4.16.5
         version: 4.16.5
@@ -172,8 +172,8 @@ importers:
         specifier: ^6.0.3
         version: 6.0.3
       axios:
-        specifier: ^1.5.0
-        version: 1.11.0
+        specifier: ^1.12.0
+        version: 1.12.0
       body-parser:
         specifier: ^2.2.0
         version: 2.2.0
@@ -434,8 +434,8 @@ importers:
         specifier: ^3.42.0
         version: 3.54.1
       axios:
-        specifier: ^1.11.0
-        version: 1.11.0
+        specifier: ^1.12.0
+        version: 1.12.0
       class-variance-authority:
         specifier: ^0.7.1
         version: 0.7.1
@@ -2945,7 +2945,7 @@ packages:
     dev: true
     optional: true
 
-  /@nestjs/axios@4.0.1(@nestjs/common@10.4.20)(axios@1.11.0)(rxjs@7.8.2):
+  /@nestjs/axios@4.0.1(@nestjs/common@10.4.20)(axios@1.12.0)(rxjs@7.8.2):
     resolution: {integrity: sha512-68pFJgu+/AZbWkGu65Z3r55bTsCPlgyKaV4BSG8yUAD72q1PPuyVRgUwFv6BxdnibTUHlyxm06FmYWNC+bjN7A==}
     peerDependencies:
       '@nestjs/common': ^10.0.0 || ^11.0.0
@@ -2953,7 +2953,7 @@ packages:
       rxjs: ^7.0.0
     dependencies:
       '@nestjs/common': 10.4.20(class-transformer@0.5.1)(class-validator@0.14.2)(reflect-metadata@0.1.14)(rxjs@7.8.2)
-      axios: 1.11.0
+      axios: 1.12.0
       rxjs: 7.8.2
     dev: false
 
@@ -3300,7 +3300,7 @@ packages:
       typeorm:
         optional: true
     dependencies:
-      '@nestjs/axios': 4.0.1(@nestjs/common@10.4.20)(axios@1.11.0)(rxjs@7.8.2)
+      '@nestjs/axios': 4.0.1(@nestjs/common@10.4.20)(axios@1.12.0)(rxjs@7.8.2)
       '@nestjs/common': 10.4.20(class-transformer@0.5.1)(class-validator@0.14.2)(reflect-metadata@0.1.14)(rxjs@7.8.2)
       '@nestjs/core': 10.4.20(@nestjs/common@10.4.20)(@nestjs/platform-express@10.4.20)(reflect-metadata@0.1.14)(rxjs@7.8.2)
       '@nestjs/typeorm': 11.0.0(@nestjs/common@10.4.20)(@nestjs/core@10.4.20)(reflect-metadata@0.1.14)(rxjs@7.8.2)(typeorm@0.3.26)
@@ -5831,7 +5831,7 @@ packages:
       '@slack/types': 2.16.0
       '@types/node': 20.6.2
       '@types/retry': 0.12.0
-      axios: 1.11.0
+      axios: 1.12.0
       eventemitter3: 5.0.1
       form-data: 4.0.4
       is-electron: 2.2.2
@@ -7852,8 +7852,8 @@ packages:
     engines: {node: '>=4'}
     dev: true
 
-  /axios@1.11.0:
-    resolution: {integrity: sha512-1Lx3WLFQWm3ooKDYZD1eXmoGO9fxYQjrycfHFC8P0sCfQVXyROp0p9PFWBehewBOdCwHc+f/b8I0fMto5eSfwA==}
+  /axios@1.12.0:
+    resolution: {integrity: sha512-oXTDccv8PcfjZmPGlWsPSwtOJCZ/b6W5jAMCNcfwJbCzDckwG0jrYJFaWH1yvivfCXjVzV/SPDEhMB3Q+DSurg==}
     dependencies:
       follow-redirects: 1.15.11
       form-data: 4.0.4
@@ -7959,8 +7959,8 @@ packages:
     dev: false
     optional: true
 
-  /bare-fs@4.4.1:
-    resolution: {integrity: sha512-B7VdbD19fypJh6jCXgYge06pxj3UvMv+x8IOZjTSqpiy/ib3UHhwe8Zm7wqxHe7QI3CrySjui4YIRBvocuBthg==}
+  /bare-fs@4.4.2:
+    resolution: {integrity: sha512-W95NLMtnREWRbiHsMrR3mRC+Z1w80Tb3y4W2v3Sszwh+M6ll0Ss16l5Zc0LLt3FqoLYn88tqp1PipFSGlt26sA==}
     engines: {bare: '>=1.16.0'}
     requiresBuild: true
     peerDependencies:
@@ -12869,7 +12869,7 @@ packages:
     resolution: {integrity: sha512-JB+ei0LkwE+rKHyW5z79Nd1jUaGxU6TvkfjFqY9vQaHxU5aU8dRl0UUaEmZdZbHwjp3WmXCBQQRNyimwbNQfCw==}
     engines: {node: '>=15.0.0'}
     dependencies:
-      axios: 1.11.0
+      axios: 1.12.0
       rusha: 0.8.14
     transitivePeerDependencies:
       - debug
@@ -14428,7 +14428,7 @@ packages:
       pump: 3.0.3
       tar-stream: 3.1.7
     optionalDependencies:
-      bare-fs: 4.4.1
+      bare-fs: 4.4.2
       bare-path: 3.0.0
     transitivePeerDependencies:
       - bare-buffer
