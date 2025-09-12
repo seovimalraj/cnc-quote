@@ -405,6 +405,13 @@ export class QapService {
         );
       }
 
+      return documents || [];
+    } catch (error) {
+      this.logger.error(`Error getting order QAP documents for order ${orderId}:`, error);
+      throw new QapInvalidDataException(error.message);
+    }
+  }
+
   async generateDfmQapDocument(data: {
     dfmRequestId: string;
     criticality: string;
@@ -951,3 +958,4 @@ export class QapService {
 
     return html;
   }
+}

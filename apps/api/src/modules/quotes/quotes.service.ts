@@ -16,18 +16,6 @@ export class QuotesService {
     this.resend = new Resend(process.env.RESEND_API_KEY);
   }
 
-@Injectable()
-export class QuotesService {
-  private readonly logger = new Logger(QuotesService.name);
-  private readonly resend: Resend;
-
-  constructor(
-    private readonly supabase: SupabaseService,
-    // private readonly pdfService: PdfService,
-  ) {
-    this.resend = new Resend(process.env.RESEND_API_KEY);
-  }
-
   async createQuoteFromDfm(dfmRequestId: string) {
     this.logger.log(`Creating quote from DFM request: ${dfmRequestId}`);
 
@@ -219,60 +207,9 @@ export class QuotesService {
   async generatePdf(_id: string): Promise<Buffer> {
     // PDF generation temporarily disabled
     throw new Error("PDF generation is temporarily disabled");
-    // const quote = await this.getQuote(id);
-
-    // Get org details
-    // const { data: org } = await this.supabase.client.from("organizations").select("*").eq("id", quote.org_id).single();
-
-    // Get customer details
-    // const { data: customer } = await this.supabase.client
-    //   .from("customers")
-    //   .select("*")
-    //   .eq("id", quote.customer_id)
-    //   .single();
-
-    // Format items
-    // const items = await Promise.all(
-    //   quote.items.map(async (item) => {
-    //     const [{ data: material }, { data: file }] = await Promise.all([
-    //       this.supabase.client.from("materials").select("*").eq("id", item.material_id).single(),
-    //       this.supabase.client.from("files").select("*").eq("id", item.file_id).single(),
-    //     ]);
-
-    //     return {
-    //       ...item,
-    //       file_name: file.name,
-    //       material: material.name,
-    //       finishes: [], // TODO: Get finish names
-    //     };
-    //   }),
-    // );
-
-    // return this.pdfService.generateQuotePDF({
-    //   id,
-    //   org: {
-    //     name: org.name,
-    //     logo_url: org.logo_url,
-    //     address: org.address,
-    //   },
-    //   customer: {
-    //     name: customer.name,
-    //     address: customer.address,
-    //   },
-    //   quote_number: `Q-${id.slice(0, 8)}`,
-    //   created_at: quote.created_at,
-    //   expires_at: quote.expires_at,
-    //   total_amount: quote.total_amount,
-    //   currency: quote.currency,
-    //   items,
-    // });
-    //   terms: quote.terms,
-    //   notes: quote.notes,
-    // });
   }
 
   async sendQuote(id: string, email: string) {
-    // const pdf = await this.generatePdf(id);
     const quote = await this.getQuote(id);
 
     // Generate secure accept link
@@ -291,17 +228,23 @@ export class QuotesService {
         <p><a href="${acceptUrl}">View and Accept Quote</a></p>
         <p>Note: PDF attachment is temporarily disabled.</p>
       `,
-      // attachments: [
-      //   {
-      //     filename: `quote-${id}.pdf`,
-      //     content: pdf,
-      //   },
-      // ],
     });
   }
 
   private async generateAcceptToken(quoteId: string): Promise<string> {
     // TODO: Implement secure token generation
     return Buffer.from(`${quoteId}-${Date.now()}`).toString("base64");
+  }
+
+  // Helper method to create a quote (placeholder)
+  private async createQuote(quoteData: any) {
+    const { data: quote, error } = await this.supabase.client
+      .from('quotes')
+      .insert(quoteData)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return quote;
   }
 }

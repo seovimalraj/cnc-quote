@@ -2,11 +2,12 @@ const nextConfig = {
   reactStrictMode: true,
   output: 'standalone',
   experimental: {
-    appDir: true,
-    serverActions: true,
-    serverComponentsExternalPackages: [],
+    serverActions: {
+      allowedOrigins: ['localhost:3000', 'cnc-quote-web.onrender.com']
+    },
     forceSwcTransforms: true,
   },
+  serverExternalPackages: [],
   typescript: {
     ignoreBuildErrors: true,
   },
