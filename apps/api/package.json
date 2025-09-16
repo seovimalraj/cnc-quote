@@ -55,7 +55,7 @@
     "@types/pdfkit": "^0.17.2",
     "@types/redis": "^4.0.11",
     "@types/supertest": "^6.0.3",
-    "axios": "^1.5.0",
+    "axios": "^1.12.0",
     "body-parser": "^2.2.0",
     "bullmq": "^4.18.3",
     "cache-manager": "^7.2.0",
