@@ -58,6 +58,7 @@ export class NotifyService {
         to: message.recipientEmail,
         subject: message.subject,
         text: message.body,
+        html: message.html,
       });
     }
 
@@ -69,7 +70,7 @@ export class NotifyService {
     }
   }
 
-  private async sendEmail(options: { to: string; subject: string; text: string }): Promise<void> {
+  async sendEmail(options: { to: string; subject: string; text: string; html?: string }): Promise<void> {
     await this.transporter.sendMail({
       from: this.configService.get("SMTP_FROM"),
       ...options,

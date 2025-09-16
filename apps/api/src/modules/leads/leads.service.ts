@@ -1,5 +1,5 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
-import { SupabaseService } from '../../lib/supabase.service';
+import { SupabaseService } from '../../lib/supabase/supabase.service';
 import { AuthService } from '../auth/auth.service';
 import { CreateLeadDto } from './dto/create-lead.dto';
 
@@ -11,7 +11,7 @@ export class LeadsService {
   ) {}
 
   async createLead(createLeadDto: CreateLeadDto, ip: string) {
-    const supabase = this.supabaseService.getClient();
+    const supabase = this.supabaseService.client;
 
     // Rate limiting: 5 submissions per hour per IP+email combination
     const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
@@ -98,7 +98,7 @@ export class LeadsService {
       organizationId = null; // Will be set by AuthService
 
       // Get the user ID from the invite
-      const supabase = this.supabaseService.getClient();
+      const supabase = this.supabaseService.client;
       const { data: inviteData, error: inviteDataError } = await supabase
         .from('user_invites')
         .select('user_id, organization_id')

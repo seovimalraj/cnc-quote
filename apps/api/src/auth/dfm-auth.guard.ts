@@ -35,7 +35,7 @@ export class DfmAuthGuard implements CanActivate {
 
       if (sessionToken) {
         try {
-          const supabase = this.supabaseService.getClient();
+          const supabase = this.supabaseService.client;
 
           const { data: session, error } = await supabase
             .from('user_sessions')

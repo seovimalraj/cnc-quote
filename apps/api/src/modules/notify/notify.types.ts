@@ -31,6 +31,7 @@ export interface ReviewNotification {
 export interface NotificationMessage {
   subject: string;
   body: string;
+  html?: string;
   recipientEmail?: string;
   slackChannel?: string;
 }

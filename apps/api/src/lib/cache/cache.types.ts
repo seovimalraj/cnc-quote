@@ -9,7 +9,7 @@ export interface RedisCache extends Cache {
 
 export interface RedisClientStore {
   client: RedisClient;
-  options: Record<string, unknown>; // RedisClientOptions;
+  options: any; // RedisClientOptions;
   name: string;
   getClient(): Promise<RedisClient>;
   set<T>(key: string, value: T, ttl?: number): Promise<void>;

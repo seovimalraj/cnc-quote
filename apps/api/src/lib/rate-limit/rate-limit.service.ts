@@ -31,7 +31,7 @@ export class RateLimitService {
         return { allowed: true };
       }
 
-      const supabase = this.supabaseService.getClient();
+      const supabase = this.supabaseService.client;
 
       // Call the database function to check rate limit
       const { data, error } = await supabase.rpc('check_rate_limit', {
@@ -79,7 +79,7 @@ export class RateLimitService {
         return null;
       }
 
-      const supabase = this.supabaseService.getClient();
+      const supabase = this.supabaseService.client;
       const windowStart = new Date();
       windowStart.setMinutes(windowStart.getMinutes() - config.windowMinutes);
 

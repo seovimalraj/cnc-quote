@@ -1,6 +1,6 @@
 import { Injectable, NestMiddleware, UnauthorizedException } from '@nestjs/common';
 import { Request, Response, NextFunction } from 'express';
-import { SupabaseService } from '../lib/supabase.service';
+import { SupabaseService } from '../lib/supabase/supabase.service';
 
 @Injectable()
 export class SessionValidationMiddleware implements NestMiddleware {
@@ -15,7 +15,7 @@ export class SessionValidationMiddleware implements NestMiddleware {
       throw new UnauthorizedException('Session token required');
     }
 
-    const supabase = this.supabaseService.getClient();
+    const supabase = this.supabaseService.client;
 
     // Validate session token
     const { data: session, error } = await supabase

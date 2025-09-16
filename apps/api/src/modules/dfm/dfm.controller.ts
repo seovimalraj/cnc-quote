@@ -4,7 +4,7 @@ import { DfmAuthGuard } from "../../auth/dfm-auth.guard";
 import { AllowSession } from "../../auth/allow-session.decorator";
 import { User } from "../../auth/user.decorator";
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery, ApiParam } from "@nestjs/swagger";
-import { SupabaseService } from "../../lib/supabase.service";
+import { SupabaseService } from "../../lib/supabase/supabase.service";
 import { AnalyticsService } from "../analytics/analytics.service";
 import { RateLimitService } from "../../lib/rate-limit/rate-limit.service";
 import { Request } from "express";
@@ -443,7 +443,7 @@ export class DfmController {
       throw new UnauthorizedException('Session token required');
     }
 
-    const supabase = this.supabaseService.getClient();
+    const supabase = this.supabaseService.client;
 
     // Validate session token
     const { data: session, error } = await supabase

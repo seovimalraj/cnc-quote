@@ -679,6 +679,18 @@ export type RiskRule = z.infer<typeof RiskRuleSchema>;
 export type TimeStudy = z.infer<typeof TimeStudySchema>;
 export type MLSuggestion = z.infer<typeof MLSuggestionSchema>;
 
+// Catalog Management Types
+export type Machine = z.infer<typeof MachineSchema>;
+export type Material = z.infer<typeof MaterialSchema>;
+export type Finish = z.infer<typeof FinishSchema>;
+export type InspectionTemplate = z.infer<typeof InspectionTemplateSchema>;
+export type QAPTemplate = z.infer<typeof QAPTemplateSchema>;
+
+// Finance Types
+export type WebhookEvent = z.infer<typeof WebhookEventSchema>;
+export type Refund = z.infer<typeof RefundSchema>;
+export type FinanceSettings = z.infer<typeof FinanceSettingsSchema>;
+
 // Catalog Management Schemas
 export const MachineSchema = z.object({
   id: z.string().uuid(),

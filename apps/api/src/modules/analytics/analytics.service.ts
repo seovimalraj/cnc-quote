@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { SupabaseService } from '../lib/supabase/supabase.service';
+import { SupabaseService } from '../../lib/supabase/supabase.service';
 
 export interface DfmAnalyticsEvent {
   event: string;
@@ -21,7 +21,7 @@ export class AnalyticsService {
 
   async trackDfmEvent(event: DfmAnalyticsEvent): Promise<void> {
     try {
-      const supabase = this.supabaseService.getClient();
+      const supabase = this.supabaseService.client;
 
       const { error } = await supabase
         .from('analytics_events')

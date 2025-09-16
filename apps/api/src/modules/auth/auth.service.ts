@@ -21,7 +21,7 @@ export class AuthService {
   ) {}
 
   async sendInvite(dto: SendInviteDto, invitedBy: any): Promise<InviteResponseDto> {
-    const supabase = this.supabaseService.getClient();
+    const supabase = this.supabaseService.client;
 
     // Rate limiting: 3 invites per hour per email
     const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
@@ -140,7 +140,7 @@ export class AuthService {
   }
 
   async acceptInvite(dto: AcceptInviteDto): Promise<AcceptInviteResponseDto> {
-    const supabase = this.supabaseService.getClient();
+    const supabase = this.supabaseService.client;
 
     // Verify token
     const { data: invite, error: inviteError } = await supabase
@@ -227,7 +227,7 @@ export class AuthService {
   }
 
   async resendInvite(dto: ResendInviteDto, user: any): Promise<void> {
-    const supabase = this.supabaseService.getClient();
+    const supabase = this.supabaseService.client;
 
     // Find the most recent pending invite
     const { data: invite, error: inviteError } = await supabase
@@ -249,7 +249,7 @@ export class AuthService {
   }
 
   async verifyInviteToken(token: string): Promise<VerifyInviteResponseDto> {
-    const supabase = this.supabaseService.getClient();
+    const supabase = this.supabaseService.client;
 
     const { data: invite, error: inviteError } = await supabase
       .from('user_invites')
@@ -341,7 +341,7 @@ The CNC Quote Team
   }
 
   private async mergeExistingData(userId: string, email: string): Promise<void> {
-    const supabase = this.supabaseService.getClient();
+    const supabase = this.supabaseService.client;
 
     try {
       // Update any existing leads with this email to link to the user

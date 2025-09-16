@@ -29,9 +29,9 @@ export class AccountingService {
       for (const order of orders) {
         try {
           const invoice = await this.createZohoInvoice({
-            customerId: order.customer.id,
-            customerName: order.customer.name,
-            customerEmail: order.customer.email,
+            customerId: order.customer[0]?.id || order.customer.id,
+            customerName: order.customer[0]?.name || order.customer.name,
+            customerEmail: order.customer[0]?.email || order.customer.email,
             orderId: order.id,
             amount: order.amount,
             date: order.created_at,
