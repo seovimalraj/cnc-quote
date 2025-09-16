@@ -113,7 +113,7 @@ function calculateSetupCost(flips: number, fixtures: number, qty: number): numbe
 
 function calculateCycleCost(volume_removed: number, surface_area: number, features: number, material: string, tolerance_pack: string): number {
   const machine = mockPricingConfig.machines['3-axis-milling'];
-  const feed_rate = machine.feed_rate_map[material.toLowerCase()] || 600;
+  const feed_rate = machine.feed_rate_map[(material || '').toLowerCase()] || 600;
   const tolerance_mult = mockPricingConfig.tolerance_packs[tolerance_pack]?.cycle_time_multiplier || 1.0;
 
   // Simplified cycle time calculation

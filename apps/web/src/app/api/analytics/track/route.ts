@@ -5,7 +5,7 @@ export async function POST(request: NextRequest) {
   try {
     const event = await request.json();
 
-    const supabase = createClient();
+    const supabase = await createClient();
 
     // Get the current user for organization_id
     const { data: { user } } = await supabase.auth.getUser();

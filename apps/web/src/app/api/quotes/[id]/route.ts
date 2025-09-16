@@ -130,10 +130,10 @@ const mockQuote: Quote = {
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const quoteId = params.id;
+    const { id: quoteId } = await params;
 
     // Generate dynamic mock data based on quote ID
     const seed = quoteId.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);

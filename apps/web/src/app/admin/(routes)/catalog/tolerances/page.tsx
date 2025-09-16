@@ -4,7 +4,7 @@ import { cookies } from 'next/headers'
 import { PlusIcon } from '@heroicons/react/20/solid'
 
 export default async function TolerancesPage() {
-  const supabase = createClient(cookies())
+  const supabase = await createClient()
   const { data: tolerances } = await supabase
     .from('tolerances')
     .select('*')

@@ -12,7 +12,7 @@ export async function GET(
       return NextResponse.json({ error: 'Request ID is required' }, { status: 400 });
     }
 
-    const supabase = createClient();
+    const supabase = await createClient();
 
     // Get the current user (optional for public access)
     const { data: { user } } = await supabase.auth.getUser();

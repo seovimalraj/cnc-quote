@@ -425,13 +425,13 @@ export default function DFMAnalysisPage() {
                               <span className="mt-2 block text-sm font-medium text-gray-900">
                                 Drop your CAD file here, or{' '}
                                 <span className="text-blue-600 hover:text-blue-500">browse</span>
-                      <SelectContent>
-                        {(options?.tolerances || []).map((tolerance) => (
-                          <SelectItem key={tolerance.id} value={tolerance.id}>
-                            {tolerance.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>e="sr-only"
+                              </span>
+                            </label>
+                            <input
+                              id="cadFile"
+                              name="cadFile"
+                              type="file"
+                              className="sr-only"
                               accept={ACCEPTED_FILE_TYPES.join(',')}
                               onChange={handleFileInput}
                             />
@@ -445,6 +445,29 @@ export default function DFMAnalysisPage() {
                   </div>
 
                   {/* Tolerance Pack */}
+                  <div className="space-y-2">
+                    <Label htmlFor="tolerancePack">Tolerance Pack</Label>
+                    <Select value={formData.tolerancePack} onValueChange={(value) => setFormData(prev => ({ ...prev, tolerancePack: value }))}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select tolerance pack" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {(options?.tolerances || []).map((tolerance) => (
+                          <SelectItem key={tolerance.id} value={tolerance.id}>
+                            {tolerance.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Surface Finish */}
+                  <div className="space-y-2">
+                    <Label htmlFor="surfaceFinish">Surface Finish</Label>
+                    <Select value={formData.surfaceFinish} onValueChange={(value) => setFormData(prev => ({ ...prev, surfaceFinish: value }))}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select surface finish" />
+                      </SelectTrigger>
                       <SelectContent>
                         {(options?.finishes || []).map((finish) => (
                           <SelectItem key={finish.id} value={finish.id}>
@@ -452,6 +475,14 @@ export default function DFMAnalysisPage() {
                           </SelectItem>
                         ))}
                       </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Tolerance Selection */}
+                  <div>
+                    <Label htmlFor="tolerance-select">Tolerance Pack</Label>
+                    <Select value={selectedTolerance} onValueChange={setSelectedTolerance}>
+                      <SelectTrigger>
                         <SelectValue placeholder="Select tolerance pack" />
                       </SelectTrigger>
                       <SelectContent>

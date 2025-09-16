@@ -15,7 +15,7 @@ interface InvitePageProps {
 }
 
 async function getInviteDetails(token: string) {
-  const supabase = createClient(cookies())
+  const supabase = await createClient()
 
   try {
     // In a real implementation, you'd verify the invite token

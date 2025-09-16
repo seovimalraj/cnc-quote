@@ -3,7 +3,7 @@ import { cookies } from 'next/headers'
 
 
 export default async function ManualReviewPage() {
-  const supabase = createClient(cookies())
+  const supabase = await createClient()
   
   // Get all machines with their TBD triggers
   const { data: machines } = await supabase

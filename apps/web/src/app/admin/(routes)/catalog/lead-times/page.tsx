@@ -3,7 +3,7 @@ import { cookies } from 'next/headers'
 import { PlusIcon } from '@heroicons/react/20/solid'
 
 export default async function LeadTimesPage() {
-  const supabase = createClient(cookies())
+  const supabase = await createClient()
   const { data: leadTimes } = await supabase
     .from('lead_times')
     .select('*')

@@ -1,5 +1,4 @@
 import { createClient } from '@/lib/supabase/server'
-import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
@@ -70,7 +69,7 @@ function getStatusBadge(status: string) {
 }
 
 export default async function DashboardPage() {
-  const supabase = createClient(cookies())
+  const supabase = await createClient()
 
   const { data: { user }, error } = await supabase.auth.getUser()
 

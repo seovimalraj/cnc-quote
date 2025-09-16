@@ -20,7 +20,7 @@ export default function CreateOrganizationPage() {
       redirect('/auth/create-organization?error=Organization name is required')
     }
 
-    const supabase = createClient(cookies())
+    const supabase = await createClient()
 
     try {
       // Get current user

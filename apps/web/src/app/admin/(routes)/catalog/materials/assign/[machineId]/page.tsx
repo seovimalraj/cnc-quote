@@ -7,7 +7,7 @@ export default async function AssignMaterialsPage({
 }: {
   params: { machineId: string }
 }) {
-  const supabase = createClient(cookies())
+  const supabase = await createClient()
   
   // Get machine details
   const { data: machine } = await supabase

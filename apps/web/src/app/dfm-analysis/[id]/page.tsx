@@ -539,6 +539,53 @@ export default function DFMResultsPage() {
     );
   }
 
+  // Conditional content for analysis results
+  const analysisContent = request.results ? (
+    <>
+    <Card className="mt-6">
+        <CardHeader>
+          <CardTitle>Analysis Summary</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="text-center">
+              <div className="text-2xl font-bold text-green-600">{request.results.summary.passed}</div>
+              <div className="text-sm text-gray-600">Passed</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-yellow-600">{request.results.summary.warnings}</div>
+              <div className="text-sm text-gray-600">Warnings</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-red-600">{request.results.summary.blockers}</div>
+              <div className="text-sm text-gray-600">Blockers</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-blue-600">
+                {request.results.geom_props.vol_mm3 ? (request.results.geom_props.vol_mm3 / 1000).toFixed(1) : 'N/A'}
+              </div>
+              <div className="text-sm text-gray-600">Volume (cm³)</div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Footer CTA */}
+      <div className="mt-8 text-center">
+        <Button
+          onClick={handleDownloadDFMReport}
+          disabled={isDownloadingReport || !request.results}
+          variant="outline"
+          size="lg"
+          className="flex items-center mx-auto"
+        >
+          <ArrowDownTrayIcon className="h-5 w-5 mr-2" />
+          {isDownloadingReport ? 'Generating Report...' : 'Download Complete DFM Analysis Report'}
+        </Button>
+      </div>
+    </>
+  ) : null;
+
   if (error || !request) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -787,26 +834,6 @@ export default function DFMResultsPage() {
     </div>
   );
 }
-                className="flex items-center"
-              >
-                <DocumentIcon className="h-4 w-4 mr-2" />
-                {isDownloadingQAP ? 'Downloading...' : 'Download QAP'}
-              </Button>
-              <Button
-                onClick={handleGetInstantQuote}
-                disabled={isGeneratingQuote || !request.results}
-                className="flex items-center bg-blue-600 hover:bg-blue-700"
-              >
-                <ShoppingCartIcon className="h-4 w-4 mr-2" />
-                {isGeneratingQuote ? 'Creating Quote...' : 'Get Instant Quote'}
-              </Button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Main Content Grid */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <div className="grid grid-cols-1 lg:grid-cols-7 gap-6">
           {/* 3D Viewer */}
           <div className="lg:col-span-4">
@@ -822,38 +849,6 @@ export default function DFMResultsPage() {
                       className="h-8 w-8 p-0"
                     >
                       <ArrowsPointingOutIcon className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant={viewerTool === 'pan' ? 'default' : 'outline'}
-                      size="sm"
-                      onClick={() => setViewerTool('pan')}
-                      className="h-8 w-8 p-0"
-                    >
-                      <EyeIcon className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant={viewerTool === 'zoom' ? 'default' : 'outline'}
-                      size="sm"
-                      onClick={() => setViewerTool('zoom')}
-                      className="h-8 w-8 p-0"
-                    >
-                      <MagnifyingGlassIcon className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant={viewerTool === 'section' ? 'default' : 'outline'}
-                      size="sm"
-                      onClick={() => setViewerTool('section')}
-                      className="h-8 w-8 p-0"
-                    >
-                      <ScissorsIcon className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant={viewerTool === 'measure' ? 'default' : 'outline'}
-                      size="sm"
-                      onClick={() => setViewerTool('measure')}
-                      className="h-8 w-8 p-0"
-                    >
-                      <RulerIcon className="h-4 w-4" />
                     </Button>
                   </div>
                 </div>
@@ -947,7 +942,6 @@ export default function DFMResultsPage() {
                           </div>
                           {getStatusBadge(check.status)}
                         </div>
-
                         <p className="text-sm text-gray-600 mb-2">{check.message}</p>
 
                         {expandedChecks.has(check.id) && (
@@ -991,50 +985,9 @@ export default function DFMResultsPage() {
         </div>
 
         {/* Analysis Summary */}
-        {request.results && (
-          <Card className="mt-6">
-            <CardHeader>
-              <CardTitle>Analysis Summary</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-green-600">{request.results.summary.passed}</div>
-                  <div className="text-sm text-gray-600">Passed</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-yellow-600">{request.results.summary.warnings}</div>
-                  <div className="text-sm text-gray-600">Warnings</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-red-600">{request.results.summary.blockers}</div>
-                  <div className="text-sm text-gray-600">Blockers</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-blue-600">
-                    {request.results.geom_props.vol_mm3 ? (request.results.geom_props.vol_mm3 / 1000).toFixed(1) : 'N/A'}
-                  </div>
-                  <div className="text-sm text-gray-600">Volume (cm³)</div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Footer CTA */}
-        <div className="mt-8 text-center">
-          <Button
-            onClick={handleDownloadDFMReport}
-            disabled={isDownloadingReport || !request.results}
-            variant="outline"
-            size="lg"
-            className="flex items-center mx-auto"
-          >
-            <ArrowDownTrayIcon className="h-5 w-5 mr-2" />
-            {isDownloadingReport ? 'Generating Report...' : 'Download Complete DFM Analysis Report'}
-          </Button>
+        <div className="max-w-7xl mx-auto px-6 py-8">
+          {analysisContent}
         </div>
-      </div>
 
       {/* Lead Collection Modal */}
       <Dialog open={showLeadModal} onOpenChange={setShowLeadModal}>
@@ -1112,144 +1065,6 @@ export default function DFMResultsPage() {
           </form>
         </DialogContent>
       </Dialog>
-    </div>
-  );
-}
-                Your DFM analysis has been queued and will start processing shortly.
-              </p>
-              <div className="flex items-center justify-center space-x-2">
-                <ArrowPathIcon className="h-4 w-4 animate-spin" />
-                <span className="text-sm text-gray-600">Waiting to start...</span>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {request.status === 'processing' && (
-          <Card className="mb-8">
-            <CardContent className="p-8 text-center">
-              <CogIcon className="mx-auto h-16 w-16 text-blue-600 mb-4 animate-spin" />
-              <h2 className="text-2xl font-bold text-gray-900 mb-2">Analysis in Progress</h2>
-              <p className="text-gray-600 mb-4">
-                We're analyzing your CAD file for manufacturability. This usually takes 2-5 minutes.
-              </p>
-              <Progress value={65} className="w-full max-w-md mx-auto" />
-              <p className="text-sm text-gray-600 mt-2">Processing 20-point analysis...</p>
-            </CardContent>
-          </Card>
-        )}
-
-        {request.status === 'failed' && (
-          <Card className="mb-8">
-            <CardContent className="p-8 text-center">
-              <ExclamationTriangleIcon className="mx-auto h-16 w-16 text-red-600 mb-4" />
-              <h2 className="text-2xl font-bold text-gray-900 mb-2">Analysis Failed</h2>
-              <p className="text-gray-600 mb-4">
-                We encountered an error while analyzing your file. Please try again or contact support.
-              </p>
-              <Button onClick={() => window.location.href = '/dfm-analysis'}>
-                Start New Analysis
-              </Button>
-            </CardContent>
-          </Card>
-        )}
-
-        {request.status === 'completed' && request.results && (
-          <div className="space-y-8">
-            {/* Overview */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <Card>
-                <CardContent className="p-6 text-center">
-                  <div className="text-3xl font-bold text-blue-600 mb-2">
-                    {request.results.overall_score}/100
-                  </div>
-                  <p className="text-sm text-gray-600">Overall Score</p>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardContent className="p-6 text-center">
-                  <div className="text-3xl font-bold text-green-600 mb-2">
-                    {request.results.checks.filter(c => c.status === 'pass').length}
-                  </div>
-                  <p className="text-sm text-gray-600">Checks Passed</p>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardContent className="p-6 text-center">
-                  <div className="text-3xl font-bold text-red-600 mb-2">
-                    {request.results.checks.filter(c => c.status === 'fail').length}
-                  </div>
-                  <p className="text-sm text-gray-600">Issues Found</p>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Detailed Results */}
-            <Card>
-              <CardHeader>
-                <CardTitle>20-Point Analysis Results</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {request.results.checks.map((check) => (
-                    <div key={check.id} className="border rounded-lg p-4">
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <div className="flex items-center space-x-2 mb-2">
-                            <h3 className="font-medium">{check.name}</h3>
-                            <Badge className={getCheckStatusColor(check.status)}>
-                              {check.status}
-                            </Badge>
-                          </div>
-                          <p className="text-sm text-gray-600 mb-2">{check.message}</p>
-                          <div className="flex items-center space-x-4 text-xs text-gray-500">
-                            <span>Category: {check.category}</span>
-                            <span>Severity: {check.severity}</span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Recommendations */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Recommendations</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {request.results.recommendations.map((rec, index) => (
-                    <div key={index} className="flex items-start space-x-3">
-                      <CheckCircleIcon className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
-                      <p className="text-sm">{rec}</p>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Cost Impact */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Cost Impact Analysis</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-center">
-                  <div className="text-3xl font-bold text-blue-600 mb-2">
-                    ${request.results.cost_impact.toFixed(2)}
-                  </div>
-                  <p className="text-sm text-gray-600">Estimated cost impact from optimizations</p>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-      </div>
     </div>
   );
 }

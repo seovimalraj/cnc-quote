@@ -87,6 +87,7 @@ export async function POST(request: NextRequest) {
     // 5. Implement honeypot and captcha validation
 
     // Send welcome email
+    const leadId = `lead-${Date.now()}`;
     try {
       await fetch('/api/emails/send', {
         method: 'POST',
@@ -98,7 +99,7 @@ export async function POST(request: NextRequest) {
           data: {
             email,
             quoteId,
-            leadId: mockLead.id
+            leadId
           }
         })
       });
@@ -109,7 +110,7 @@ export async function POST(request: NextRequest) {
 
     // For now, we'll simulate the response
     const mockLead = {
-      id: `lead-${Date.now()}`,
+      id: leadId,
       email,
       phone,
       quoteId,

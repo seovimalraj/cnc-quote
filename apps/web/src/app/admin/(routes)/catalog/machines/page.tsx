@@ -3,7 +3,7 @@ import { cookies } from 'next/headers'
 import type { Machine as _Machine } from '@cnc-quote/shared';
 
 export default async function MachinesPage() {
-  const supabase = createClient(cookies())
+  const supabase = await createClient()
   const { data: machines } = await supabase
     .from('machines')
     .select(`

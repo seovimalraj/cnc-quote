@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { PlusIcon } from '@heroicons/react/20/solid'
 
 export default async function MaterialsPage() {
-  const supabase = createClient(cookies())
+  const supabase = await createClient()
   const { data: materials } = await supabase
     .from('materials')
     .select(`

@@ -1,6 +1,5 @@
 import { Suspense } from 'react'
 import { createClient } from '@/lib/supabase/server'
-import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { PromoBanner } from '@/components/portal/dashboard/PromoBanner'
 import { InstantQuoteCard } from '@/components/portal/dashboard/InstantQuoteCard'
@@ -14,7 +13,7 @@ import { posthog } from 'posthog-js'
 
 // Server action to fetch dashboard data in parallel
 async function getDashboardData() {
-  const supabase = createClient(cookies())
+  const supabase = await createClient()
 
   const { data: { user }, error: userError } = await supabase.auth.getUser()
 

@@ -24,7 +24,7 @@ interface RuleWithMachine {
 }
 
 export default async function FeaturesPage() {
-  const supabase = createClient(cookies())
+  const supabase = await createClient()
   
   // Get all feature types with their rules
   const { data: featureTypes }: { data: (FeatureType & { machine_feature_rules: (FeatureRule & { machine: { name: string; process_type: string } })[] })[] | null } = await supabase

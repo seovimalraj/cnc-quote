@@ -17,7 +17,7 @@ export default function SignUpPage() {
       redirect('/auth/sign-up?error=Passwords do not match')
     }
 
-    const supabase = createClient(cookies())
+    const supabase = await createClient()
 
     try {
       const { data, error } = await supabase.auth.signUp({

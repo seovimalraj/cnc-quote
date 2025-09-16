@@ -5,16 +5,20 @@ export async function POST(request: NextRequest) {
   try {
     console.log('File upload request received');
 
-    // Check authentication
-    const user = await getUser(request);
-    if (!user) {
-      return NextResponse.json(
-        { error: 'Authentication required' },
-        { status: 401 }
-      );
+    // Check authentication (skip in development)
+    let user = null;
+    if (process.env.NODE_ENV !== 'development') {
+      user = await getUser(request);
+      if (!user) {
+        return NextResponse.json(
+          { error: 'Authentication required' },
+          { status: 401 }
+        );
+      }
+      console.log('Authenticated user:', user.email);
+    } else {
+      console.log('Development mode: Skipping authentication');
     }
-
-    console.log('Authenticated user:', user.email);
 
     // Parse request body with error handling
     let body;

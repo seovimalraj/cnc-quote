@@ -4,7 +4,7 @@ import { cookies } from 'next/headers';
 import { PlusIcon, CheckCircleIcon, ClockIcon } from '@heroicons/react/20/solid';
 
 export default async function ProfilesPage() {
-  const supabase = createClient(cookies())
+  const supabase = await createClient()
   const { data: profiles } = await supabase
     .from('pricing_profiles')
     .select(`

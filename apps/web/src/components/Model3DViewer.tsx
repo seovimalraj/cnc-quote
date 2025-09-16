@@ -1,9 +1,18 @@
 'use client';
 
-import React, { Suspense } from 'react';
-import { Canvas } from '@react-three/fiber';
-import { OrbitControls, Grid, Environment, Html } from '@react-three/drei';
-import { Box, Sphere, Cylinder, Plane } from '@react-three/drei';
+import React, { Suspense, useEffect, useState } from 'react';
+import dynamic from 'next/dynamic';
+
+// Dynamically import React Three Fiber components to avoid SSR issues
+const Canvas = dynamic(() => import('@react-three/fiber').then(mod => ({ default: mod.Canvas })), { ssr: false });
+const OrbitControls = dynamic(() => import('@react-three/drei').then(mod => ({ default: mod.OrbitControls })), { ssr: false });
+const Grid = dynamic(() => import('@react-three/drei').then(mod => ({ default: mod.Grid })), { ssr: false });
+const Environment = dynamic(() => import('@react-three/drei').then(mod => ({ default: mod.Environment })), { ssr: false });
+const Html = dynamic(() => import('@react-three/drei').then(mod => ({ default: mod.Html })), { ssr: false });
+const Box = dynamic(() => import('@react-three/drei').then(mod => ({ default: mod.Box })), { ssr: false });
+const Cylinder = dynamic(() => import('@react-three/drei').then(mod => ({ default: mod.Cylinder })), { ssr: false });
+
+// Import THREE directly
 import * as THREE from 'three';
 
 interface Model3DViewerProps {
@@ -54,6 +63,23 @@ function LoadingFallback() {
 }
 
 export default function Model3DViewer({ fileName, fileType }: Model3DViewerProps) {
+  const [isClient, setIsClient] = useState(false);
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
+  if (!isClient) {
+    return (
+      <div className="w-full h-full bg-gray-50 rounded-lg overflow-hidden flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading 3D viewer...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="w-full h-full bg-gray-50 rounded-lg overflow-hidden">
       <Canvas
