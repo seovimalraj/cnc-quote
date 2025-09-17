@@ -7,7 +7,7 @@ import { AuthModule } from '../auth/auth.module';
 @Module({
   imports: [AuthModule],
   controllers: [LeadsController],
-  providers: [LeadsService, SupabaseService],
+  providers: [LeadsService],
   exports: [LeadsService]
 })
 export class LeadsModule {}

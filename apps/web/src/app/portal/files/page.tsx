@@ -721,7 +721,11 @@ export default function FilesPage() {
             />
           ) : signedUrl && previewFile ? (
             <FilePreview
-              file={previewFile}
+              file={{
+                name: previewFile.name,
+                mime: previewFile.type,
+                size: previewFile.size
+              }}
               signedUrl={signedUrl}
               className="h-[60vh]"
             />

@@ -23,9 +23,7 @@ import { BillingStep } from '@/components/checkout/BillingStep';
 import { ShippingStep } from '@/components/checkout/ShippingStep';
 import { TaxStep } from '@/components/checkout/TaxStep';
 import { OrderReviewStep } from '@/components/checkout/OrderReviewStep';
-import { PaymentStep } from '@/components/checkout/PaymentStep';
-
-// Types based on specification
+import { trackEvent } from '@/lib/analytics/posthog';
 interface Quote {
   id: string;
   status: string;
@@ -161,7 +159,7 @@ export default function CheckoutPage() {
 
   useEffect(() => {
     // Track page view
-    posthog.capture('checkout_view', { quote_id: quoteId });
+    trackEvent('checkout_view', { quote_id: quoteId });
 
     // Simulate API call
     const fetchQuote = async () => {
@@ -176,7 +174,7 @@ export default function CheckoutPage() {
 
   const handleStepChange = (step: number) => {
     setCheckoutState(prev => ({ ...prev, currentStep: step }));
-    posthog.capture('checkout_step_change', { quote_id: quoteId, step });
+    trackEvent('checkout_step_change', { quote_id: quoteId, step });
   };
 
   const handleSaveStep = async (stepData: any) => {
@@ -194,7 +192,7 @@ export default function CheckoutPage() {
       // Track step completion
       const stepNames = ['compliance_saved', 'billing_saved', 'shipping_saved', 'tax_saved'];
       if (checkoutState.currentStep <= 4) {
-        posthog.capture(stepNames[checkoutState.currentStep - 1], { quote_id: quoteId });
+        trackEvent(stepNames[checkoutState.currentStep - 1], { quote_id: quoteId });
       }
     } catch (error) {
       console.error('Failed to save step:', error);

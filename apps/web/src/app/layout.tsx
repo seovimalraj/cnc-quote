@@ -1,6 +1,6 @@
 import './globals.css';
 import { Toaster } from 'react-hot-toast';
-import { AuthProvider } from '@/contexts/AuthContext';
+import { AuthProvider } from '@/components/AuthProvider';
 
 export const dynamic = 'force-dynamic';
 

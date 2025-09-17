@@ -1,10 +1,11 @@
 import { Injectable } from "@nestjs/common";
 import { InjectQueue } from "@nestjs/bullmq";
 import { Queue } from "bullmq";
+import * as path from "path";
 
 // Using require because the package.json is outside the TypeScript source tree
 // eslint-disable-next-line @typescript-eslint/no-var-requires
-const packageJson = require("../../../package.json");
+const packageJson = require(path.join(process.cwd(), "package.json"));
 
 @Injectable()
 export class HealthService {

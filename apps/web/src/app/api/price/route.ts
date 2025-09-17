@@ -1,7 +1,84 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+// Type definitions for pricing config
+interface MaterialConfig {
+  grade: string;
+  density_kg_m3: number;
+  buy_price: number;
+  stock_forms: string[];
+  waste_factor_percent: number;
+  finish_compat: string[];
+  min_wall_mm: number;
+  min_hole_mm: number;
+  machinability: number;
+}
+
+interface FinishConfig {
+  model: string;
+  rate: number;
+  min_lot: number;
+  capacity_dims: { max_area: number };
+  leadtime_add: number;
+  region_allowed: string[];
+}
+
+interface TolerancePack {
+  cycle_time_multiplier: number;
+  surface_default: number;
+  inspection_requirements: string;
+}
+
+interface SpeedRegion {
+  [region: string]: {
+    [speed: string]: {
+      multiplier: number;
+      leadtime_days: number;
+    };
+  };
+}
+
+interface RiskMatrix {
+  [key: string]: {
+    time_multiplier: number;
+    risk_percent?: number;
+    risk_flat?: number;
+  };
+}
+
+interface PricingConfig {
+  version: string;
+  machines: {
+    [key: string]: {
+      axes: number;
+      envelope: { x: number; y: number; z: number };
+      hourly_rate: number;
+      setup_rate: number;
+      min_setup_min: number;
+      feed_rate_map: { [material: string]: number };
+      rapid_rate: number;
+      toolchange_s: number;
+      region: string;
+      capacity: number;
+    };
+  };
+  materials: { [material: string]: MaterialConfig };
+  finishes: { [finish: string]: FinishConfig };
+  tolerance_packs: { [pack: string]: TolerancePack };
+  inspection: {
+    base_usd: number;
+    per_dim_usd: number;
+    program_min: number;
+  };
+  speed_region: SpeedRegion;
+  risk_matrix: RiskMatrix;
+  overhead_margin: {
+    overhead_percent: number;
+    target_margin_percent: number;
+  };
+}
+
 // Mock pricing configuration (in production, this would come from database)
-const mockPricingConfig = {
+const mockPricingConfig: PricingConfig = {
   version: 'v1.2.3',
   machines: {
     '3-axis-milling': {
@@ -218,7 +295,15 @@ export async function POST(request: NextRequest) {
       standard_price
     };
 
-    const lead_time_options = [];
+    const lead_time_options: Array<{
+      id: string;
+      region: 'USA' | 'International';
+      speed: 'Economy' | 'Standard' | 'Expedite';
+      business_days: number;
+      unit_price: number;
+      msrp: number;
+      savings_text: string;
+    }> = [];
     ['USA', 'International'].forEach(region => {
       ['Economy', 'Standard', 'Expedite'].forEach(speed => {
         const unit_price = applySpeedRegionMultiplier(standard_price, speed, region);

@@ -10,16 +10,16 @@ import {
   ArrowPathIcon,
   DocumentTextIcon,
 } from '@heroicons/react/24/outline';
-import { posthog } from 'posthog-js';
+import { trackEvent } from '@/lib/analytics/posthog';
 
 export default function CheckoutCancelPage() {
   const params = useParams();
   const router = useRouter();
-  const quoteId = params.quote_id as string;
+  const quoteId = params?.quote_id as string;
 
   useEffect(() => {
     // Track page view
-    posthog.capture('payment_cancel_view', { quote_id: quoteId });
+    trackEvent('payment_cancel_view', { quote_id: quoteId });
   }, [quoteId]);
 
   const handleReturnToPayment = () => {

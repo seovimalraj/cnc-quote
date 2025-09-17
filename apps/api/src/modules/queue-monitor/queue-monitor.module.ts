@@ -8,12 +8,13 @@ import { Queue as BullMQQueue } from "bullmq";
 import { QueueMonitorController } from "./queue-monitor.controller";
 import { QueueMonitorService } from "./queue-monitor.service";
 import { QueueMonitorMiddleware } from "./queue-monitor.middleware";
+import { QueueModule } from "../../queues";
 
-const QUEUE_NAMES = ["cad", "pricing", "email"] as const;
+const QUEUE_NAMES = ["cad", "pricing", "email", "pdf"] as const;
 type _QueueName = (typeof QUEUE_NAMES)[number];
 
 @Module({
-  imports: [BullModule.registerQueue(...QUEUE_NAMES.map((name) => ({ name })))],
+  imports: [QueueModule],
   controllers: [QueueMonitorController],
   providers: [
     QueueMonitorService,

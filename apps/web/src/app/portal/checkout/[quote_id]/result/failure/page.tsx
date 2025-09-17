@@ -11,25 +11,25 @@ import {
   PhoneIcon,
   ChatBubbleLeftRightIcon,
 } from '@heroicons/react/24/outline';
-import { posthog } from 'posthog-js';
+import { trackEvent } from '@/lib/analytics/posthog';
 
 export default function CheckoutFailurePage() {
   const params = useParams();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const quoteId = params.quote_id as string;
+  const quoteId = params?.quote_id as string;
 
   const [errorReason, setErrorReason] = useState<string>('');
 
   useEffect(() => {
     // Track page view
-    posthog.capture('payment_failure_view', {
+    trackEvent('payment_failure_view', {
       quote_id: quoteId,
-      error_reason: searchParams.get('reason') || 'unknown'
+      error_reason: searchParams?.get('reason') || 'unknown'
     });
 
     // Get error reason from URL params (masked for security)
-    const reason = searchParams.get('reason');
+    const reason = searchParams?.get('reason');
     if (reason) {
       setErrorReason(getMaskedErrorMessage(reason));
     } else {

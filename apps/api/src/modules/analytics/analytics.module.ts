@@ -3,7 +3,7 @@ import { AnalyticsService } from './analytics.service';
 import { SupabaseService } from '../../lib/supabase/supabase.service';
 
 @Module({
-  providers: [AnalyticsService, SupabaseService],
+  providers: [AnalyticsService],
   exports: [AnalyticsService],
 })
 export class AnalyticsModule {}

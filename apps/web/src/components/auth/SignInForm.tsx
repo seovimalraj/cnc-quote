@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline'
-import { posthog } from 'posthog-js'
+import { trackEvent } from '@/lib/analytics/posthog'
 
 interface SignInFormProps {
   action: (formData: FormData) => void
@@ -23,10 +23,10 @@ export function SignInForm({ action }: SignInFormProps) {
   const [rememberMe, setRememberMe] = useState(false)
 
   const searchParams = useSearchParams()
-  const error = searchParams.get('error')
+  const error = searchParams?.get('error')
 
   useEffect(() => {
-    posthog.capture('signin_view')
+    trackEvent('signin_view')
   }, [])
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -41,18 +41,18 @@ export function SignInForm({ action }: SignInFormProps) {
         formData.append('remember_me', 'on')
       }
 
-      posthog.capture('signin_submit', { has_email: !!email, remember_me: rememberMe })
+      trackEvent('signin_submit', { has_email: !!email, remember_me: rememberMe })
 
       await action(formData)
     } catch (err) {
-      posthog.capture('signin_failure', { error: err instanceof Error ? err.message : 'Unknown error' })
+      trackEvent('signin_failure', { error: err instanceof Error ? err.message : 'Unknown error' })
     } finally {
       setIsLoading(false)
     }
   }
 
   const handleSSO = async (provider: 'google' | 'microsoft' | 'github') => {
-    posthog.capture('sso_click', { provider })
+    trackEvent('sso_click', { provider })
 
     // In a real implementation, this would redirect to the SSO provider
     // For now, we'll just do nothing

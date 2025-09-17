@@ -172,4 +172,12 @@ export class AnalyticsService {
       properties,
     });
   }
+
+  async trackStatusChecked(requestId: string, properties: Record<string, any> = {}): Promise<void> {
+    await this.trackDfmEvent({
+      event: 'dfm_status_checked',
+      dfmRequestId: requestId,
+      properties,
+    });
+  }
 }

@@ -3,7 +3,7 @@ import { Parser } from "expr-eval";
 import { SupabaseService } from "../../lib/supabase/supabase.service";
 import { CacheService } from "../../lib/cache/cache.service";
 import { ManualReviewService } from "../manual-review/manual-review.service";
-import { PricingProfile, PriceResponse, PriceBreakdown as _PriceBreakdown } from "@cnc-quote/shared";
+import { PricingProfile, PriceResponse, PriceBreakdown as _PriceBreakdown, CncPriceRequest, SheetMetalPriceRequest, InjectionMoldingPriceRequest } from "@cnc-quote/shared";
 
 @Injectable()
 export class PricingService {

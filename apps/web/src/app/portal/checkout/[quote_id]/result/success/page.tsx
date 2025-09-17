@@ -12,7 +12,7 @@ import {
   ArrowDownTrayIcon,
   HomeIcon,
 } from '@heroicons/react/24/outline';
-import { posthog } from 'posthog-js';
+import { trackEvent } from '@/lib/analytics/posthog';
 
 interface Order {
   id: string;
@@ -26,7 +26,7 @@ interface Order {
 export default function CheckoutSuccessPage() {
   const params = useParams();
   const router = useRouter();
-  const quoteId = params.quote_id as string;
+  const quoteId = params?.quote_id as string;
 
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
@@ -43,7 +43,7 @@ export default function CheckoutSuccessPage() {
 
   useEffect(() => {
     // Track page view
-    posthog.capture('payment_success_view', { quote_id: quoteId });
+    trackEvent('payment_success_view', { quote_id: quoteId });
 
     // Simulate API call to fetch order
     const fetchOrder = async () => {

@@ -20,7 +20,7 @@ import {
   WrenchScrewdriverIcon,
   CubeIcon,
   PaintBrushIcon,
-  SaveIcon,
+  DocumentCheckIcon,
   ArrowPathIcon,
   ExclamationTriangleIcon
 } from '@heroicons/react/24/outline';
@@ -247,6 +247,15 @@ const mockQuotes: Quote[] = [
     console.log(`Updating quote ${quoteId} to status: ${newStatus}`);
   };
 
+const AdminDashboard = () => {
+  const [activeTab, setActiveTab] = useState('quotes');
+  const [selectedQuote, setSelectedQuote] = useState<Quote | null>(null);
+  const [pricingConfig, setPricingConfig] = useState<PricingConfig | null>(null);
+  const [isLoadingPricing, setIsLoadingPricing] = useState(false);
+  const [isSavingPricing, setIsSavingPricing] = useState(false);
+  const [hasPricingChanges, setHasPricingChanges] = useState(false);
+  const [lastPricingSaved, setLastPricingSaved] = useState<Date | null>(null);
+
   // Pricing Configuration Functions
   const loadPricingConfig = async () => {
     try {
@@ -394,14 +403,10 @@ const mockQuotes: Quote[] = [
     setHasPricingChanges(true);
   };
 
-const AdminDashboard = () => {
-  const [activeTab, setActiveTab] = useState('quotes');
-  const [selectedQuote, setSelectedQuote] = useState<Quote | null>(null);
-  const [pricingConfig, setPricingConfig] = useState<PricingConfig | null>(null);
-  const [isLoadingPricing, setIsLoadingPricing] = useState(false);
-  const [isSavingPricing, setIsSavingPricing] = useState(false);
-  const [hasPricingChanges, setHasPricingChanges] = useState(false);
-  const [lastPricingSaved, setLastPricingSaved] = useState<Date | null>(null);
+  const updateQuoteStatus = (quoteId: string, newStatus: Quote['status']) => {
+    // In a real app, this would make an API call
+    console.log(`Updating quote ${quoteId} to status: ${newStatus}`);
+  };
 
   return (
     <DefaultLayout>
@@ -454,7 +459,7 @@ const AdminDashboard = () => {
                 <div className="mt-4 flex items-end justify-between">
                   <div>
                     <h4 className="text-title-md font-bold text-black dark:text-white">
-                      {quotes.length}
+                      {mockQuotes.length}
                     </h4>
                     <span className="text-sm font-medium">Total Quotes</span>
                   </div>
@@ -540,7 +545,7 @@ const AdminDashboard = () => {
                       {isSavingPricing ? (
                         <ArrowPathIcon className="w-4 h-4 animate-spin mr-2" />
                       ) : (
-                        <SaveIcon className="w-4 h-4 mr-2" />
+                        <DocumentCheckIcon className="w-4 h-4 mr-2" />
                       )}
                       Save Draft
                     </Button>

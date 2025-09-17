@@ -125,7 +125,8 @@ export const PriceBreakdownSchema = z.object({
 });
 
 // Material Schema
-export const MaterialSchema = z.object({
+// export const MaterialSchema = z.object({
+const MaterialSchema = z.object({
   id: z.string().uuid(),
   organization_id: z.string().uuid(),
   name: z.string(),
@@ -142,7 +143,8 @@ export const MaterialSchema = z.object({
 });
 
 // Finish Schema
-export const FinishSchema = z.object({
+// export const FinishSchema = z.object({
+const FinishSchema = z.object({
   id: z.string().uuid(),
   organization_id: z.string().uuid(),
   name: z.string(),
@@ -188,8 +190,8 @@ export type InjectionMoldingPriceRequest = z.infer<typeof InjectionMoldingPriceR
 export type PriceResponse = z.infer<typeof PriceResponseSchema>;
 export type PricingProfile = z.infer<typeof PricingProfileSchema>;
 export type PriceBreakdown = z.infer<typeof PriceBreakdownSchema>;
-export type Material = z.infer<typeof MaterialSchema>;
-export type Finish = z.infer<typeof FinishSchema>;
+// export type Material = z.infer<typeof MaterialSchema>;
+// export type Finish = z.infer<typeof FinishSchema>;
 export type Tolerance = z.infer<typeof ToleranceSchema>;
 export type LeadTime = z.infer<typeof LeadTimeSchema>;
 

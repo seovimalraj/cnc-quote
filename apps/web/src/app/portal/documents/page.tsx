@@ -312,15 +312,15 @@ export default function DocumentsPage() {
   const getDocumentIcon = (type: string) => {
     const icons: Record<string, any> = {
       QAP: DocumentTextIcon,
-      Certificate: FileIcon,
+      Certificate: DocumentIcon,
       FAIR: DocumentTextIcon,
       Measurement: DocumentTextIcon,
       Invoice: ReceiptPercentIcon,
       Receipt: ReceiptPercentIcon,
-      CoC: FileIcon,
-      MaterialCert: FileIcon,
+      CoC: DocumentIcon,
+      MaterialCert: DocumentIcon,
     };
-    return icons[type] || FileIcon;
+    return icons[type] || DocumentIcon;
   };
 
   // Filtered documents based on active tab
@@ -536,7 +536,7 @@ export default function DocumentsPage() {
                               onClick={() => handleNavigateToLinked(document)}
                               title="Open Linked"
                             >
-                              <FileIcon className="w-4 h-4" />
+                              <DocumentIcon className="w-4 h-4" />
                             </Button>
                           </div>
                         </TableCell>

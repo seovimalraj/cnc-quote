@@ -75,6 +75,10 @@ export interface Document {
   updated_at: string;
   tags: string[];
   checksum_sha256?: string;
+  // Additional properties used in UI
+  url?: string;
+  name?: string;
+  size?: number;
 }
 
 export interface File {

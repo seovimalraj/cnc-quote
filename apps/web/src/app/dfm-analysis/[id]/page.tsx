@@ -28,14 +28,14 @@ import {
   ArrowDownTrayIcon,
   ShoppingCartIcon,
   DocumentIcon,
-  FilterIcon,
+  FunnelIcon,
   ChevronDownIcon,
   ChevronRightIcon,
   PlayIcon,
   PauseIcon,
   ArrowsPointingOutIcon,
   ScissorsIcon,
-  RulerIcon,
+  ScaleIcon,
   HandRaisedIcon,
   CubeTransparentIcon,
   CurrencyDollarIcon,
@@ -81,8 +81,13 @@ interface DFMResults {
 interface DFMCheck {
   id: string;
   title: string;
-  status: 'pass' | 'warning' | 'blocker';
+  name?: string;
+  category?: string;
+  status: 'pass' | 'warning' | 'blocker' | 'fail';
   message: string;
+  severity?: string;
+  details?: string;
+  recommendation?: string;
   metrics: Record<string, any>;
   suggestions: string[];
   highlights: {
@@ -111,7 +116,7 @@ interface ViewerMesh {
 export default function DFMResultsPage() {
   const params = useParams();
   const router = useRouter();
-  const requestId = params.id as string;
+  const requestId = params?.id as string;
 
   const [request, setRequest] = useState<DFMRequest | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -672,7 +677,7 @@ export default function DFMResultsPage() {
                       size="sm"
                       onClick={() => setViewerTool('measure')}
                     >
-                      <RulerIcon className="h-4 w-4" />
+                      <ScaleIcon className="h-4 w-4" />
                     </Button>
                   </div>
                 </div>
@@ -831,240 +836,6 @@ export default function DFMResultsPage() {
           </Card>
         </div>
       </div>
-    </div>
-  );
-}
-        <div className="grid grid-cols-1 lg:grid-cols-7 gap-6">
-          {/* 3D Viewer */}
-          <div className="lg:col-span-4">
-            <Card className="h-[600px]">
-              <CardHeader className="pb-3">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-lg">3D Model Viewer</CardTitle>
-                  <div className="flex items-center space-x-2">
-                    <Button
-                      variant={viewerTool === 'orbit' ? 'default' : 'outline'}
-                      size="sm"
-                      onClick={() => setViewerTool('orbit')}
-                      className="h-8 w-8 p-0"
-                    >
-                      <ArrowsPointingOutIcon className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent className="p-0">
-                <div
-                  ref={viewerRef}
-                  className="w-full h-[500px] bg-gray-100 rounded-b-lg flex items-center justify-center"
-                >
-                  {request.status === 'Complete' && viewerMesh ? (
-                    <div className="text-center">
-                      <CubeIcon className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-                      <p className="text-gray-600">3D Viewer Active</p>
-                      <p className="text-sm text-gray-500">Click checks to highlight geometry</p>
-                    </div>
-                  ) : (
-                    <div className="text-center">
-                      <CubeIcon className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-                      <p className="text-gray-600">
-                        {request.status === 'Analyzing' ? 'Processing 3D model...' : '3D viewer will load when analysis completes'}
-                      </p>
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Checks Panel */}
-          <div className="lg:col-span-3">
-            <Card className="h-[600px]">
-              <CardHeader className="pb-3">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-lg">Analysis Checks</CardTitle>
-                  <div className="flex items-center space-x-2">
-                    <Button
-                      variant={checkFilter === 'all' ? 'default' : 'outline'}
-                      size="sm"
-                      onClick={() => setCheckFilter('all')}
-                    >
-                      All ({request.results?.summary.passed + request.results?.summary.warnings + request.results?.summary.blockers || 0})
-                    </Button>
-                    <Button
-                      variant={checkFilter === 'warnings' ? 'default' : 'outline'}
-                      size="sm"
-                      onClick={() => setCheckFilter('warnings')}
-                      className="text-yellow-700"
-                    >
-                      Warnings ({request.results?.summary.warnings || 0})
-                    </Button>
-                    <Button
-                      variant={checkFilter === 'blockers' ? 'default' : 'outline'}
-                      size="sm"
-                      onClick={() => setCheckFilter('blockers')}
-                      className="text-red-700"
-                    >
-                      Blockers ({request.results?.summary.blockers || 0})
-                    </Button>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent className="p-0">
-                <ScrollArea className="h-[500px]">
-                  <div className="p-4 space-y-2">
-                    {getFilteredChecks().map((check) => (
-                      <div
-                        key={check.id}
-                        className={`border rounded-lg p-3 cursor-pointer transition-colors ${
-                          selectedCheck?.id === check.id
-                            ? 'border-blue-500 bg-blue-50'
-                            : 'border-gray-200 hover:border-gray-300'
-                        }`}
-                        onClick={() => handleCheckClick(check)}
-                      >
-                        <div className="flex items-center justify-between mb-2">
-                          <div className="flex items-center space-x-2">
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                toggleCheckExpansion(check.id);
-                              }}
-                              className="text-gray-500 hover:text-gray-700"
-                            >
-                              {expandedChecks.has(check.id) ? (
-                                <ChevronDownIcon className="h-4 w-4" />
-                              ) : (
-                                <ChevronRightIcon className="h-4 w-4" />
-                              )}
-                            </button>
-                            <span className="font-medium text-sm">{check.title}</span>
-                          </div>
-                          {getStatusBadge(check.status)}
-                        </div>
-                        <p className="text-sm text-gray-600 mb-2">{check.message}</p>
-
-                        {expandedChecks.has(check.id) && (
-                          <div className="space-y-2">
-                            {check.metrics && Object.keys(check.metrics).length > 0 && (
-                              <div className="bg-gray-50 rounded p-2">
-                                <p className="text-xs font-medium text-gray-700 mb-1">Metrics:</p>
-                                {Object.entries(check.metrics).map(([key, value]) => (
-                                  <div key={key} className="text-xs text-gray-600">
-                                    <span className="font-medium">{key}:</span> {String(value)}
-                                  </div>
-                                ))}
-                              </div>
-                            )}
-
-                            {check.suggestions && check.suggestions.length > 0 && (
-                              <div className="bg-blue-50 rounded p-2">
-                                <p className="text-xs font-medium text-blue-700 mb-1">Suggestions:</p>
-                                <ul className="text-xs text-blue-600 space-y-1">
-                                  {check.suggestions.map((suggestion, idx) => (
-                                    <li key={idx}>• {suggestion}</li>
-                                  ))}
-                                </ul>
-                              </div>
-                            )}
-
-                            {(check.highlights.face_ids.length > 0 || check.highlights.edge_ids.length > 0) && (
-                              <div className="text-xs text-gray-500">
-                                Highlights: {check.highlights.face_ids.length} faces, {check.highlights.edge_ids.length} edges
-                              </div>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </ScrollArea>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-
-        {/* Analysis Summary */}
-        <div className="max-w-7xl mx-auto px-6 py-8">
-          {analysisContent}
-        </div>
-
-      {/* Lead Collection Modal */}
-      <Dialog open={showLeadModal} onOpenChange={setShowLeadModal}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Where should we send your DFM report?</DialogTitle>
-            <DialogDescription>
-              Enter your business contact information to receive your complete DFM analysis report.
-            </DialogDescription>
-          </DialogHeader>
-
-          <form onSubmit={handleLeadSubmit} className="space-y-4">
-            <div>
-              <Label htmlFor="business_email">Business Email *</Label>
-              <Input
-                id="business_email"
-                type="email"
-                value={leadFormData.business_email}
-                onChange={(e) => setLeadFormData(prev => ({ ...prev, business_email: e.target.value }))}
-                placeholder="name@company.com"
-                className={leadFormErrors.business_email ? 'border-red-500' : ''}
-              />
-              {leadFormErrors.business_email && (
-                <p className="text-sm text-red-600 mt-1">{leadFormErrors.business_email}</p>
-              )}
-            </div>
-
-            <div>
-              <Label htmlFor="phone_e164">Phone Number *</Label>
-              <Input
-                id="phone_e164"
-                type="tel"
-                value={leadFormData.phone_e164}
-                onChange={(e) => setLeadFormData(prev => ({ ...prev, phone_e164: e.target.value }))}
-                placeholder="+1 212 555 0100"
-                className={leadFormErrors.phone_e164 ? 'border-red-500' : ''}
-              />
-              {leadFormErrors.phone_e164 && (
-                <p className="text-sm text-red-600 mt-1">{leadFormErrors.phone_e164}</p>
-              )}
-            </div>
-
-            <div className="flex items-start space-x-2">
-              <Checkbox
-                id="consent"
-                checked={leadFormData.consent}
-                onCheckedChange={(checked) => setLeadFormData(prev => ({ ...prev, consent: checked as boolean }))}
-              />
-              <div className="grid gap-1.5 leading-none">
-                <Label htmlFor="consent" className="text-sm">
-                  I agree to the Terms and Privacy Policy *
-                </Label>
-                {leadFormErrors.consent && (
-                  <p className="text-sm text-red-600">{leadFormErrors.consent}</p>
-                )}
-              </div>
-            </div>
-
-            {leadSubmitCount >= 3 && (
-              <Alert>
-                <AlertDescription>
-                  For security, please complete the captcha below.
-                </AlertDescription>
-              </Alert>
-            )}
-
-            <div className="flex justify-end space-x-2 pt-4">
-              <Button type="button" variant="outline" onClick={handleLeadCancel}>
-                Cancel
-              </Button>
-              <Button type="submit" disabled={isSubmittingLead}>
-                {isSubmittingLead ? 'Submitting...' : 'Continue'}
-              </Button>
-            </div>
-          </form>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

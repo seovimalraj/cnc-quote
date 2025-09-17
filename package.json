@@ -28,27 +28,27 @@
   },
   "dependencies": {
     "@nestjs/axios": "^4.0.1",
-    "@nestjs/bull": "^10.2.3",
-    "@sentry/node": "^7.54.0",
-    "@supabase/supabase-js": "^2.33.2",
-    "axios": "^1.5.0",
+    "@nestjs/bull": "^11.0.3",
+    "@sentry/node": "^10.12.0",
+    "@supabase/supabase-js": "^2.57.4",
+    "axios": "^1.12.2",
     "bull": "^4.16.5",
     "file-type": "^21.0.0",
-    "posthog-node": "^3.1.2",
-    "puppeteer": "^24.20.0",
-    "stripe": "^13.5.0",
-    "zod": "^3.22.4"
+    "posthog-node": "^5.8.4",
+    "puppeteer": "^24.21.0",
+    "stripe": "^18.5.0",
+    "zod": "^4.1.9"
   },
   "devDependencies": {
     "@types/busboy": "^1.5.4",
-    "@types/node": "^20.6.2",
-    "@typescript-eslint/eslint-plugin": "^6.21.0",
-    "@typescript-eslint/parser": "^6.21.0",
-    "eslint": "^8.57.1",
-    "prettier": "^3.0.3",
-    "ts-node": "^10.9.1",
-    "turbo": "^1.10.16",
-    "typescript": "^5.1.6"
+    "@types/node": "^24.5.1",
+    "@typescript-eslint/eslint-plugin": "^8.44.0",
+    "@typescript-eslint/parser": "^8.44.0",
+    "eslint": "^9.35.0",
+    "prettier": "^3.6.2",
+    "ts-node": "^10.9.2",
+    "turbo": "^2.5.6",
+    "typescript": "^5.9.2"
   },
   "workspaces": [
     "apps/*",

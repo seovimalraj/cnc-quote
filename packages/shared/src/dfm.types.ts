@@ -17,7 +17,7 @@ export const DfmRuleSchema = z.object({
   condition: z.string(), // JSON logic expression or eval-eval compatible expression
   message: z.string(),
   triggers_manual_review: z.boolean().default(false),
-  metadata: z.record(z.unknown()).optional(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
   created_at: z.string().datetime(),
   updated_at: z.string().datetime(),
 });
@@ -28,7 +28,7 @@ export const DfmValidationIssueSchema = z.object({
   name: z.string(),
   severity: SeveritySchema,
   message: z.string(),
-  details: z.record(z.unknown()).optional(),
+  details: z.record(z.string(), z.unknown()).optional(),
   location: z.object({
     x: z.number(),
     y: z.number(),
@@ -102,19 +102,19 @@ export const DfmValidationRequestSchema = z.object({
   quote_id: z.string().uuid(),
   organization_id: z.string().uuid(),
   process_type: z.enum(['cnc', 'sheet_metal', 'injection_molding']),
-  geometry_data: z.record(z.unknown()),
-  material_properties: z.record(z.unknown()).optional(),
-  design_parameters: z.record(z.unknown()).optional(),
+  geometry_data: z.record(z.string(), z.unknown()),
+  material_properties: z.record(z.string(), z.unknown()).optional(),
+  design_parameters: z.record(z.string(), z.unknown()).optional(),
   skip_rules: z.array(z.string()).optional(), // Rule IDs to skip
 });
 
 // DFM Rule Evaluation Context Schema
 export const DfmRuleEvaluationContextSchema = z.object({
-  geometry: z.record(z.unknown()),
-  material: z.record(z.unknown()).optional(),
-  process: z.record(z.unknown()).optional(),
-  design: z.record(z.unknown()).optional(),
-  tolerances: z.record(z.unknown()).optional(),
+  geometry: z.record(z.string(), z.unknown()),
+  material: z.record(z.string(), z.unknown()).optional(),
+  process: z.record(z.string(), z.unknown()).optional(),
+  design: z.record(z.string(), z.unknown()).optional(),
+  tolerances: z.record(z.string(), z.unknown()).optional(),
 });
 
 // DFM Rule Result Schema
@@ -123,7 +123,7 @@ export const DfmRuleResultSchema = z.object({
   passed: z.boolean(),
   severity: SeveritySchema.optional(),
   message: z.string().optional(),
-  details: z.record(z.unknown()).optional(),
+  details: z.record(z.string(), z.unknown()).optional(),
   evaluation_time_ms: z.number(),
 });
 

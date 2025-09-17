@@ -10,9 +10,6 @@ import { BullModule } from "@nestjs/bullmq";
   imports: [
     SupabaseModule,
     CacheModule,
-    BullModule.registerQueue({
-      name: "dfm-analysis",
-    }),
   ],
   controllers: [DfmController],
   providers: [DfmService, DfmAnalysisProcessor],

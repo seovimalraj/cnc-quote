@@ -1,566 +1,183 @@
-# CNC Quote Platform
+# Supabase CLI
 
-A comprehensive, full-stack platform for instant quoting of CNC machining, Sheet Metal fabrication, and Injection Molding services. The platform provides automated CAD analysis, real-time pricing, DFM validation, and complete order management workflows.
+[![Coverage Status](https://coveralls.io/repos/github/supabase/cli/badge.svg?branch=main)](https://coveralls.io/github/supabase/cli?branch=main) [![Bitbucket Pipelines](https://img.shields.io/bitbucket/pipelines/supabase-cli/setup-cli/master?style=flat-square&label=Bitbucket%20Canary)](https://bitbucket.org/supabase-cli/setup-cli/pipelines) [![Gitlab Pipeline Status](https://img.shields.io/gitlab/pipeline-status/sweatybridge%2Fsetup-cli?label=Gitlab%20Canary)
+](https://gitlab.com/sweatybridge/setup-cli/-/pipelines)
 
-## 🎯 Service Level Objectives (SLOs)
+[Supabase](https://supabase.io) is an open source Firebase alternative. We're building the features of Firebase using enterprise-grade open source tools.
 
-- ⚡ **Time to First Price**: P95 < 2000ms
-- 🔄 **CAD Analysis**: P95 < 20000ms
-- 💳 **Payment to Order**: P95 < 10000ms
+This repository contains all the functionality for Supabase CLI.
 
-## 🚀 Features
+- [x] Running Supabase locally
+- [x] Managing database migrations
+- [x] Creating and deploying Supabase Functions
+- [x] Generating types directly from your database schema
+- [x] Making authenticated HTTP requests to [Management API](https://supabase.com/docs/reference/api/introduction)
 
-### Core Manufacturing Processes
-- **CNC Machining**: Milling and turning operations with advanced feature recognition
-- **Sheet Metal**: Laser cutting, press brake bending, and waterjet cutting
-- **Injection Molding**: Complex part analysis with mold design considerations
+## Getting started
 
-### Key Capabilities
-- 📐 **CAD File Analysis** - Automated geometry analysis using OpenCASCADE
-- 💰 **Real-time Pricing** - Dynamic pricing engine with machine-specific calculations
-- 🔍 **DFM Validation** - Design for Manufacturing feedback and optimization suggestions
-- 📋 **Quote Management** - Complete quote lifecycle from creation to order conversion
-- 💳 **Payment Processing** - Stripe and PayPal integration for seamless transactions
-- 📄 **QAP Documents** - Quality Assurance Program document generation
-- 🔄 **Order Management** - Full order tracking and workflow management
-- 📊 **Manual Review System** - Advanced review workflows for complex parts
-- 🏭 **Machine Management** - Comprehensive machine configuration and capabilities
-- 📁 **File Management** - Secure file storage and processing
+### Install the CLI
 
-## 🛠 Tech Stack
+Available via [NPM](https://www.npmjs.com) as dev dependency. To install:
 
-### Frontend
-- **Next.js 13** - React framework with App Router
-- **TypeScript** - Type-safe development
-- **Tailwind CSS** - Utility-first styling
-- **React Three Fiber** - 3D CAD visualization
-- **Supabase Auth** - Authentication and authorization
-- **SWR** - Data fetching and caching
-
-### Backend API
-- **NestJS** - Scalable Node.js framework
-- **TypeScript** - End-to-end type safety
-- **PostgreSQL** - Primary database via Supabase
-- **BullMQ + Redis** - Job queues and caching
-- **JWT** - Authentication tokens
-- **Swagger** - API documentation
-
-### CAD Service
-- **Python FastAPI** - High-performance async API
-- **OpenCASCADE** - 3D CAD kernel for geometry analysis
-- **Celery** - Distributed task processing
-- **NumPy** - Scientific computing
-
-### Infrastructure & Monitoring
-- **Supabase** - Backend-as-a-Service (PostgreSQL, Auth, Storage)
-- **Redis** - Caching and job queues
-- **Sentry** - Error tracking and performance monitoring
-- **PostHog** - Product analytics and event tracking
-- **Render.com** - Cloud hosting platform
-
-## 🔄 Development Setup
-
-1. **Prerequisites**
-   - Node.js 18+
-   - PNPM package manager
-   - Python 3.11+
-   - Poetry
-   - Redis
-   - Stripe CLI
-
-2. **Environment Variables**
-
-   Create the following .env files:
-
-   apps/web/.env:
-   ```env
-   NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
-   NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key
-   NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=your_stripe_key
-   NEXT_PUBLIC_API_URL=http://localhost:3000
-   NEXT_PUBLIC_SENTRY_DSN=your_sentry_dsn
-   NEXT_PUBLIC_POSTHOG_KEY=your_posthog_key
-   ```
-
-   apps/api/.env:
-   ```env
-   SUPABASE_URL=your_supabase_url
-   SUPABASE_ANON_KEY=your_anon_key
-   STRIPE_SECRET_KEY=your_stripe_secret
-   STRIPE_WEBHOOK_SECRET=your_webhook_secret
-   SENTRY_DSN=your_sentry_dsn
-   POSTHOG_API_KEY=your_posthog_key
-   PORT=3000
-   ```
-
-   apps/cad-service/.env:
-   ```env
-   SUPABASE_URL=your_supabase_url
-   SUPABASE_ANON_KEY=your_anon_key
-   PORT=3001
-   ```
-
-3. **Installation**
-   ```bash
-   # Install dependencies
-   pnpm install
-
-   # Run database migrations
-   cd apps/api
-   pnpm supabase db push
-   ```
-
-4. **Development Servers**
-   ```bash
-   # Terminal 1 - API
-   cd apps/api
-   pnpm dev
-
-   # Terminal 2 - Web
-   cd apps/web
-   pnpm dev
-
-   # Terminal 3 - CAD Service
-   cd apps/cad-service
-   pnpm dev
-
-   # Terminal 4 - Stripe webhook forwarding
-   stripe listen --forward-to http://localhost:3000/api/payments/stripe/webhook
-   ```
-
-## 🧪 Testing
-
-Run comprehensive test suites:
 ```bash
-# Test RLS policies
-pnpm check-rls
-
-# Test pricing engine
-pnpm check-pricing
-
-# Test CAD pipeline
-pnpm check-cad
-
-# Test widget embedding
-pnpm check-embed
-
-# Test payment flow
-pnpm check-payment
-
-# Test performance SLOs
-pnpm check-slos
-
-# Test monitoring setup
-pnpm check-observability
+npm i supabase --save-dev
 ```
 
-## 📊 Monitoring & Health Checks
+To install the beta release channel:
 
-- **System Health Dashboard**: /admin/system-health
-  - API/CAD service status
-  - Queue metrics
-  - Database latency
-  - Stripe webhook status
-  - Widget origins
+```bash
+npm i supabase@beta --save-dev
+```
 
-- **Error Tracking**: Sentry integration with:
-  - Organization context
-  - Request ID tracking
-  - Performance monitoring
+When installing with yarn 4, you need to disable experimental fetch with the following nodejs config.
 
-- **Analytics**: PostHog tracking for:
-  - User journeys
-  - Conversion funnels
-  - Feature usage
+```
+NODE_OPTIONS=--no-experimental-fetch yarn add supabase
+```
 
-## 🚀 Deployment
+> **Note**
+For Bun versions below v1.0.17, you must add `supabase` as a [trusted dependency](https://bun.sh/guides/install/trusted) before running `bun add -D supabase`.
 
-This project is configured for deployment on Render.com using the provided `render.yaml` blueprint:
+<details>
+  <summary><b>macOS</b></summary>
 
-1. **Create a Render Account**
-   - Connect your GitHub repository
-   - Create a new Blueprint instance
+  Available via [Homebrew](https://brew.sh). To install:
 
-2. **Environment Setup**
-   - Configure environment variables in Render dashboard
-   - Set up service-specific settings
+  ```sh
+  brew install supabase/tap/supabase
+  ```
 
-3. **Service URLs**
-   - Web UI: https://cnc-quote-web.onrender.com
-   - API: https://cnc-quote-api.onrender.com
-   - CAD Service: https://cnc-quote-cad.onrender.com
-
-4. **Post-Deployment**
-   - Configure Stripe webhook endpoints
-   - Update Supabase allowed domains
-   - Verify health checks
-   - Monitor error reporting
-
-## 🔌 Widget Integration
-
-Embed the quote widget in your website:
-
-```html
-<iframe
-  src="https://your-domain.com/widget"
-  width="100%"
-  height="600px"
-  allow="payment"
-></iframe>
-
-<script>
-window.addEventListener('message', (event) => {
-  if (event.origin !== 'https://your-domain.com') return;
+  To install the beta release channel:
   
-  if (event.data.type === 'price:updated') {
-    console.log('New price:', event.data.price);
-  }
-});
-</script>
-```
+  ```sh
+  brew install supabase/tap/supabase-beta
+  brew link --overwrite supabase-beta
+  ```
+  
+  To upgrade:
 
-## 🤝 Contributing
+  ```sh
+  brew upgrade supabase
+  ```
+</details>
 
-1. Fork the repository
-2. Create your feature branch
-3. Run the test suites
-4. Submit a pull request
+<details>
+  <summary><b>Windows</b></summary>
 
-## 📝 License
+  Available via [Scoop](https://scoop.sh). To install:
 
-[License Name] - See LICENSE file for details
-- **Sentry** - Error monitoring and performance tracking
-- **Stripe & PayPal** - Payment processing
-- **Resend** - Email delivery
+  ```powershell
+  scoop bucket add supabase https://github.com/supabase/scoop-bucket.git
+  scoop install supabase
+  ```
 
-## 🏗 Architecture
+  To upgrade:
 
-```
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   Next.js Web   │    │   NestJS API    │    │ Python CAD Svc  │
-│                 │────│                 │────│                 │
-│ • React UI      │    │ • REST API      │    │ • OpenCASCADE   │
-│ • 3D Viewer     │    │ • Auth/Guards   │    │ • Geometry      │
-│ • File Upload   │    │ • Business Logic│    │ • Analysis      │
-└─────────────────┘    └─────────────────┘    └─────────────────┘
-         │                       │                       │
-         └───────────────────────┼───────────────────────┘
-                                 │
-         ┌─────────────────┐    │    ┌─────────────────┐
-         │   Supabase      │────┼────│     Redis       │
-         │                 │    │    │                 │
-         │ • PostgreSQL    │    │    │ • Job Queues    │
-         │ • Auth          │    │    │ • Caching       │
-         │ • File Storage  │    │    │ • Sessions      │
-         └─────────────────┘         └─────────────────┘
-```
+  ```powershell
+  scoop update supabase
+  ```
+</details>
 
-## 📁 Project Structure
+<details>
+  <summary><b>Linux</b></summary>
 
-```
-cnc-quote/
-├── apps/
-│   ├── web/                    # Next.js Frontend Application
-│   │   ├── src/
-│   │   │   ├── app/           # App Router pages
-│   │   │   │   ├── (auth)/    # Authentication pages
-│   │   │   │   ├── admin/     # Admin dashboard
-│   │   │   │   ├── portal/    # Customer portal
-│   │   │   │   └── widget/    # Embeddable quote widget
-│   │   │   ├── components/    # Reusable UI components
-│   │   │   │   ├── checkout/  # Payment components
-│   │   │   │   ├── upload/    # File upload components
-│   │   │   │   ├── viewer/    # 3D CAD viewer
-│   │   │   │   └── widget/    # Widget components
-│   │   │   └── lib/          # Utilities and configurations
-│   │   └── e2e/              # End-to-end tests
-│   │
-│   ├── api/                   # NestJS Backend API
-│   │   ├── src/
-│   │   │   ├── auth/         # Authentication & authorization
-│   │   │   ├── lib/          # Shared libraries
-│   │   │   │   ├── cache/    # Caching service
-│   │   │   │   └── supabase/ # Supabase integration
-│   │   │   ├── modules/      # Feature modules
-│   │   │   │   ├── cad/      # CAD analysis
-│   │   │   │   ├── dfm/      # Design for Manufacturing
-│   │   │   │   ├── files/    # File management
-│   │   │   │   ├── machines/ # Machine configuration
-│   │   │   │   ├── orders/   # Order management
-│   │   │   │   ├── payments/ # Payment processing
-│   │   │   │   ├── pricing/  # Pricing engine
-│   │   │   │   ├── qap/      # Quality Assurance
-│   │   │   │   └── quotes/   # Quote management
-│   │   │   ├── queues/       # Job queue configuration
-│   │   │   └── observability/# Logging and monitoring
-│   │   ├── db/migrations/    # Database migrations
-│   │   └── test/            # API tests
-│   │
-│   └── cad-service/          # Python CAD Analysis Service
-│       ├── app/
-│       │   ├── routers/      # FastAPI route handlers
-│       │   └── workers/      # Celery background workers
-│       └── requirements.txt
-│
-├── packages/
-│   └── shared/               # Shared TypeScript types and utilities
-│       └── src/
-│           ├── types.core.ts    # Core data types
-│           ├── dfm.types.ts     # DFM validation types
-│           └── pricing.types.ts # Pricing calculation types
-│
-├── docs/                     # Project documentation
-└── turbo.json               # Monorepo build configuration
-```
+  Available via [Homebrew](https://brew.sh) and Linux packages.
 
-## 🚦 Getting Started
+  #### via Homebrew
 
-### Prerequisites
-- Node.js 18+ and pnpm
-- Python 3.10+ (for CAD service)
-- PostgreSQL database (via Supabase)
-- Redis instance
+  To install:
 
-### Installation
+  ```sh
+  brew install supabase/tap/supabase
+  ```
 
-1. **Clone the repository**
+  To upgrade:
+
+  ```sh
+  brew upgrade supabase
+  ```
+
+  #### via Linux packages
+
+  Linux packages are provided in [Releases](https://github.com/supabase/cli/releases). To install, download the `.apk`/`.deb`/`.rpm`/`.pkg.tar.zst` file depending on your package manager and run the respective commands.
+
+  ```sh
+  sudo apk add --allow-untrusted <...>.apk
+  ```
+
+  ```sh
+  sudo dpkg -i <...>.deb
+  ```
+
+  ```sh
+  sudo rpm -i <...>.rpm
+  ```
+
+  ```sh
+  sudo pacman -U <...>.pkg.tar.zst
+  ```
+</details>
+
+<details>
+  <summary><b>Other Platforms</b></summary>
+
+  You can also install the CLI via [go modules](https://go.dev/ref/mod#go-install) without the help of package managers.
+
+  ```sh
+  go install github.com/supabase/cli@latest
+  ```
+
+  Add a symlink to the binary in `$PATH` for easier access:
+
+  ```sh
+  ln -s "$(go env GOPATH)/bin/cli" /usr/bin/supabase
+  ```
+
+  This works on other non-standard Linux distros.
+</details>
+
+<details>
+  <summary><b>Community Maintained Packages</b></summary>
+
+  Available via [pkgx](https://pkgx.sh/). Package script [here](https://github.com/pkgxdev/pantry/blob/main/projects/supabase.com/cli/package.yml).
+  To install in your working directory:
+
+  ```bash
+  pkgx install supabase
+  ```
+
+  Available via [Nixpkgs](https://nixos.org/). Package script [here](https://github.com/NixOS/nixpkgs/blob/master/pkgs/development/tools/supabase-cli/default.nix).
+</details>
+
+### Run the CLI
+
 ```bash
-git clone <repository-url>
-cd cnc-quote
+supabase bootstrap
 ```
 
-2. **Install dependencies**
+Or using npx:
+
 ```bash
-pnpm install
+npx supabase bootstrap
 ```
 
-3. **Environment Setup**
-   
-   Create `.env.local` files in each app directory with required variables:
+The bootstrap command will guide you through the process of setting up a Supabase project using one of the [starter](https://github.com/supabase-community/supabase-samples/blob/main/samples.json) templates.
 
-   **apps/web/.env.local:**
-   ```env
-   NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
-   NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
-   NEXT_PUBLIC_API_URL=http://localhost:3001
-   NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=your_stripe_key
-   ```
+## Docs
 
-   **apps/api/.env:**
-   ```env
-   SUPABASE_URL=your_supabase_url
-   SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
-   JWT_SECRET=your_jwt_secret
-   REDIS_URL=redis://localhost:6379
-   STRIPE_SECRET_KEY=your_stripe_secret
-   PAYPAL_CLIENT_ID=your_paypal_client_id
-   CAD_SERVICE_URL=http://localhost:8000
-   ```
+Command & config reference can be found [here](https://supabase.com/docs/reference/cli/about).
 
-4. **Database Setup**
-```bash
-# Run migrations (if using local PostgreSQL)
-cd apps/api && pnpm run migrate
+## Breaking changes
+
+We follow semantic versioning for changes that directly impact CLI commands, flags, and configurations.
+
+However, due to dependencies on other service images, we cannot guarantee that schema migrations, seed.sql, and generated types will always work for the same CLI major version. If you need such guarantees, we encourage you to pin a specific version of CLI in package.json.
+
+## Developing
+
+To run from source:
+
+```sh
+# Go >= 1.22
+go run . help
 ```
-
-5. **Start Development Servers**
-```bash
-# Start all services
-pnpm dev
-
-# Or start individually:
-pnpm --filter @cnc-quote/web dev      # Frontend on :3000
-pnpm --filter @cnc-quote/api dev      # API on :3001
-cd apps/cad-service && python main.py # CAD service on :8000
-```
-
-## 📋 API Endpoints
-
-### Authentication
-- `POST /auth/login` - User authentication
-- `POST /auth/refresh` - Token refresh
-- `GET /auth/profile` - User profile
-
-### CAD Analysis
-- `POST /cad/analyze` - Queue CAD file analysis
-- `GET /cad/analysis/:taskId` - Get analysis results
-- `GET /cad/preview/:fileId` - Get 3D preview data
-
-### Quotes & Pricing
-- `POST /price` - Calculate pricing for parts
-- `POST /api/quotes` - Create new quote
-- `GET /api/quotes/:id` - Get quote details
-- `PUT /api/quotes/:id` - Update quote
-- `POST /api/quotes/:id/send` - Send quote to customer
-- `GET /api/quotes/:id/pdf` - Download quote PDF
-
-### DFM Validation
-- `POST /api/validate/cnc` - Validate CNC design
-- `POST /api/validate/sheet-metal` - Validate sheet metal design
-- `POST /api/validate/injection-molding` - Validate injection molding design
-
-### Orders & Payments
-- `POST /payments/create-checkout-session` - Create payment session
-- `POST /payments/webhook` - Handle payment webhooks
-- `GET /orders` - List orders
-- `POST /orders` - Create order from quote
-
-### QAP (Quality Assurance)
-- `POST /qap/templates` - Create QAP template
-- `GET /qap/templates/:id` - Get template
-- `POST /qap/documents` - Generate QAP document
-- `GET /qap/documents/:id` - Get QAP document
-
-### File Management
-- `POST /files/upload` - Upload CAD files
-- `GET /files/:id` - Get file metadata
-- `DELETE /files/:id` - Delete file
-
-### Machine Management
-- `GET /machines` - List organization machines
-- `GET /machines/:id` - Get machine details
-- `POST /machines` - Create machine configuration
-
-## 🎯 Key Features Deep Dive
-
-### CAD Analysis Engine
-The platform uses OpenCASCADE for advanced 3D geometry analysis:
-- **Feature Recognition**: Automatic detection of holes, pockets, slots, and complex geometries
-- **Material Volume**: Precise volume calculations for material cost estimation
-- **Surface Area**: Surface area analysis for finishing operations
-- **Complexity Analysis**: Algorithmic complexity scoring for pricing adjustments
-
-### Intelligent Pricing Engine
-Multi-factor pricing calculations include:
-- **Machine Time**: Setup time + cycle time based on geometry complexity
-- **Material Costs**: Volume-based material calculations with waste factors
-- **Tooling**: Tool selection and wear calculations
-- **Feature Multipliers**: Cost adjustments based on manufacturing features
-- **Volume Discounts**: Quantity-based pricing tiers
-
-### DFM Validation System
-Real-time design feedback covering:
-- **Manufacturability**: Process-specific design rule validation
-- **Tolerance Analysis**: Achievable tolerance recommendations
-- **Feature Optimization**: Suggestions for cost-effective design changes
-- **Material Selection**: Process-appropriate material recommendations
-
-### Advanced Quote Management
-Comprehensive quote lifecycle:
-- **Multi-part Quotes**: Support for assemblies and multiple components
-- **Revision Tracking**: Version control for quote modifications
-- **Customer Approval**: Digital approval workflow with e-signatures
-- **Quote-to-Order**: Seamless conversion with payment processing
-
-## 🧪 Testing
-
-### Frontend Testing
-```bash
-cd apps/web
-pnpm test                    # Unit tests
-pnpm test:e2e               # End-to-end tests with Playwright
-```
-
-### Backend Testing
-```bash
-cd apps/api
-pnpm test                    # Unit tests
-pnpm test:e2e               # Integration tests
-```
-
-### Test Coverage
-- Unit tests for business logic
-- Integration tests for API endpoints
-- E2E tests for critical user workflows
-- CAD analysis validation tests
-
-## 🚀 Deployment
-
-### Production Build
-```bash
-pnpm build                   # Build all applications
-```
-
-### Docker Support
-```bash
-# Build CAD service container
-cd apps/cad-service
-docker build -t cad-service .
-
-# Run with docker-compose (if configured)
-docker-compose up -d
-```
-
-### Environment Variables
-Ensure all production environment variables are properly configured:
-- Database connections
-- Redis configuration
-- Payment provider credentials
-- File storage settings
-- Monitoring and logging
-
-## 📊 Monitoring & Observability
-
-### Error Tracking
-- **Sentry Integration**: Comprehensive error tracking and performance monitoring
-- **Custom Logging**: Structured logging with correlation IDs
-- **Health Checks**: Service health monitoring endpoints
-
-### Performance Monitoring
-- API response time tracking
-- Database query performance
-- CAD analysis processing times
-- Queue processing metrics
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
-### Development Guidelines
-- Follow TypeScript strict mode
-- Maintain test coverage above 80%
-- Use conventional commit messages
-- Update documentation for new features
-
-## 📄 License
-
-This project is licensed under the GNU General Public License v3.0 - see the [LICENSE](LICENSE) file for details.
-
-## 🔧 Troubleshooting
-
-### Common Issues
-
-**CAD Analysis Fails**
-- Ensure OpenCASCADE dependencies are installed
-- Check CAD service logs for geometry parsing errors
-- Verify file format support (STEP, IGES, STL)
-
-**Pricing Calculation Errors**
-- Validate machine configuration completeness
-- Check material database entries
-- Verify feature detection accuracy
-
-**Authentication Issues**
-- Confirm Supabase configuration
-- Check JWT token expiration
-- Verify organization membership
-
-**Payment Processing**
-- Validate Stripe/PayPal webhook endpoints
-- Check API key configuration
-- Monitor payment provider status
-
-## 📞 Support
-
-For technical support or questions:
-- Create an issue in the repository
-- Check the documentation in `/docs`
-- Review API documentation via Swagger UI
-
----
-
-**Built with ❤️ for modern manufacturing**

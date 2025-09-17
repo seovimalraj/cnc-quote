@@ -1,7 +1,7 @@
 import { Injectable, CanActivate, ExecutionContext, UnauthorizedException } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { Request } from 'express';
-import { SupabaseService } from '../../lib/supabase/supabase.service';
+import { SupabaseService } from '../lib/supabase/supabase.service';
 
 @Injectable()
 export class DfmAuthGuard implements CanActivate {

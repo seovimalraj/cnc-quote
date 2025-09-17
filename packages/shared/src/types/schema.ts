@@ -87,8 +87,8 @@ export const AuditEventSchema = z.object({
   target_type: z.enum(['user', 'organization', 'membership', 'invite']),
   target_id: z.string().uuid(),
   action: z.enum(['create', 'update', 'delete', 'role_change', 'disable', 'enable', 'invite_send', 'invite_resend', 'invite_revoke', 'impersonate_start', 'impersonate_end', 'quota_edit']),
-  before: z.record(z.unknown()).nullable(),
-  after: z.record(z.unknown()).nullable(),
+  before: z.record(z.string(), z.unknown()).nullable(),
+  after: z.record(z.string(), z.unknown()).nullable(),
   ts: z.string().datetime(),
   created_at: z.string().datetime(),
 });
@@ -132,7 +132,7 @@ export const WebhookEventSchema = z.object({
   idempotency_key: z.string().nullable(),
   order_id: z.string().uuid().nullable(),
   quote_id: z.string().uuid().nullable(),
-  payload_summary: z.record(z.unknown()),
+  payload_summary: z.record(z.string(), z.unknown()),
   created_at: z.string().datetime(),
   updated_at: z.string().datetime(),
 });
@@ -177,7 +177,7 @@ export const CadTaskSchema = z.object({
   file_id: z.string().uuid(),
   organization_id: z.string().uuid(),
   status: z.enum(['Queued', 'Processing', 'Succeeded', 'Failed']),
-  features: z.record(z.unknown()).optional(),
+  features: z.record(z.string(), z.unknown()).optional(),
   error_code: z.string().optional(),
   processing_started_at: z.string().datetime().optional(),
   processing_completed_at: z.string().datetime().optional(),
@@ -216,7 +216,7 @@ export const QuoteSchema = z.object({
     'Expired'
   ]),
   items: z.array(QuoteItemSchema),
-  pricing: z.record(z.unknown()).optional(),
+  pricing: z.record(z.string(), z.unknown()).optional(),
   dfm_flags: z.array(z.string()).optional(),
   currency: z.string().default('USD'),
   expires_at: z.string().datetime(),
@@ -351,7 +351,7 @@ export const PaymentSchema = z.object({
   amount: z.number().positive(),
   currency: z.string().default('USD'),
   status: z.enum(['pending', 'processing', 'succeeded', 'failed', 'cancelled', 'refunded']),
-  metadata: z.record(z.unknown()).optional(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
   created_at: z.string().datetime(),
   updated_at: z.string().datetime(),
 });
@@ -362,7 +362,7 @@ export const QapDocumentSchema = z.object({
   order_id: z.string().uuid(),
   organization_id: z.string().uuid(),
   template_id: z.string().uuid(),
-  document_data: z.record(z.unknown()),
+  document_data: z.record(z.string(), z.unknown()),
   status: z.enum(['draft', 'generated', 'approved', 'rejected']),
   generated_url: z.string().url().optional(),
   approved_at: z.string().datetime().optional(),
@@ -573,7 +573,7 @@ export const MetricsTimeseriesSchema = z.object({
   metric: z.string(),
   value: z.number(),
   percentile: z.string().optional(), // 'p50', 'p95', 'p99', 'raw'
-  labels: z.record(z.any()).optional(),
+  labels: z.record(z.string(), z.any()).optional(),
   timestamp: z.string().datetime(),
 });
 
@@ -650,6 +650,8 @@ export const AlertChannelsSchema = z.object({
 // Type exports
 export type User = z.infer<typeof UserSchema>;
 export type Organization = z.infer<typeof OrganizationSchema>;
+export type Membership = z.infer<typeof MembershipSchema>;
+export type Invite = z.infer<typeof InviteSchema>;
 export type File = z.infer<typeof FileSchema>;
 export type CadTask = z.infer<typeof CadTaskSchema>;
 export type QuoteItem = z.infer<typeof QuoteItemSchema>;
@@ -823,7 +825,7 @@ export const QAPTemplateSchema = z.object({
   industry: z.enum(['General', 'Aerospace', 'Medical', 'Automotive']),
   rev: z.string(),
   owner_user_id: z.string().uuid(),
-  variables: z.record(z.unknown()),
+  variables: z.record(z.string(), z.unknown()),
   steps: z.array(z.object({
     title: z.string(),
     description_md: z.string(),

@@ -1,13 +1,11 @@
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
-from OCC.Core.STEPControl import STEPControl_Reader
-from OCC.Core.IFSelect import IFSelect_RetDone
-from OCC.Core.BRepMesh import BRepMesh_IncrementalMesh
-from OCC.Core.StlAPI import StlAPI_Writer
-import tempfile
-import os
-import numpy as np
-import trimesh
+# from OCC.Core.STEPControl import STEPControl_Reader
+# from OCC.Core.IFSelect import IFSelect_RetDone
+# from OCC.Core.BRepMesh import BRepMesh_IncrementalMesh
+# from OCC.Core.StlAPI import StlAPI_Writer
+# import numpy as np
+# import trimesh
 from pathlib import Path
 
 from ..workers.celery import celery_app
@@ -25,42 +23,45 @@ class GltfResponse(BaseModel):
 
 @celery_app.task
 def convert_to_gltf(file_id: str, file_path: str):
-    try:
-        # Read STEP file
-        reader = STEPControl_Reader()
-        status = reader.ReadFile(file_path)
-        if status != IFSelect_RetDone:
-            raise Exception("Failed to read STEP file")
+    # Temporarily disabled - OCC dependencies not available
+    # TODO: Re-enable when OCC is properly installed
+    return {"error": "GLTF conversion temporarily disabled"}
+    # try:
+    #     # Read STEP file
+    #     reader = STEPControl_Reader()
+    #     status = reader.ReadFile(file_path)
+    #     if status != IFSelect_RetDone:
+    #         raise Exception("Failed to read STEP file")
+    
+    #     reader.TransferRoots()
+    #     shape = reader.OneShape()
+    
+    #     # Create mesh
+    #     mesh = BRepMesh_IncrementalMesh(shape, 0.1)
+    #     mesh.Perform()
+    
+    #     # First convert to STL as an intermediate format
+    #     with tempfile.NamedTemporaryFile(suffix='.stl', delete=False) as tmp_stl:
+    #         stl_writer = StlAPI_Writer()
+    #         stl_writer.Write(shape, tmp_stl.name)
         
-        reader.TransferRoots()
-        shape = reader.OneShape()
+    #         # Load STL file
+    #         mesh = trimesh.load(tmp_stl.name)
         
-        # Create mesh
-        mesh = BRepMesh_IncrementalMesh(shape, 0.1)
-        mesh.Perform()
+    #         # Create output directory if it doesn't exist
+    #         output_dir = Path("/tmp/previews")
+    #         output_dir.mkdir(exist_ok=True)
+            
+    #         # Generate GLTF file
+    #         gltf_path = output_dir / f"{file_id}.gltf"
+    #         mesh.export(str(gltf_path), file_type='gltf')
         
-        # First convert to STL as an intermediate format
-        with tempfile.NamedTemporaryFile(suffix='.stl', delete=False) as tmp_stl:
-            stl_writer = StlAPI_Writer()
-            stl_writer.Write(shape, tmp_stl.name)
-            
-            # Load STL file
-            mesh = trimesh.load(tmp_stl.name)
-            
-            # Create output directory if it doesn't exist
-            output_dir = Path("/tmp/previews")
-            output_dir.mkdir(exist_ok=True)
-            
-            # Generate GLTF file
-            gltf_path = output_dir / f"{file_id}.gltf"
-            mesh.export(str(gltf_path), file_type='gltf')
-            
-            return {
-                "file_id": file_id,
-                "gltf_url": f"/preview/{file_id}.gltf"
-            }
-    except Exception as e:
-        return {"error": str(e)}
+    #         return {
+    #             "file_id": file_id,
+    #             "gltf_url": f"/preview/{file_id}.gltf"
+    #         }
+    # except Exception as e:
+    #     return {"error": str(e)}
 
 @router.post("/{file_id}", response_model=GltfResponse)
 async def create_gltf(file_id: str, request: GltfRequest):

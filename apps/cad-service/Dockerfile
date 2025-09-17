@@ -32,7 +32,7 @@ COPY apps/cad-service/app ./app
 
 # Install dependencies
 RUN poetry config virtualenvs.create false \
-    && poetry install --no-interaction --no-ansi --only=main
+    && poetry install --no-interaction --no-ansi --only=main --no-root
 
 # Expose port
 EXPOSE 10001

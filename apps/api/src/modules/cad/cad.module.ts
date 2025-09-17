@@ -12,9 +12,6 @@ import { CadProcessor } from "./cad.processor";
       timeout: 60000, // 1 minute timeout for CAD operations
       maxRedirects: 5,
     }),
-    BullModule.registerQueue({
-      name: "cad",
-    }),
     FilesModule,
   ],
   controllers: [CadController],
