@@ -4,6 +4,12 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+overrides:
+  minimist: ^1.2.8
+  mkdirp: ^3.0.1
+  qs: ^6.14.0
+  lodash: ^4.17.21
+
 importers:
 
   .:
@@ -33,8 +39,8 @@ importers:
         specifier: ^5.8.4
         version: 5.8.4
       puppeteer:
-        specifier: ^24.21.0
-        version: 24.21.0(typescript@5.9.2)
+        specifier: ^24.22.0
+        version: 24.22.0(typescript@5.9.2)
       stripe:
         specifier: ^18.5.0
         version: 18.5.0(@types/node@24.5.1)
@@ -129,9 +135,6 @@ importers:
       '@nestjs/typeorm':
         specifier: ^11.0.0
         version: 11.0.0(@nestjs/common@11.1.6(class-transformer@0.5.1)(class-validator@0.14.2)(reflect-metadata@0.1.14)(rxjs@7.8.2))(@nestjs/core@11.1.6)(reflect-metadata@0.1.14)(rxjs@7.8.2)(typeorm@0.3.26(ioredis@5.7.0)(redis@5.8.2)(reflect-metadata@0.1.14)(ts-node@10.9.2(@swc/core@1.13.5(@swc/helpers@0.5.17))(@types/node@24.5.1)(typescript@5.9.2)))
-      '@paypal/checkout-server-sdk':
-        specifier: ^1.0.3
-        version: 1.0.3
       '@paypal/paypal-server-sdk':
         specifier: ^1.1.0
         version: 1.1.0
@@ -461,7 +464,7 @@ importers:
         specifier: ^0.544.0
         version: 0.544.0(react@19.1.1)
       next:
-        specifier: ^15.0.0
+        specifier: ^15.5.3
         version: 15.5.3(@babel/core@7.28.4)(@opentelemetry/api@1.9.0)(@playwright/test@1.55.0)(react-dom@19.1.1(react@19.1.1))(react@19.1.1)
       otplib:
         specifier: ^12.0.1
@@ -473,13 +476,13 @@ importers:
         specifier: ^1.266.0
         version: 1.266.0
       react:
-        specifier: ^19.0.0
+        specifier: ^19.1.1
         version: 19.1.1
       react-apexcharts:
         specifier: ^1.7.0
         version: 1.7.0(apexcharts@5.3.5)(react@19.1.1)
       react-dom:
-        specifier: ^19.0.0
+        specifier: ^19.1.1
         version: 19.1.1(react@19.1.1)
       react-dropzone:
         specifier: ^14.3.8
@@ -2322,21 +2325,12 @@ packages:
   '@paralleldrive/cuid2@2.2.2':
     resolution: {integrity: sha512-ZOBkgDwEdoYVlSeRbYYXs0S9MejQofiVYoTbKzy/6GQa39/q5tQU2IX46+shYnUkpEl3wc+J6wRlar7r2EK2xA==}
 
-  '@paypal/checkout-server-sdk@1.0.3':
-    resolution: {integrity: sha512-UEdq8akEdMz0Vs4qoQFU2gMp8PpyE/HKyMwiZuK4vIWUKl8jfd1fWKjQN5cDFm9NkFUIp5U7h++rdMOVj9WMNA==}
-    engines: {node: '>=8'}
-    deprecated: 'Package no longer supported. The author suggests using the @paypal/paypal-server-sdk package instead: https://www.npmjs.com/package/@paypal/paypal-server-sdk. Contact Support at https://www.npmjs.com/support for more info.'
-
   '@paypal/paypal-js@8.4.2':
     resolution: {integrity: sha512-UbY2lvwW65KX4migWbAx8KK0TCbPdIxeHIHogpJ5Z6yta5Qd2+90rXyx8FGdp6wrcr1f/srotlxnBXvqYWyHog==}
 
   '@paypal/paypal-server-sdk@1.1.0':
     resolution: {integrity: sha512-MaJQmSVpQb5nEeZWZDTtGRxeaHj6O51G9Olmm3zQ5E4XNgR4emAI08CKC2ZPhBldVoxAoBVjLyvKjGV5lC1n2Q==}
     engines: {node: '>=14.17.0'}
-
-  '@paypal/paypalhttp@1.0.1':
-    resolution: {integrity: sha512-DC7AHxTT7drF6dUi3YaFdPVuT15sIkpD5H2eHmdtFgxM4UanS1o1ZDfMhR9mpxd8o+X6pz2r+EZVRRq+n1cssQ==}
-    engines: {node: '>=4'}
 
   '@paypal/react-paypal-js@8.9.1':
     resolution: {integrity: sha512-7UWGvv+5XD2OexlUpNBRvONErYuxzi0k8wlsjxFsnVSav8hgpfu/27oTMdvGREDzXnQYOKIBn3tbTbNlNc6psA==}
@@ -6449,8 +6443,9 @@ packages:
   mitt@3.0.1:
     resolution: {integrity: sha512-vKivATfr97l2/QBCYAkXYDbrIWPM2IIKEl7YPhjCvKlG3kE2gm+uBo6nEXK3M5/Ffh/FLpKExzOQ3JJoJGFKBw==}
 
-  mkdirp@0.5.6:
-    resolution: {integrity: sha512-FP+p8RB8OWpF3YZBCrP5gtADmtXApB5AMLn+vdyA+PyxCjrCs00mjyUozssO33cwDeT3wNGdLxJ5M//YqtHAJw==}
+  mkdirp@3.0.1:
+    resolution: {integrity: sha512-+NsyUUAZDmo6YVHzL/stxSu3t9YS1iljliy3BSDrXJ/dkn1KYdmtZODGGjLcc9XLgVVpH4KshHB8XmZgMhaBXg==}
+    engines: {node: '>=10'}
     hasBin: true
 
   mlly@1.8.0:
@@ -7023,8 +7018,17 @@ packages:
     resolution: {integrity: sha512-WR4FehOs4XJ8OSp7MkGyVB4mfMs9Q6t8Y48TxiTCRxc8G2lJ5OKYPJvgU80dtKl+aIqIbdcNTgIooY49S5SsmA==}
     engines: {node: '>=18'}
 
+  puppeteer-core@24.22.0:
+    resolution: {integrity: sha512-oUeWlIg0pMz8YM5pu0uqakM+cCyYyXkHBxx9di9OUELu9X9+AYrNGGRLK9tNME3WfN3JGGqQIH3b4/E9LGek/w==}
+    engines: {node: '>=18'}
+
   puppeteer@24.21.0:
     resolution: {integrity: sha512-JNY9JluUXepKzqKoPHsNVsrkpRRTare8geNP2L8YMkFHOKIvWSki/yUL9l2VJpani49epEHLpVg+zDcbTYibWA==}
+    engines: {node: '>=18'}
+    hasBin: true
+
+  puppeteer@24.22.0:
+    resolution: {integrity: sha512-QabGIvu7F0hAMiKGHZCIRHMb6UoH0QAJA2OaqxEU2tL5noXPrxUcotg2l3ttOA4p1PFnVIGkr6PXRAWlM2evVQ==}
     engines: {node: '>=18'}
     hasBin: true
 
@@ -10544,10 +10548,6 @@ snapshots:
     dependencies:
       '@noble/hashes': 1.8.0
 
-  '@paypal/checkout-server-sdk@1.0.3':
-    dependencies:
-      '@paypal/paypalhttp': 1.0.1
-
   '@paypal/paypal-js@8.4.2':
     dependencies:
       promise-polyfill: 8.3.0
@@ -10562,8 +10562,6 @@ snapshots:
     transitivePeerDependencies:
       - debug
       - supports-color
-
-  '@paypal/paypalhttp@1.0.1': {}
 
   '@paypal/react-paypal-js@8.9.1(react-dom@19.1.1(react@19.1.1))(react@19.1.1)':
     dependencies:
@@ -15349,9 +15347,7 @@ snapshots:
 
   mitt@3.0.1: {}
 
-  mkdirp@0.5.6:
-    dependencies:
-      minimist: 1.2.8
+  mkdirp@3.0.1: {}
 
   mlly@1.8.0:
     dependencies:
@@ -15391,7 +15387,7 @@ snapshots:
       append-field: 1.0.0
       busboy: 1.6.0
       concat-stream: 2.0.0
-      mkdirp: 0.5.6
+      mkdirp: 3.0.1
       object-assign: 4.1.1
       type-is: 1.6.18
       xtend: 4.0.2
@@ -15952,6 +15948,22 @@ snapshots:
       - supports-color
       - utf-8-validate
 
+  puppeteer-core@24.22.0:
+    dependencies:
+      '@puppeteer/browsers': 2.10.10
+      chromium-bidi: 8.0.0(devtools-protocol@0.0.1495869)
+      debug: 4.4.3
+      devtools-protocol: 0.0.1495869
+      typed-query-selector: 2.12.0
+      webdriver-bidi-protocol: 0.2.11
+      ws: 8.18.3
+    transitivePeerDependencies:
+      - bare-buffer
+      - bufferutil
+      - react-native-b4a
+      - supports-color
+      - utf-8-validate
+
   puppeteer@24.21.0(typescript@5.9.2):
     dependencies:
       '@puppeteer/browsers': 2.10.10
@@ -15959,6 +15971,22 @@ snapshots:
       cosmiconfig: 9.0.0(typescript@5.9.2)
       devtools-protocol: 0.0.1495869
       puppeteer-core: 24.21.0
+      typed-query-selector: 2.12.0
+    transitivePeerDependencies:
+      - bare-buffer
+      - bufferutil
+      - react-native-b4a
+      - supports-color
+      - typescript
+      - utf-8-validate
+
+  puppeteer@24.22.0(typescript@5.9.2):
+    dependencies:
+      '@puppeteer/browsers': 2.10.10
+      chromium-bidi: 8.0.0(devtools-protocol@0.0.1495869)
+      cosmiconfig: 9.0.0(typescript@5.9.2)
+      devtools-protocol: 0.0.1495869
+      puppeteer-core: 24.22.0
       typed-query-selector: 2.12.0
     transitivePeerDependencies:
       - bare-buffer
