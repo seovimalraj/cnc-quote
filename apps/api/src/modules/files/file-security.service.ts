@@ -43,7 +43,7 @@ export class FileSecurityService {
     '.ipt', '.iam', '.zip'
   ];
 
-  async validateFile(file: Express.Multer.File, req?: Request): Promise<FileValidationResult> {
+  async validateFile(file: any, req?: Request): Promise<FileValidationResult> {
     try {
       // Check file size (max 50MB)
       const maxSize = 50 * 1024 * 1024; // 50MB
@@ -100,7 +100,7 @@ export class FileSecurityService {
     }
   }
 
-  private async validateFileContent(file: Express.Multer.File): Promise<FileValidationResult> {
+  private async validateFileContent(file: any): Promise<FileValidationResult> {
     try {
       const buffer = file.buffer;
       const extension = path.extname(file.originalname).toLowerCase();
@@ -142,7 +142,7 @@ export class FileSecurityService {
     }
   }
 
-  private async scanForViruses(file: Express.Multer.File): Promise<FileValidationResult> {
+  private async scanForViruses(file: any): Promise<FileValidationResult> {
     // TODO: Implement virus scanning using ClamAV or similar service
     // For now, return valid
     return { isValid: true };

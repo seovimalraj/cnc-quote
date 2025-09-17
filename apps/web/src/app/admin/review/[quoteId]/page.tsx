@@ -63,7 +63,7 @@ interface ReviewWorkspace {
 
 export default function ReviewerWorkspace() {
   const params = useParams();
-  const quoteId = params.quoteId as string;
+  const quoteId = params?.quoteId as string;
 
   const [workspace, setWorkspace] = useState<ReviewWorkspace | null>(null);
   const [loading, setLoading] = useState(true);

@@ -459,7 +459,7 @@ export default function ProfilePage() {
                             size="sm"
                             onClick={() => handleSSOUnlink(provider)}
                           >
-                            <UnlinkIcon className="w-4 h-4 mr-2" />
+                            <LinkSlashIcon className="w-4 h-4 mr-2" />
                             Unlink
                           </Button>
                         ) : (

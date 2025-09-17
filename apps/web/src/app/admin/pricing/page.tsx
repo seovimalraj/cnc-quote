@@ -11,7 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import {
   CogIcon,
-  SaveIcon,
+  DocumentCheckIcon,
   ArrowPathIcon,
   CheckCircleIcon,
   ExclamationTriangleIcon,
@@ -295,7 +295,7 @@ export default function AdminPricingPage() {
                 {isSaving ? (
                   <ArrowPathIcon className="w-4 h-4 animate-spin mr-2" />
                 ) : (
-                  <SaveIcon className="w-4 h-4 mr-2" />
+                  <DocumentCheckIcon className="w-4 h-4 mr-2" />
                 )}
                 Save Draft
               </Button>

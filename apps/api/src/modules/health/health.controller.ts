@@ -25,8 +25,7 @@ export class HealthController {
 @Controller("health")
 export class SimpleHealthController {
   @Get()
-  @ApiResponse({ status: 200, description: "Service is healthy" })
-  async check() {
+  check() {
     return {
       status: "healthy",
       timestamp: new Date().toISOString(),

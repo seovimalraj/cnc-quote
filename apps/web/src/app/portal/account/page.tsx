@@ -35,7 +35,7 @@ export default function AccountPage() {
 
   // Determine active tab from pathname
   useEffect(() => {
-    const pathSegments = pathname.split('/');
+    const pathSegments = pathname?.split('/') || [];
     const lastSegment = pathSegments[pathSegments.length - 1];
 
     if (lastSegment === 'account') {

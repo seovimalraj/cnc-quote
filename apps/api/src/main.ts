@@ -5,21 +5,24 @@ import { SwaggerModule, DocumentBuilder } from "@nestjs/swagger";
 import helmet from "helmet";
 import * as bodyParser from "body-parser";
 import timeout from "connect-timeout";
-import * as Sentry from "@sentry/node";
-import { nodeProfilingIntegration } from "@sentry/profiling-node";
+import { Request, Response, NextFunction } from "express";
+// import * as Sentry from "@sentry/node";
+// import { nodeProfilingIntegration } from "@sentry/profiling-node";
 import { AppModule } from "./app.module";
 import { SecurityMiddleware } from "./middleware/security.middleware";
 
 // Initialize Sentry
-Sentry.init({
-  dsn: process.env.SENTRY_DSN,
-  integrations: [nodeProfilingIntegration()],
-  tracesSampleRate: 1.0,
-  profilesSampleRate: 1.0,
-});
+// Sentry.init({
+//   dsn: process.env.SENTRY_DSN,
+//   integrations: [nodeProfilingIntegration()],
+//   tracesSampleRate: 1.0,
+//   profilesSampleRate: 1.0,
+// });
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(AppModule, {
+    logger: ['error', 'warn', 'log', 'debug', 'verbose'],
+  });
 
   // Enable API versioning
   app.enableVersioning({
@@ -65,14 +68,25 @@ async function bootstrap() {
   );
 
   // Apply security middleware globally
-  app.use(SecurityMiddleware);
+  app.use((req: Request, res: Response, next: NextFunction) => {
+    // Additional security headers
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('X-XSS-Protection', '1; mode=block');
+    res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+    res.setHeader('Permissions-Policy', 'geolocation=(), microphone=(), camera=()');
 
-  // Enable CORS with Render.com domains
+    // Remove server information
+    res.removeHeader('X-Powered-By');
+
+    next();
+  });
+
+  // Enable CORS with quote.frigate.ai domains
   app.enableCors({
     origin: [
-      "https://cnc-quote-web.onrender.com",
-      "https://cnc-quote-api.onrender.com",
-      "https://cnc-quote-cad.onrender.com",
+      "https://quote.frigate.ai",
+      "https://quote.frigate.ai/api",
+      "https://quote.frigate.ai/cad",
       ...(process.env.ALLOWED_ORIGINS?.split(",") || []),
       ...(process.env.NODE_ENV === "development" ? ["http://localhost:3000"] : []),
     ],
@@ -103,6 +117,6 @@ async function bootstrap() {
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup("api/docs", app, document);
 
-  await app.listen(process.env.PORT || 3001);
+  await app.listen(process.env.PORT || 3001, '0.0.0.0');
 }
 bootstrap();

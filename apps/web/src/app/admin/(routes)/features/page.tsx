@@ -1,9 +1,27 @@
 import { createClient } from '@/lib/supabase/server'
 import { cookies } from 'next/headers'
 import { PlusIcon } from '@heroicons/react/20/solid'
-import { FeatureType, FeatureRule } from '@cnc-quote/shared'
+import { FeatureType } from '@cnc-quote/shared'
 
-interface RuleWithMachine {
+interface FeatureRule {
+  id: string;
+  feature_type_id: string;
+  machine_id: string;
+  complexity_bracket_id: string | null;
+  min_dimension_mm: number | null;
+  max_dimension_mm: number | null;
+  time_minutes: number;
+  multiplier: number;
+  complexity?: string;
+  thickness_range?: string;
+  min_bend_radius?: number;
+  max_bend_angle?: number;
+  min_wall_thickness?: number;
+  max_wall_thickness?: number;
+  draft_angle?: number;
+}
+
+interface RuleWithMachine extends FeatureRule {
   machine: { name: string; process_type: string };
   id: string;
   feature_type_id: string;
@@ -27,7 +45,13 @@ export default async function FeaturesPage() {
   const supabase = await createClient()
   
   // Get all feature types with their rules
-  const { data: featureTypes }: { data: (FeatureType & { machine_feature_rules: (FeatureRule & { machine: { name: string; process_type: string } })[] })[] | null } = await supabase
+  const { data: featureTypes }: { data: (FeatureType & { 
+    machine_feature_rules: (FeatureRule & { machine: { name: string; process_type: string } })[];
+    sheet_features: (FeatureRule & { machine: { name: string; process_type: string } })[];
+    im_features: (FeatureRule & { machine: { name: string; process_type: string } })[];
+    type?: string;
+    description?: string;
+  })[] | null } = await supabase
     .from('feature_types')
     .select(`
       *,

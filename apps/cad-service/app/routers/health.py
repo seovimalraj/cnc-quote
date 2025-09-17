@@ -68,4 +68,4 @@ async def health_check(response: Response):
             "celery": celery_status,
             "system": system_health
         }
-    })
+    }

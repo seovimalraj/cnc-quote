@@ -10,7 +10,6 @@ import { LeadsModule } from "./modules/leads/leads.module";
 import { SupabaseModule } from "./lib/supabase/supabase.module";
 import { CacheModule } from "./lib/cache/cache.module";
 import { PaymentsModule } from "./modules/payments/payments.module";
-import { NotifyModule } from "./modules/notify/notify.module";
 import { OrdersModule } from "./modules/orders/orders.module";
 import { QapModule } from "./modules/qap/qap.module";
 import { ManualReviewModule } from "./modules/manual-review/manual-review.module";
@@ -32,7 +31,7 @@ import { AdminMetricsModule } from "./modules/admin-metrics/admin-metrics.module
 import { AdminErrorsModule } from "./modules/admin-errors/admin-errors.module";
 import { AdminAlertsModule } from "./modules/admin-alerts/admin-alerts.module";
 import { AdminDfmModule } from "./modules/admin-dfm/admin-dfm.module";
-import { MiddlewareModule } from "./middleware/middleware.module";
+// import { MiddlewareModule } from "./middleware/middleware.module";
 import { AuthModule as AuthEndpointsModule } from "./modules/auth/auth.module";
 
 @Module({
@@ -49,40 +48,23 @@ import { AuthModule as AuthEndpointsModule } from "./modules/auth/auth.module";
         return config;
       },
     }),
-    RateLimitModule,
-    SupabaseModule,
-    CacheModule,
-    AuthModule,
-    AuthEndpointsModule,
     QueueModule,
-    ObservabilityModule,
+    SupabaseModule,
     HealthModule,
-    MachineModule,
-    PricingModule,
-    DfmModule,
-    LeadsModule,
-    PaymentsModule,
-    NotifyModule,
-    OrdersModule,
-    QapModule,
-    ManualReviewModule,
     TestModule,
-    QueueMonitorModule,
-    AdminModule,
-    ReviewModule,
-    DocumentsModule,
-    FilesModule,
-    CatalogModule,
-    AdminFilesModule,
-    FinanceModule,
-    AdminUsersModule,
-    AdminOrgsModule,
-    AdminHealthModule,
-    AdminMetricsModule,
-    AdminErrorsModule,
-    AdminAlertsModule,
-    AdminDfmModule,
-    MiddlewareModule,
+    MachineModule,
+    // ObservabilityModule,
+    // PricingModule,
+    // DfmModule,
+    // LeadsModule,
+    // QapModule,
+    // QueueMonitorModule,
+    // AdminModule,
+    // ReviewModule,
+    // DocumentsModule,
+    // FilesModule,
+    // CatalogModule,
+    // FinanceModule,
   ],
 })
 export class AppModule {}

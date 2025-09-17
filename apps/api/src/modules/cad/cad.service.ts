@@ -36,7 +36,7 @@ export class CadService {
     }
 
     // Get download URL for CAD service
-    const { url: downloadUrl } = await this.filesService.getDownloadUrl(fileId, userId);
+    const downloadUrl = await this.filesService.getSignedUrl(fileId);
 
     // Queue analysis task
     try {
@@ -44,7 +44,7 @@ export class CadService {
         "analyze" as CadJobType,
         {
           fileId,
-          downloadUrl: downloadUrl.signedUrl,
+          downloadUrl: downloadUrl,
         } as CadJobData,
         {
           attempts: 3,
@@ -106,7 +106,7 @@ export class CadService {
 
     try {
       // Get download URL
-      const { url: downloadUrl } = await this.filesService.getDownloadUrl(fileId, userId);
+      const downloadUrl = await this.filesService.getSignedUrl(fileId);
 
       // Request GLTF conversion
       const { data: conversionRequest } = await firstValueFrom(

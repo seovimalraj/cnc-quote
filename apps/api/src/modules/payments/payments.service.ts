@@ -2,7 +2,7 @@ import { Injectable, Logger } from "@nestjs/common";
 import Stripe from "stripe";
 import { SupabaseService } from "../../lib/supabase/supabase.service";
 import { NotifyService } from "../notify/notify.service";
-import * as paypal from "@paypal/checkout-server-sdk";
+import * as paypalServerSDK from "@paypal/paypal-server-sdk";
 import { PaymentProvider, PaymentSessionResult } from "./payments.types";
 import { Quote } from "./payments.types.quotes";
 import { PaymentProviderError, QuoteNotFoundError } from "./payments.errors";
@@ -11,7 +11,7 @@ import { PaymentProviderError, QuoteNotFoundError } from "./payments.errors";
 export class PaymentsService {
   private readonly logger = new Logger(PaymentsService.name);
   private readonly stripe: Stripe;
-  private readonly paypal: paypal.PayPalHttpClient;
+  private readonly paypal: paypalServerSDK.Client;
 
   constructor(
     private readonly supabase: SupabaseService,
@@ -21,15 +21,20 @@ export class PaymentsService {
       apiVersion: "2025-08-27.basil",
     });
 
-    const environment =
-      process.env.NODE_ENV === "production"
-        ? new paypal.core.LiveEnvironment(process.env.PAYPAL_CLIENT_ID, process.env.PAYPAL_CLIENT_SECRET)
-        : new paypal.core.SandboxEnvironment(process.env.PAYPAL_CLIENT_ID, process.env.PAYPAL_CLIENT_SECRET);
+    const environment = process.env.NODE_ENV === "production"
+      ? paypalServerSDK.Environment.Production
+      : paypalServerSDK.Environment.Sandbox;
 
-    this.paypal = new paypal.core.PayPalHttpClient(environment);
+    this.paypal = new paypalServerSDK.Client({
+      clientCredentialsAuthCredentials: {
+        oAuthClientId: process.env.PAYPAL_CLIENT_ID,
+        oAuthClientSecret: process.env.PAYPAL_CLIENT_SECRET,
+      },
+      environment,
+    });
   }
 
-  private async getQuoteDetails(quoteId: string): Promise<OrderDetails> {
+  private async getQuoteDetails(quoteId: string): Promise<Quote> {
     const { data: quote } = await this.supabase.client
       .from("quotes")
       .select(
@@ -63,7 +68,7 @@ export class PaymentsService {
     };
   }
 
-  private async createOrderFromQuote(quote: OrderDetails, orgId: string) {
+  private async createOrderFromQuote(quote: Quote, orgId: string) {
     const { data: order } = await this.supabase.client
       .from("orders")
       .insert({
@@ -133,52 +138,54 @@ export class PaymentsService {
   }
 
   private async createPayPalCheckoutSession(quote: Quote): Promise<PaymentSessionResult> {
-    const request = new paypal.orders.OrdersCreateRequest();
-    request.prefer("return=representation");
-    request.requestBody({
-      intent: "CAPTURE",
-      application_context: {
-        return_url: `${process.env.APP_URL}/portal/orders/paypal/success`,
-        cancel_url: `${process.env.APP_URL}/portal/quotes/${quote.id}`,
-        brand_name: process.env.APP_NAME,
-        landing_page: "LOGIN",
-        user_action: "PAY_NOW",
-      },
-      purchase_units: [
-        {
-          amount: {
-            currency_code: quote.currency.toUpperCase(),
-            value: quote.total_amount.toString(),
-            breakdown: {
-              item_total: {
-                currency_code: quote.currency.toUpperCase(),
-                value: quote.total_amount.toString(),
+    const ordersController = new paypalServerSDK.OrdersController(this.paypal);
+    
+    const orderRequest = {
+      body: {
+        intent: paypalServerSDK.CheckoutPaymentIntent.Capture,
+        applicationContext: {
+          returnUrl: `${process.env.APP_URL}/portal/orders/paypal/success`,
+          cancelUrl: `${process.env.APP_URL}/portal/quotes/${quote.id}`,
+          brandName: process.env.APP_NAME,
+          landingPage: paypalServerSDK.OrderApplicationContextLandingPage.Login,
+          userAction: paypalServerSDK.OrderApplicationContextUserAction.PayNow,
+        },
+        purchaseUnits: [
+          {
+            amount: {
+              currencyCode: quote.currency.toUpperCase(),
+              value: quote.total_amount.toString(),
+              breakdown: {
+                itemTotal: {
+                  currencyCode: quote.currency.toUpperCase(),
+                  value: quote.total_amount.toString(),
+                },
               },
             },
+            items: quote.items.map((item) => ({
+              name: "Manufacturing Services",
+              description: `Quantity: ${item.quantity}`,
+              unitAmount: {
+                currencyCode: quote.currency.toUpperCase(),
+                value: item.unit_price.toString(),
+              },
+              quantity: item.quantity.toString(),
+            })),
+            customId: JSON.stringify({
+              quote_id: quote.id,
+              org_id: quote.org_id,
+            }),
           },
-          items: quote.items.map((item) => ({
-            name: "Manufacturing Services",
-            description: `Quantity: ${item.quantity}`,
-            unit_amount: {
-              currency_code: quote.currency.toUpperCase(),
-              value: item.unit_price.toString(),
-            },
-            quantity: item.quantity.toString(),
-          })),
-          custom_id: JSON.stringify({
-            quote_id: quote.id,
-            org_id: quote.org_id,
-          }),
-        },
-      ],
-    });
+        ],
+      },
+    };
 
-    const order = await this.paypal.execute(request);
+    const { result } = await ordersController.createOrder(orderRequest);
 
     return {
       provider: "paypal",
-      orderId: order.result.id,
-      url: order.result.links.find((link) => link.rel === "approve").href,
+      orderId: result.id,
+      url: result.links.find((link) => link.rel === "approve").href,
     };
   }
 
@@ -282,13 +289,16 @@ export class PaymentsService {
 
   async capturePayPalOrder(paypalOrderId: string) {
     try {
-      const request = new paypal.orders.OrdersCaptureRequest(paypalOrderId);
-      request.prefer("return=representation");
+      const ordersController = new paypalServerSDK.OrdersController(this.paypal);
+      
+      const captureRequest = {
+        id: paypalOrderId,
+      };
 
-      const captureResponse = await this.paypal.execute(request);
-      const captureData = captureResponse.result;
+      const { result } = await ordersController.captureOrder(captureRequest);
+      const captureData = result;
 
-      const { quote_id, org_id } = JSON.parse(captureData.purchase_units[0].custom_id);
+      const { quote_id, org_id } = JSON.parse(captureData.purchaseUnits[0].customId);
 
       const quote = await this.getQuoteDetails(quote_id);
       const order = await this.createOrderFromQuote(quote, org_id);
@@ -296,7 +306,7 @@ export class PaymentsService {
       await this.supabase.client.from("payments").insert({
         order_id: order.id,
         paypal_order_id: paypalOrderId,
-        paypal_capture_id: captureData.purchase_units[0].payments.captures[0].id,
+        paypal_capture_id: captureData.purchaseUnits[0].payments.captures[0].id,
         amount: quote.total_amount,
         currency: quote.currency,
         status: "succeeded",

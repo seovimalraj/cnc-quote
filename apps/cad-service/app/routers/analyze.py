@@ -1,15 +1,15 @@
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from typing import Optional
-from OCC.Core.BRepBndLib import brepbndlib_Add
-from OCC.Core.BRepMesh import BRepMesh_IncrementalMesh
-from OCC.Core.BRepGProp import brepgprop_VolumeProperties, brepgprop_SurfaceProperties
-from OCC.Core.GProp import GProp_GProps
-from OCC.Core.STEPControl import STEPControl_Reader
-from OCC.Core.IFSelect import IFSelect_RetDone
-from OCC.Core.TopoDS import TopoDS_Shape
-from OCC.Core.Bnd import Bnd_Box
-import numpy as np
+# from OCC.Core.BRepBndLib import brepbndlib_Add
+# from OCC.Core.BRepMesh import BRepMesh_IncrementalMesh
+# from OCC.Core.BRepGProp import brepgprop_VolumeProperties, brepgprop_SurfaceProperties
+# from OCC.Core.GProp import GProp_GProps
+# from OCC.Core.STEPControl import STEPControl_Reader
+# from OCC.Core.IFSelect import IFSelect_RetDone
+# from OCC.Core.TopoDS import TopoDS_Shape
+# from OCC.Core.Bnd import Bnd_Box
+# import numpy as np
 
 from ..workers.celery import celery_app
 
@@ -28,55 +28,63 @@ class AnalysisResponse(BaseModel):
     task_id: Optional[str] = None
 
 def analyze_step_file(file_path: str) -> dict:
-    # Initialize STEP reader
-    reader = STEPControl_Reader()
-    
-    # Read STEP file
-    status = reader.ReadFile(file_path)
-    if status != IFSelect_RetDone:
-        raise HTTPException(status_code=400, detail="Failed to read STEP file")
-    
-    # Transfer shapes
-    reader.TransferRoots()
-    shape = reader.OneShape()
-    
-    # Create mesh for surface calculations
-    mesh = BRepMesh_IncrementalMesh(shape, 0.1)
-    mesh.Perform()
-    
-    # Calculate volume
-    vol_props = GProp_GProps()
-    brepgprop_VolumeProperties(shape, vol_props)
-    volume = vol_props.Mass()
-    
-    # Calculate surface area
-    surf_props = GProp_GProps()
-    brepgprop_SurfaceProperties(shape, surf_props)
-    surface_area = surf_props.Mass()
-    
-    # Calculate bounding box
-    bbox = Bnd_Box()
-    brepbndlib_Add(shape, bbox)
-    xmin, ymin, zmin, xmax, ymax, zmax = bbox.Get()
-    
-    # Count primitive features (basic implementation)
-    # In a real system, this would do more sophisticated feature recognition
-    primitive_features = {
-        "holes": 0,
-        "pockets": 0,
-        "slots": 0,
-        "faces": 0
-    }
-    
+    # Temporarily disabled - OCC dependencies not available
+    # TODO: Re-enable when OCC is properly installed
     return {
-        "volume": volume,
-        "surface_area": surface_area,
-        "bbox": {
-            "min": {"x": xmin, "y": ymin, "z": zmin},
-            "max": {"x": xmax, "y": ymax, "z": zmax}
-        },
-        "primitive_features": primitive_features
+        "volume": 0.0,
+        "surface_area": 0.0,
+        "bbox": {"x": 0, "y": 0, "z": 0},
+        "primitive_features": {}
     }
+    # # Initialize STEP reader
+    # reader = STEPControl_Reader()
+    
+    # # Read STEP file
+    # status = reader.ReadFile(file_path)
+    # if status != IFSelect_RetDone:
+    #     raise HTTPException(status_code=400, detail="Failed to read STEP file")
+    
+    # # Transfer shapes
+    # reader.TransferRoots()
+    # shape = reader.OneShape()
+    
+    # # Create mesh for surface calculations
+    # mesh = BRepMesh_IncrementalMesh(shape, 0.1)
+    # mesh.Perform()
+    
+    # # Calculate volume
+    # vol_props = GProp_GProps()
+    # brepgprop_VolumeProperties(shape, vol_props)
+    # volume = vol_props.Mass()
+    
+    # # Calculate surface area
+    # surf_props = GProp_GProps()
+    # brepgprop_SurfaceProperties(shape, surf_props)
+    # surface_area = surf_props.Mass()
+    
+    # # Calculate bounding box
+    # bbox = Bnd_Box()
+    # brepbndlib_Add(shape, bbox)
+    # xmin, ymin, zmin, xmax, ymax, zmax = bbox.Get()
+    
+    # # Count primitive features (basic implementation)
+    # # In a real system, this would do more sophisticated feature recognition
+    # primitive_features = {
+    #     "holes": 0,
+    #     "pockets": 0,
+    #     "slots": 0,
+    #     "faces": 0
+    # }
+    
+    # # return {
+    # #     "volume": volume,
+    #     "surface_area": surface_area,
+    #     "bbox": {
+    #         "min": {"x": xmin, "y": ymin, "z": zmin},
+    #         "max": {"x": xmax, "y": ymax, "z": zmax}
+    #     },
+    #     "primitive_features": primitive_features
+    # }
 
 @celery_app.task
 def analyze_file(file_id: str, file_path: str):

@@ -20,7 +20,8 @@ import {
   PlayIcon,
   TrashIcon,
   EyeIcon,
-  QuestionMarkCircleIcon
+  QuestionMarkCircleIcon,
+  UserIcon
 } from '@heroicons/react/24/outline';
 import { trackEvent } from '@/lib/analytics/posthog';
 
@@ -30,6 +31,49 @@ const TIME_RANGES = [
   { value: '1h', label: 'Last 1h' },
   { value: '24h', label: 'Last 24h' },
   { value: '7d', label: 'Last 7d' }
+];
+
+// Mock data for workcenter
+const mockNeedsReview = [
+  {
+    id: 'Q-2024-001',
+    org: 'Acme Corp',
+    complexity: 'High',
+    dfmBlockers: 3,
+    value: '$2,450',
+    slaAge: '2h 15m',
+    assignee: 'Unassigned'
+  },
+  {
+    id: 'Q-2024-002',
+    org: 'TechStart Inc',
+    complexity: 'Medium',
+    dfmBlockers: 1,
+    value: '$1,200',
+    slaAge: '45m',
+    assignee: 'Unassigned'
+  }
+];
+
+const mockPriced = [
+  {
+    id: 'Q-2024-003',
+    org: 'BuildCo LLC',
+    complexity: 'Low',
+    dfmBlockers: 0,
+    value: '$850',
+    slaAge: '1h 30m',
+    assignee: 'Sarah Chen'
+  },
+  {
+    id: 'Q-2024-004',
+    org: 'InnovateLab',
+    complexity: 'High',
+    dfmBlockers: 2,
+    value: '$3,200',
+    slaAge: '3h 45m',
+    assignee: 'Mike Johnson'
+  }
 ];
 
 // Environment badge component

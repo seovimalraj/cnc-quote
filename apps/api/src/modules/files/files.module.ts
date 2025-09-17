@@ -7,9 +7,6 @@ import { SupabaseModule } from "../../lib/supabase/supabase.module";
 @Module({
   imports: [
     SupabaseModule,
-    BullModule.registerQueue({
-      name: "files",
-    }),
   ],
   controllers: [FilesController],
   providers: [FilesService],

@@ -396,7 +396,7 @@ export default function OrdersPage() {
                         onClick={() => handleDownloadInvoice(order.id)}
                         title="Download Invoice"
                       >
-                        <ReceiptIcon className="w-4 h-4" />
+                        <ReceiptPercentIcon className="w-4 h-4" />
                       </Button>
                     </div>
                   </TableCell>

@@ -8,14 +8,22 @@ services:
     ports:
       - "3001:3001"
     environment:
-      - NODE_ENV=development
-      - DATABASE_URL=postgresql://postgres:postgres@db:5432/cnc_quote
+      - NODE_ENV=production
+      - DATABASE_URL=postgresql://postgres:Nb+a5meKduZsNG/HtSaSktBQYbdB8mcb@db:5432/cnc_quote
       - REDIS_URL=redis://redis:6379
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=
+      - JWT_SECRET=CvLsEGE0l29M+R1s6OcSm8r8We3JI7C9Gyox2fheQ4I=
+      - ALLOWED_ORIGINS=https://quote.frigate.ai,https://quote.frigate.ai/api,https://quote.frigate.ai/cad
+      - SUPABASE_URL=https://quote.frigate.ai/db
+      - SUPABASE_SERVICE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU
+      - APP_URL=https://quote.frigate.ai
     depends_on:
       - db
       - redis
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3001/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:3001/v1/health"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -26,16 +34,17 @@ services:
       context: .
       dockerfile: apps/cad-service/Dockerfile
     ports:
-      - "3002:3002"
+      - "3002:10001"
     environment:
       - PYTHONUNBUFFERED=1
-      - DATABASE_URL=postgresql://postgres:postgres@db:5432/cnc_quote
+      - DATABASE_URL=postgresql://postgres:Nb+a5meKduZsNG/HtSaSktBQYbdB8mcb@db:5432/cnc_quote
       - REDIS_URL=redis://redis:6379
+      - PORT=10001
     depends_on:
       - db
       - redis
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3002/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:10001/health"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -48,9 +57,11 @@ services:
     ports:
       - "3000:3000"
     environment:
-      - NEXT_PUBLIC_API_URL=http://api:3001
+      - NEXT_PUBLIC_API_URL=https://quote.frigate.ai/api
+      - NEXT_PUBLIC_CAD_SERVICE_URL=https://quote.frigate.ai/cad
     depends_on:
       - api
+      - cad-service
 
   db:
     image: postgres:15-alpine
@@ -58,10 +69,11 @@ services:
       - "5432:5432"
     environment:
       - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
       - POSTGRES_DB=cnc_quote
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./init-services-db.sh:/docker-entrypoint-initdb.d/init-services-db.sh
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 10s
@@ -101,8 +113,105 @@ services:
       - ./monitoring/grafana:/etc/grafana/provisioning
       - grafana_data:/var/lib/grafana
 
+  # Sentry Error Tracking
+  sentry:
+    image: getsentry/sentry:latest
+    ports:
+      - "9001:9000"
+    environment:
+      - SENTRY_SECRET_KEY=dYW5FM9BGruAlZOClerJu/sO9vNdgpzh
+      - SENTRY_POSTGRES_HOST=db
+      - SENTRY_POSTGRES_PORT=5432
+      - SENTRY_DB_NAME=sentry
+      - SENTRY_DB_USER=sentry
+      - SENTRY_DB_PASSWORD=InYNZ0S7wHmWMmcBD5GeQK3qZnf8JfCrzaNXleU/Wx8=
+      - SENTRY_REDIS_HOST=redis
+      - SENTRY_REDIS_PORT=6379
+      - SENTRY_WEB_HOST=0.0.0.0
+      - SENTRY_WEB_PORT=9000
+      - SENTRY_EMAIL_HOST=mailhog
+      - SENTRY_EMAIL_PORT=1025
+      - SENTRY_SERVER_EMAIL=sentry@quote.frigate.ai
+    depends_on:
+      - db
+      - redis
+      - mailhog
+    volumes:
+      - sentry_data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9001/_health/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Keycloak Security Platform
+  keycloak:
+    image: quay.io/keycloak/keycloak:latest
+    ports:
+      - "8080:8080"
+    environment:
+      - KEYCLOAK_ADMIN=admin
+      - KEYCLOAK_ADMIN_PASSWORD=J0N+BVgmHn/4ZHjuopjot/QN6i8MAORy
+      - KC_DB=postgres
+      - KC_DB_URL=jdbc:postgresql://db:5432/keycloak
+      - KC_DB_USERNAME=keycloak
+      - KC_DB_PASSWORD=FyOsLqvPXlo13oLlmEguNRQ4xp3Ji+hW/OZVrnkTmGY=
+      - KC_HOSTNAME=quote.frigate.ai
+      - KC_HOSTNAME_PATH=/security
+    depends_on:
+      - db
+    volumes:
+      - keycloak_data:/opt/keycloak/data
+    command: start-dev
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/realms/master"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # MailHog for email testing
+  mailhog:
+    image: mailhog/mailhog:latest
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8025"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # SonarQube Code Quality Analysis
+  sonarqube:
+    image: sonarqube:community
+    ports:
+      - "9000:9000"
+    environment:
+      - SONAR_JDBC_URL=jdbc:postgresql://db:5432/sonarqube
+      - SONAR_JDBC_USERNAME=sonarqube
+      - SONAR_JDBC_PASSWORD=I3Vpgqewff7SV3vqxaAZbQxwZkQ4HhQr1CvOGjAcVUs=
+      - SONAR_WEB_JAVAOPTS=-Xmx512m -Xms128m -XX:+HeapDumpOnOutOfMemoryError
+      - SONAR_CE_JAVAOPTS=-Xmx512m -Xms128m -XX:+HeapDumpOnOutOfMemoryError
+    depends_on:
+      - db
+    volumes:
+      - sonarqube_data:/opt/sonarqube/data
+      - sonarqube_extensions:/opt/sonarqube/extensions
+      - sonarqube_logs:/opt/sonarqube/logs
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/api/system/status"]
+      interval: 60s
+      timeout: 30s
+      retries: 5
+      start_period: 120s
+
 volumes:
   postgres_data:
   redis_data:
   prometheus_data:
   grafana_data:
+  sentry_data:
+  keycloak_data:
+  sonarqube_data:
+  sonarqube_extensions:
+  sonarqube_logs:

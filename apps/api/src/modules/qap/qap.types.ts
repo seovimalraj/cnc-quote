@@ -19,7 +19,7 @@ export const qapTemplateSchema = z.object({
   name: z.string().min(1).max(255),
   description: z.string().optional(),
   templateHtml: z.string().min(1),
-  schemaJson: z.record(z.unknown()),
+  schemaJson: z.record(z.string(), z.unknown()),
   processType: z.nativeEnum(QapTemplateProcessType),
 });
 
@@ -71,7 +71,7 @@ export const qapDocumentSchema = z.object({
   templateId: z.string().uuid(),
   orderId: z.string().uuid(),
   orderItemId: z.string().uuid(),
-  documentData: z.record(z.unknown()),
+  documentData: z.record(z.string(), z.unknown()),
 });
 
 export class QapDocumentResponse {

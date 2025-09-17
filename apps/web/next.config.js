@@ -1,13 +1,14 @@
+const { withSentryConfig } = require("@sentry/nextjs");
+
 const nextConfig = {
   reactStrictMode: true,
   output: 'standalone',
   experimental: {
     serverActions: {
-      allowedOrigins: ['localhost:3000', 'cnc-quote-web.onrender.com']
+      allowedOrigins: ['localhost:3000', 'quote.frigate.ai']
     },
     forceSwcTransforms: true,
   },
-  serverExternalPackages: [],
   typescript: {
     ignoreBuildErrors: true,
   },
@@ -16,9 +17,7 @@ const nextConfig = {
   },
   images: {
     domains: [
-      'cnc-quote-web.onrender.com',
-      'cnc-quote-api.onrender.com',
-      'cnc-quote-cad.onrender.com'
+      'quote.frigate.ai'
     ],
   },
   // Disable static generation completely
@@ -55,4 +54,8 @@ const nextConfig = {
   },
 };
 
-module.exports = nextConfig;
+module.exports = withSentryConfig(nextConfig, {
+  silent: true,
+  org: process.env.SENTRY_ORG,
+  project: process.env.SENTRY_PROJECT,
+});

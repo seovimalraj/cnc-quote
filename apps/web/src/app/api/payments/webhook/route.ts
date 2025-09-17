@@ -3,14 +3,14 @@ import Stripe from 'stripe';
 import { createClient } from '@/lib/supabase/server';
 import { headers } from 'next/headers';
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2023-10-16',
-});
-
 const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET!;
 
 export async function POST(request: NextRequest) {
   try {
+    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+      apiVersion: '2025-08-27.basil',
+    });
+
     const body = await request.text();
     const headersList = headers();
     const sig = headersList.get('stripe-signature');

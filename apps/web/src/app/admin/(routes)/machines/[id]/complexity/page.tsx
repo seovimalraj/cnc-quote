@@ -50,7 +50,7 @@ export default function ComplexityPage() {
   const [features, setFeatures] = useState(5);
   const [simulatedMultiplier, setSimulatedMultiplier] = useState(1);
 
-  const { register, handleSubmit, formState: { errors } } = useForm<z.infer<typeof settingsSchema>>({
+  const { register, handleSubmit, formState: { errors } } = useForm({
     resolver: zodResolver(settingsSchema),
     defaultValues: settings || undefined
   });
@@ -83,7 +83,7 @@ export default function ComplexityPage() {
     loadData();
   }, [loadData]);
 
-  const onSaveSettings = async (data: z.infer<typeof settingsSchema>) => {
+  const onSaveSettings = async (data: any) => {
     const { error } = await supabase
       .from('complexity_settings')
       .upsert({
@@ -237,7 +237,7 @@ export default function ComplexityPage() {
                 <Select 
                   {...register('formula')}
                   value={settings?.formula}
-                  onValueChange={(value: z.infer<typeof settingsSchema>['formula']) => setSettings(s => ({...s!, formula: value}))}
+                  onValueChange={(value: any) => setSettings(s => ({...s!, formula: value}))}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select formula type" />

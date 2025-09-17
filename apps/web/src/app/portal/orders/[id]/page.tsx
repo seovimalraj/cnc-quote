@@ -115,7 +115,7 @@ export default function OrderDetailPage() {
 
   const handleViewQuote = () => {
     if (!order) return;
-    posthog.capture('order_view_quote', { order_id: order.id, quote_id: order.quote_id });
+    trackEvent('order_view_quote', { order_id: order.id, quote_id: order.quote_id });
     router.push(`/portal/quotes/${order.quote_id}`);
   };
 
@@ -124,7 +124,7 @@ export default function OrderDetailPage() {
     try {
       const response = await api.post(`/api/quotes/${order.quote_id}/duplicate`);
       const newQuoteId = response.data.id;
-      posthog.capture('order_reorder', { order_id: order.id, new_quote_id: newQuoteId });
+      trackEvent('order_reorder', { order_id: order.id, new_quote_id: newQuoteId });
       router.push(`/portal/quotes/${newQuoteId}`);
     } catch (error: any) {
       toast.error('Failed to create reorder quote');
@@ -143,7 +143,7 @@ export default function OrderDetailPage() {
       // Refresh messages
       const messagesRes = await api.get<Message[]>(`/orders/${order.id}/messages`);
       setMessages(messagesRes.data);
-      posthog.capture('order_message_sent', { order_id: order.id });
+      trackEvent('order_message_sent', { order_id: order.id });
       toast.success('Message sent');
     } catch (error: any) {
       toast.error('Failed to send message');
@@ -164,7 +164,7 @@ export default function OrderDetailPage() {
       a.click();
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
-      posthog.capture('order_download_document', { order_id: order?.id, document_id: doc.id });
+      trackEvent('order_download_document', { order_id: order?.id, document_id: doc.id });
     } catch (error) {
       toast.error('Failed to download document');
       console.error('Error downloading document:', error);
@@ -200,7 +200,7 @@ export default function OrderDetailPage() {
     };
     const url = urls[shipment.carrier] || `https://www.google.com/search?q=${shipment.carrier}+tracking+${shipment.tracking_numbers[0]}`;
     window.open(url, '_blank');
-    posthog.capture('order_open_tracking', { order_id: order?.id, shipment_id: shipment.id });
+    trackEvent('order_open_tracking', { order_id: order?.id, shipment_id: shipment.id });
   };
 
   const handleDownloadPackingList = async (shipment: Shipment) => {
@@ -256,12 +256,12 @@ export default function OrderDetailPage() {
       Material_Cert: DocumentTextIcon,
       FAIR: DocumentTextIcon,
       Dimensional_Report: DocumentTextIcon,
-      Quote_PDF: FileIcon,
-      Invoice_PDF: ReceiptIcon,
+      Quote_PDF: DocumentIcon,
+      Invoice_PDF: ReceiptPercentIcon,
       Packing_List: DocumentTextIcon,
       Shipping_Label: TruckIcon,
     };
-    return icons[kind] || FileIcon;
+    return icons[kind] || DocumentIcon;
   };
 
   if (isLoading) {
@@ -321,11 +321,11 @@ export default function OrderDetailPage() {
 
         <div className="flex items-center space-x-2">
           <Button variant="outline" onClick={handleDownloadInvoice}>
-            <ReceiptIcon className="w-4 h-4 mr-2" />
+            <ReceiptPercentIcon className="w-4 h-4 mr-2" />
             Download Invoice
           </Button>
           <Button variant="outline" onClick={handleViewQuote}>
-            <FileIcon className="w-4 h-4 mr-2" />
+            <DocumentIcon className="w-4 h-4 mr-2" />
             View Quote
           </Button>
           <Button variant="outline" onClick={handleReorder}>

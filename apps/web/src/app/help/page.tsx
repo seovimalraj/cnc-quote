@@ -36,7 +36,7 @@ const POPULAR_ARTICLES = [
 export default function HelpCenterPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [searchQuery, setSearchQuery] = useState(searchParams.get('q') || '');
+  const [searchQuery, setSearchQuery] = useState(searchParams?.get('q') || '');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [articles, setArticles] = useState<HelpArticle[]>([]);
   const [loading, setLoading] = useState(true);

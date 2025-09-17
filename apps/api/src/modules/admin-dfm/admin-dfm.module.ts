@@ -5,7 +5,7 @@ import { SupabaseService } from '../../lib/supabase/supabase.service';
 
 @Module({
   controllers: [AdminDfmController],
-  providers: [AdminDfmService, SupabaseService],
+  providers: [AdminDfmService],
   exports: [AdminDfmService],
 })
 export class AdminDfmModule {}

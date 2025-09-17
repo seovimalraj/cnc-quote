@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline'
-import { posthog } from 'posthog-js'
+import { trackEvent } from '@/lib/analytics/posthog'
 
 interface SignUpFormProps {
   action: (formData: FormData) => void
@@ -26,10 +26,10 @@ export function SignUpForm({ action }: SignUpFormProps) {
   const [acceptMarketing, setAcceptMarketing] = useState(false)
 
   const searchParams = useSearchParams()
-  const error = searchParams.get('error')
+  const error = searchParams?.get('error')
 
   useEffect(() => {
-    posthog.capture('signup_view')
+    trackEvent('signup_view')
   }, [])
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -54,14 +54,14 @@ export function SignUpForm({ action }: SignUpFormProps) {
         formData.append('marketing_consent', 'on')
       }
 
-      posthog.capture('signup_submit', {
+      trackEvent('signup_submit', {
         has_email: !!email,
         marketing_consent: acceptMarketing
       })
 
       await action(formData)
     } catch (err) {
-      posthog.capture('signup_failure', {
+      trackEvent('signup_failure', {
         error: err instanceof Error ? err.message : 'Unknown error'
       })
     } finally {
@@ -70,7 +70,7 @@ export function SignUpForm({ action }: SignUpFormProps) {
   }
 
   const handleSSO = async (provider: 'google' | 'microsoft' | 'github') => {
-    posthog.capture('sso_signup_click', { provider })
+    trackEvent('sso_signup_click', { provider })
 
     // In a real implementation, this would redirect to the SSO provider
     // For now, we'll just do nothing

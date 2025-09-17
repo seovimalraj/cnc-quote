@@ -3,12 +3,12 @@ import Stripe from 'stripe';
 import { createClient } from '@/lib/supabase/server';
 import { cookies } from 'next/headers';
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2023-10-16',
-});
-
 export async function POST(request: NextRequest) {
   try {
+    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+      apiVersion: '2025-08-27.basil',
+    });
+
     const { quoteId, currency = 'usd', billingInfo, shippingInfo } = await request.json();
 
     if (!quoteId) {
