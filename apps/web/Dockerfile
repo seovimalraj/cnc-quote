@@ -1,5 +1,5 @@
 # Build stage
-FROM node:18-alpine AS builder
+FROM node:20-alpine AS builder
 
 WORKDIR /app
 
@@ -19,7 +19,7 @@ COPY packages ./packages
 RUN pnpm --filter web build
 
 # Production stage
-FROM node:18-alpine AS production
+FROM node:20-alpine AS production
 
 WORKDIR /app
 
@@ -32,6 +32,9 @@ RUN apk add --no-cache curl && npm install -g pnpm && pnpm install --prod --froz
 COPY --from=builder /app/apps/web/.next/standalone/ ./
 COPY --from=builder /app/apps/web/.next/static ./.next/static
 COPY --from=builder /app/apps/web/public ./public
+
+# Ensure static directory exists and has correct permissions
+RUN mkdir -p .next/static && chmod -R 755 .next
 
 # Expose port
 EXPOSE 3000
