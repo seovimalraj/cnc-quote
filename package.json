@@ -35,13 +35,13 @@
     "bull": "^4.16.5",
     "file-type": "^21.0.0",
     "posthog-node": "^5.8.4",
-    "puppeteer": "^24.21.0",
+    "puppeteer": "^24.22.0",
     "stripe": "^18.5.0",
     "zod": "^4.1.9"
   },
   "devDependencies": {
     "@types/busboy": "^1.5.4",
-    "@types/node": "^24.5.1",
+    "@types/node": "^24.5.2",
     "@typescript-eslint/eslint-plugin": "^8.44.0",
     "@typescript-eslint/parser": "^8.44.0",
     "eslint": "^9.35.0",
@@ -53,5 +53,15 @@
   "workspaces": [
     "apps/*",
     "packages/*"
-  ]
+  ],
+  "pnpm": {
+    "overrides": {
+      "minimist": "^1.2.8",
+      "mkdirp": "^3.0.1",
+      "qs": "^6.14.0",
+      "lodash": "^4.17.21",
+      "glob": "^10.0.0",
+      "inflight": "^1.0.6"
+    }
+  }
 }

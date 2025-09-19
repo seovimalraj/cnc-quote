@@ -1,41 +1,102 @@
 'use client';
 
-import React, { Suspense } from 'react';
+import React, { Suspense, useRef, useState } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls, Grid, Environment, Html, Box, Cylinder } from '@react-three/drei';
+import * as THREE from 'three';
 
 interface Canvas3DProps {
-  fileName?: string;
-  fileType?: string;
+  readonly fileName?: string;
+  readonly fileType?: string;
+  readonly dfmHighlights?: ReadonlyArray<{
+    readonly id: string;
+    readonly title: string;
+    readonly status: 'passed' | 'warning' | 'blocker';
+    readonly highlights: {
+      readonly face_ids: readonly number[];
+      readonly edge_ids: readonly number[];
+    };
+    readonly suggestions: readonly string[];
+  }>;
 }
 
-// Mock 3D model component - in production this would load actual CAD files
-function MockModel({ fileName }: { fileName?: string }) {
+// Mock 3D model component that can show DFM highlights
+function CADModel({ fileName, dfmHighlights = [] }: { readonly fileName?: string; readonly dfmHighlights?: readonly any[] }) {
+  const meshRef = useRef<THREE.Mesh>(null);
+  const [hoveredHighlight, setHoveredHighlight] = useState<string | null>(null);
+
+  // Create mock geometry based on file type
+  const createGeometry = () => {
+    if (fileName?.toLowerCase().includes('bracket')) {
+      return new THREE.BoxGeometry(2, 1, 0.2);
+    } else if (fileName?.toLowerCase().includes('shaft')) {
+      return new THREE.CylinderGeometry(0.1, 0.1, 2, 16);
+    } else if (fileName?.toLowerCase().includes('plate')) {
+      return new THREE.BoxGeometry(3, 2, 0.1);
+    }
+    return new THREE.BoxGeometry(1.5, 1, 0.5);
+  };
+
+  const geometry = createGeometry();
+
+  // Create highlight overlays for DFM issues
+  const highlightMeshes = dfmHighlights.map((highlight, index) => {
+    if (highlight.highlights.face_ids.length === 0 && highlight.highlights.edge_ids.length === 0) {
+      return null;
+    }
+
+    const color = highlight.status === 'blocker' ? '#ef4444' :
+                  highlight.status === 'warning' ? '#f59e0b' : '#10b981';
+
+    return (
+      <group key={highlight.id}>
+        {/* Highlight overlay */}
+        <Box
+          args={[1.6, 1.1, 0.6]}
+          position={[0, 0, 0]}
+          onPointerOver={() => setHoveredHighlight(highlight.id)}
+          onPointerOut={() => setHoveredHighlight(null)}
+        >
+          <meshBasicMaterial
+            color={color}
+            transparent
+            opacity={hoveredHighlight === highlight.id ? 0.3 : 0.1}
+            side={THREE.BackSide}
+          />
+        </Box>
+
+        {/* Tooltip */}
+        {hoveredHighlight === highlight.id && (
+          <Html position={[0, 1.5, 0]} center>
+            <div className="bg-white p-2 rounded shadow-lg max-w-xs">
+              <div className="font-semibold text-sm">{highlight.title}</div>
+              <div className="text-xs text-gray-600 mt-1">
+                {highlight.suggestions.length > 0 ? highlight.suggestions[0] : 'No suggestions available'}
+              </div>
+            </div>
+          </Html>
+        )}
+      </group>
+    );
+  });
+
   return (
     <group>
-      {/* Main body */}
-      <Box args={[2, 1, 1]} position={[0, 0, 0]}>
+      {/* Main model */}
+      <mesh ref={meshRef} geometry={geometry} position={[0, 0, 0]}>
         <meshStandardMaterial color="#e5e7eb" />
-      </Box>
+      </mesh>
 
-      {/* Holes */}
-      <Cylinder args={[0.1, 0.1, 0.2]} position={[0.5, 0.6, 0.5]} rotation={[Math.PI / 2, 0, 0]}>
-        <meshStandardMaterial color="#1f2937" />
-      </Cylinder>
-      <Cylinder args={[0.1, 0.1, 0.2]} position={[-0.5, 0.6, 0.5]} rotation={[Math.PI / 2, 0, 0]}>
-        <meshStandardMaterial color="#1f2937" />
-      </Cylinder>
-      <Cylinder args={[0.1, 0.1, 0.2]} position={[0.5, 0.6, -0.5]} rotation={[Math.PI / 2, 0, 0]}>
-        <meshStandardMaterial color="#1f2937" />
-      </Cylinder>
-      <Cylinder args={[0.1, 0.1, 0.2]} position={[-0.5, 0.6, -0.5]} rotation={[Math.PI / 2, 0, 0]}>
-        <meshStandardMaterial color="#1f2937" />
-      </Cylinder>
+      {/* DFM highlights */}
+      {highlightMeshes}
 
-      {/* Features */}
-      <Box args={[0.3, 0.2, 0.3]} position={[0, -0.4, 0]}>
-        <meshStandardMaterial color="#d1d5db" />
-      </Box>
+      {/* Mock features (holes, etc.) */}
+      <Cylinder args={[0.05, 0.05, 0.3]} position={[0.3, 0.6, 0.15]} rotation={[Math.PI / 2, 0, 0]}>
+        <meshStandardMaterial color="#1f2937" />
+      </Cylinder>
+      <Cylinder args={[0.05, 0.05, 0.3]} position={[-0.3, 0.6, 0.15]} rotation={[Math.PI / 2, 0, 0]}>
+        <meshStandardMaterial color="#1f2937" />
+      </Cylinder>
     </group>
   );
 }
@@ -51,7 +112,7 @@ function LoadingFallback() {
   );
 }
 
-export function Canvas3D({ fileName, fileType }: Canvas3DProps) {
+export function Canvas3D({ fileName, fileType, dfmHighlights = [] }: Canvas3DProps) {
   return (
     <div className="w-full h-full bg-gray-50 rounded-lg overflow-hidden relative">
       <Canvas
@@ -88,8 +149,8 @@ export function Canvas3D({ fileName, fileType }: Canvas3DProps) {
             infiniteGrid
           />
 
-          {/* 3D Model */}
-          <MockModel fileName={fileName} />
+          {/* 3D Model with DFM highlights */}
+          <CADModel fileName={fileName} dfmHighlights={dfmHighlights} />
 
           {/* Controls */}
           <OrbitControls
@@ -98,25 +159,32 @@ export function Canvas3D({ fileName, fileType }: Canvas3DProps) {
             enableRotate={true}
             minDistance={2}
             maxDistance={20}
-            target={[0, 0, 0]}
           />
         </Suspense>
       </Canvas>
 
-      {/* File info overlay */}
-      {fileName && (
-        <div className="absolute top-4 left-4 bg-white/90 backdrop-blur-sm rounded-lg px-3 py-2 shadow-sm">
-          <p className="text-sm font-medium text-gray-900">{fileName}</p>
-          <p className="text-xs text-gray-600">{fileType || 'CAD Model'}</p>
+      {/* DFM Legend */}
+      {dfmHighlights.length > 0 && (
+        <div className="absolute top-4 right-4 bg-white p-3 rounded-lg shadow-lg">
+          <div className="text-sm font-semibold mb-2">DFM Analysis</div>
+          <div className="space-y-1">
+            {dfmHighlights.slice(0, 3).map((highlight) => (
+              <div key={highlight.id} className="flex items-center space-x-2 text-xs">
+                <div
+                  className={`w-3 h-3 rounded ${
+                    highlight.status === 'blocker' ? 'bg-red-500' :
+                    highlight.status === 'warning' ? 'bg-yellow-500' : 'bg-green-500'
+                  }`}
+                />
+                <span className="truncate max-w-32">{highlight.title}</span>
+              </div>
+            ))}
+            {dfmHighlights.length > 3 && (
+              <div className="text-xs text-gray-500">+{dfmHighlights.length - 3} more</div>
+            )}
+          </div>
         </div>
       )}
-
-      {/* Controls info */}
-      <div className="absolute bottom-4 right-4 bg-white/90 backdrop-blur-sm rounded-lg px-3 py-2 shadow-sm">
-        <p className="text-xs text-gray-600">
-          🖱️ Drag to rotate • 🔍 Scroll to zoom • 👆 Right-click to pan
-        </p>
-      </div>
     </div>
   );
 }

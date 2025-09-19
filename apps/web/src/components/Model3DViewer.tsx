@@ -4,8 +4,18 @@ import React from 'react';
 import dynamic from 'next/dynamic';
 
 interface Model3DViewerProps {
-  fileName?: string;
-  fileType?: string;
+  readonly fileName?: string;
+  readonly fileType?: string;
+  readonly dfmHighlights?: ReadonlyArray<{
+    readonly id: string;
+    readonly title: string;
+    readonly status: 'passed' | 'warning' | 'blocker';
+    readonly highlights: {
+      readonly face_ids: readonly number[];
+      readonly edge_ids: readonly number[];
+    };
+    readonly suggestions: readonly string[];
+  }>;
 }
 
 // Dynamically import the Canvas component with SSR disabled
@@ -21,6 +31,6 @@ const Canvas3D = dynamic(() => import('./Canvas3D').then(mod => ({ default: mod.
   )
 });
 
-export default function Model3DViewer({ fileName, fileType }: Model3DViewerProps) {
-  return <Canvas3D fileName={fileName} fileType={fileType} />;
+export default function Model3DViewer({ fileName, fileType, dfmHighlights }: Model3DViewerProps) {
+  return <Canvas3D fileName={fileName} fileType={fileType} dfmHighlights={dfmHighlights} />;
 }
