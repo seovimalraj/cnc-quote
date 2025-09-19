@@ -5,7 +5,6 @@ import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   CubeIcon,
@@ -15,7 +14,6 @@ import {
   CheckCircleIcon,
   ExclamationTriangleIcon,
   ArrowPathIcon,
-  EyeIcon,
   CogIcon,
   ShoppingCartIcon
 } from '@heroicons/react/24/outline';
@@ -173,6 +171,7 @@ export default function QuotePage() {
         setSelectedLineId(quoteData.lines[0].id);
       }
     } catch (err) {
+      console.error('Failed to load quote:', err);
       setError('Network error. Please try again.');
     } finally {
       setIsLoading(false);
@@ -246,17 +245,35 @@ export default function QuotePage() {
     }
   };
 
-  const getDfmStatusColor = (status: DFMCheck['status']) => {
+  const hasDfmBlockers = dfmChecks.some(check => check.status === 'blocker');
+  const canCheckout = quote?.selectedLeadOptionId && !hasDfmBlockers;
+
+  const getDfmHighlightStatus = (status: DFMCheck['status']) => {
     switch (status) {
-      case 'pass': return 'text-green-600';
-      case 'warning': return 'text-yellow-600';
-      case 'blocker': return 'text-red-600';
-      default: return 'text-gray-600';
+      case 'pass': return 'passed';
+      case 'warning': return 'warning';
+      case 'blocker': return 'blocker';
+      default: return 'blocker';
     }
   };
 
-  const hasDfmBlockers = dfmChecks.some(check => check.status === 'blocker');
-  const canCheckout = quote?.selectedLeadOptionId && !hasDfmBlockers;
+  const getDfmCardClassName = (status: DFMCheck['status']) => {
+    switch (status) {
+      case 'blocker': return 'border-red-200 bg-red-50';
+      case 'warning': return 'border-yellow-200 bg-yellow-50';
+      case 'pass': return 'border-green-200 bg-green-50';
+      default: return 'border-green-200 bg-green-50';
+    }
+  };
+
+  const getDfmBadgeVariant = (status: DFMCheck['status']) => {
+    switch (status) {
+      case 'pass': return 'default';
+      case 'warning': return 'secondary';
+      case 'blocker': return 'destructive';
+      default: return 'default';
+    }
+  };
 
   if (isLoading) {
     return (
@@ -348,9 +365,10 @@ export default function QuotePage() {
               </CardHeader>
               <CardContent className="space-y-3">
                 {(quote.lines || []).map((line) => (
-                  <div
+                  <button
                     key={line.id}
-                    className={`p-3 rounded-lg border cursor-pointer transition-colors ${
+                    type="button"
+                    className={`p-3 rounded-lg border cursor-pointer transition-colors text-left w-full ${
                       selectedLineId === line.id
                         ? 'border-blue-500 bg-blue-50'
                         : 'border-gray-200 hover:border-gray-300'
@@ -378,7 +396,7 @@ export default function QuotePage() {
                         </Button>
                       </div>
                     </div>
-                  </div>
+                  </button>
                 ))}
               </CardContent>
             </Card>
@@ -403,6 +421,13 @@ export default function QuotePage() {
                         <Model3DViewer
                           fileName={quote.lines.find(l => l.id === selectedLineId)?.fileName}
                           fileType="CAD Model"
+                          dfmHighlights={dfmChecks.map(check => ({
+                            id: check.id,
+                            title: check.name,
+                            status: getDfmHighlightStatus(check.status),
+                            highlights: { face_ids: [], edge_ids: [] }, // Mock highlights
+                            suggestions: [check.message]
+                          }))}
                         />
                       ) : (
                         <div className="bg-gray-100 rounded-lg h-full flex items-center justify-center">
@@ -423,11 +448,7 @@ export default function QuotePage() {
                       {dfmChecks.map((check) => (
                         <div
                           key={check.id}
-                          className={`p-3 rounded-lg border cursor-pointer transition-colors ${
-                            check.status === 'blocker' ? 'border-red-200 bg-red-50' :
-                            check.status === 'warning' ? 'border-yellow-200 bg-yellow-50' :
-                            'border-green-200 bg-green-50'
-                          }`}
+                          className={`p-3 rounded-lg border cursor-pointer transition-colors ${getDfmCardClassName(check.status)}`}
                         >
                           <div className="flex items-center justify-between">
                             <div className="flex items-center space-x-2">
@@ -436,11 +457,7 @@ export default function QuotePage() {
                               {check.status === 'blocker' && <ExclamationTriangleIcon className="w-4 h-4 text-red-500" />}
                               <span className="font-medium">{check.name}</span>
                             </div>
-                            <Badge variant={
-                              check.status === 'pass' ? 'default' :
-                              check.status === 'warning' ? 'secondary' :
-                              'destructive'
-                            }>
+                            <Badge variant={getDfmBadgeVariant(check.status)}>
                               {check.status}
                             </Badge>
                           </div>
@@ -474,9 +491,10 @@ export default function QuotePage() {
                         { id: 'usa-standard', speed: 'Standard', days: 4, price: 227.98 },
                         { id: 'usa-economy', speed: 'Economy', days: 7, price: 186.28 }
                       ].map((option) => (
-                        <div
+                        <button
                           key={option.id}
-                          className={`p-3 rounded-lg border cursor-pointer transition-colors ${
+                          type="button"
+                          className={`p-3 rounded-lg border cursor-pointer transition-colors text-left w-full ${
                             quote.selectedLeadOptionId === option.id
                               ? 'border-blue-500 bg-blue-50'
                               : 'border-gray-200 hover:border-gray-300'
@@ -493,7 +511,7 @@ export default function QuotePage() {
                               <p className="text-xs text-gray-500">per part</p>
                             </div>
                           </div>
-                        </div>
+                        </button>
                       ))}
                     </div>
                   </div>
@@ -501,8 +519,9 @@ export default function QuotePage() {
                   <div>
                     <h4 className="font-medium text-gray-900 mb-3">Made Internationally</h4>
                     <div className="space-y-2">
-                      <div
-                        className={`p-3 rounded-lg border cursor-pointer transition-colors ${
+                      <button
+                        type="button"
+                        className={`p-3 rounded-lg border cursor-pointer transition-colors text-left w-full ${
                           quote.selectedLeadOptionId === 'intl-economy'
                             ? 'border-blue-500 bg-blue-50'
                             : 'border-gray-200 hover:border-gray-300'
@@ -519,7 +538,7 @@ export default function QuotePage() {
                             <p className="text-xs text-gray-500">per part</p>
                           </div>
                         </div>
-                      </div>
+                      </button>
                     </div>
                   </div>
                 </CardContent>

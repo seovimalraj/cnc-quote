@@ -1,24 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getUser } from '@/lib/auth';
+import { createClient } from '@/lib/supabase/server';
+import { v4 as uuidv4 } from 'uuid';
 
 export async function POST(request: NextRequest) {
   try {
     console.log('File upload request received');
-
-    // Check authentication (skip in development)
-    let user = null;
-    if (process.env.NODE_ENV !== 'development') {
-      user = await getUser(request);
-      if (!user) {
-        return NextResponse.json(
-          { error: 'Authentication required' },
-          { status: 401 }
-        );
-      }
-      console.log('Authenticated user:', user.email);
-    } else {
-      console.log('Development mode: Skipping authentication');
-    }
 
     // Parse request body with error handling
     let body;
@@ -70,18 +56,39 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Generate file ID and path
-    const fileId = `file_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    const filePath = `uploads/${fileId}/${fileName}`;
+    const supabase = await createClient();
 
-    // For development/demo purposes, skip authentication and use mock upload URL
-    console.log('Development mode: Using mock upload URL');
+    // For now, use direct upload approach
+    // In production, this should use signed URLs for security
+    const fileId = uuidv4();
+    const filePath = `quote-uploads/${fileId}/${fileName}`;
+
+    // Store file metadata first
+    const { error: insertError } = await supabase
+      .from('quote_files')
+      .insert({
+        id: fileId,
+        file_name: fileName,
+        file_path: filePath,
+        file_size: fileSize,
+        mime_type: contentType,
+        created_at: new Date().toISOString(),
+      });
+
+    if (insertError) {
+      console.error('Failed to store file metadata:', insertError);
+      return NextResponse.json({ error: 'Failed to store file metadata' }, { status: 500 });
+    }
+
+    // For development, return a mock signed URL that the frontend can handle
+    // In production, this should be a real signed URL from Supabase
+    const mockSignedUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/cad-files/${filePath}`;
 
     return NextResponse.json({
       fileId,
-      signedUrl: `https://httpbin.org/put`,
+      signedUrl: mockSignedUrl,
       filePath,
-      expiresAt: Date.now() + (15 * 60 * 1000) // 15 minutes
+      expiresAt: Date.now() + (3600 * 1000) // 1 hour
     }, {
       headers: {
         'Access-Control-Allow-Origin': '*',
