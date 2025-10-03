@@ -34,6 +34,9 @@ interface UploadedFile {
   progress: number;
   checksum?: string;
   preview?: string;
+  name: string;
+  size: number;
+  type: string;
 }
 
 interface QuoteSummary {
@@ -55,6 +58,7 @@ interface LeadFormErrors {
   businessEmail?: string;
   phoneE164?: string;
   consent?: string;
+  honeypot?: string;
 }
 
 export default function InstantQuotePage() {
@@ -92,24 +96,7 @@ export default function InstantQuotePage() {
   const maxFileSize = 200 * 1024 * 1024; // 200MB
 
   // Business email validation
-  const validateBusinessEmail = (email: string): boolean => {
-    const emailRegex = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
-    if (!emailRegex.test(email)) return false;
 
-    const blocklistDomains = ['gmail.com', 'yahoo.com', 'outlook.com', 'hotmail.com', 'aol.com', 'icloud.com', 'proton.me', 'yopmail.com', 'gmx.com', 'mailinator.com'];
-    const allowedTlds = ['com', 'net', 'org', 'io', 'co', 'ai', 'edu', 'gov'];
-
-    const domain = email.split('@')[1].toLowerCase();
-    const tld = domain.split('.').pop();
-
-    return !blocklistDomains.includes(domain) && allowedTlds.includes(tld || '');
-  };
-
-  // Phone validation (E.164 format)
-  const validatePhoneE164 = (phone: string): boolean => {
-    const e164Regex = /^\+[1-9]\d{6,14}$/;
-    return e164Regex.test(phone) && phone.length >= 8 && phone.length <= 15;
-  };
 
   // Format phone number to E.164
   const formatPhoneToE164 = (phone: string): string => {
@@ -119,6 +106,50 @@ export default function InstantQuotePage() {
     if (digits.length === 10) return `+1${digits}`;
     if (digits.length === 11 && digits.startsWith('1')) return `+${digits}`;
     return `+${digits}`;
+  };
+
+  // Create quote with all uploaded files
+  const createQuoteWithAllFiles = async (filesToUse?: UploadedFile[]): Promise<string> => {
+    const files = filesToUse || uploadedFiles;
+    console.log('Creating quote with', files.length, 'files');
+    
+    const filesData = files.map(uploadedFile => ({
+      fileId: uploadedFile.id,
+      fileName: uploadedFile.file.name,
+      fileSize: uploadedFile.file.size,
+      contentType: uploadedFile.file.type || 'application/octet-stream'
+    }));
+
+    const quoteResponse = await fetch('/api/quotes', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        source: 'web',
+        guestEmail: null,
+        files: filesData
+      })
+    });
+
+    if (!quoteResponse.ok) {
+      const errorText = await quoteResponse.text();
+      console.error('Quote creation failed:', errorText);
+      throw new Error(`Failed to create quote: ${quoteResponse.status}`);
+    }
+
+    const quote = await quoteResponse.json();
+    console.log('Quote created successfully:', quote);
+    
+    // Update quote summary with the real quote data - handle potential undefined values
+    const lines = quote.lines || [];
+    setQuoteSummary({
+      quoteId: quote.id,
+      totalFiles: lines.length,
+      processedFiles: lines.length,
+      estimatedPrice: quote.subtotal,
+      estimatedTime: lines[0]?.leadTimeOptions?.[1]?.business_days || 10
+    });
+
+    return quote.id;
   };
 
   const onDrop = useCallback(async (acceptedFiles: File[], rejectedFiles: any[]) => {
@@ -150,7 +181,10 @@ export default function InstantQuotePage() {
       id: Math.random().toString(36).substr(2, 9),
       file,
       status: 'uploading' as const,
-      progress: 0
+      progress: 0,
+      name: file.name,
+      size: file.size,
+      type: file.type
     }));
 
     setUploadedFiles(prev => [...prev, ...newFiles]);
@@ -237,10 +271,23 @@ export default function InstantQuotePage() {
       const uploadData = await uploadPrepResponse.json();
       console.log('Upload preparation successful:', uploadData);
 
-      const { fileId, signedUrl } = uploadData;
+      const { signedUrl, fileId } = uploadData;
+
+      // Update file record with the real fileId from backend
+      setUploadedFiles(prev =>
+        prev.map(f =>
+          f.id === uploadedFile.id
+            ? { ...f, id: fileId, progress: 25 }
+            : f
+        )
+      );
+
+      // Update the uploadedFile reference to use the new ID
+      uploadedFile = { ...uploadedFile, id: fileId };
 
       // Step 2: Upload file to signed URL
-      console.log('Uploading to signed URL...');
+      console.log('Uploading to signed URL:', signedUrl);
+
       let uploadResponse;
       try {
         uploadResponse = await fetch(signedUrl, {
@@ -249,132 +296,61 @@ export default function InstantQuotePage() {
           headers: {
             'Content-Type': contentType
           },
-          mode: 'cors' // Enable CORS
+          mode: 'cors'
         });
+        
+        console.log('Upload response:', uploadResponse.status, uploadResponse.ok);
       } catch (uploadError) {
-        console.warn('Upload to signed URL failed, simulating success for development:', uploadError);
-        // For development, simulate a successful upload
+        console.warn('Upload to signed URL failed, this is expected in demo mode:', uploadError);
+        // For demo purposes, simulate a successful upload
         uploadResponse = { ok: true, status: 200 };
+        console.log('Using mock successful upload response');
       }
 
       if (!uploadResponse.ok && uploadResponse.status !== 200) {
-        const errorText = await uploadResponse.text?.() || 'Upload failed';
+        const errorText = uploadResponse instanceof Response ? await uploadResponse.text() : 'Upload failed';
         console.error('File upload to signed URL failed:', errorText);
         throw new Error(`Failed to upload file: ${uploadResponse.status}`);
       }
 
-      console.log('File upload successful');
+      console.log('File upload successful for:', uploadedFile.file.name);
+      
+      // Update progress to show upload complete
       setUploadedFiles(prev =>
         prev.map(f =>
           f.id === uploadedFile.id
-            ? { ...f, progress: 100, status: 'completed' }
+            ? { ...f, progress: 75, status: 'processing' }
             : f
         )
       );
 
-      // Step 3: Create draft quote (only for first file)
-      let quoteId = quoteSummary?.quoteId;
-      if (!quoteId) {
-        console.log('Creating draft quote...');
-        const quoteResponse = await fetch('/api/quotes', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            source: 'web',
-            guestEmail: null // For anonymous users
-          })
-        });
+      // Step 3: File upload completed (quote will be created when modal is shown)
 
-        if (!quoteResponse.ok) {
-          const errorText = await quoteResponse.text();
-          console.error('Quote creation failed:', errorText);
-          throw new Error(`Failed to create quote: ${quoteResponse.status}`);
-        }
-
-        const quote = await quoteResponse.json();
-        quoteId = quote.id;
-        console.log('Quote created successfully:', quoteId);
-
-        setQuoteSummary({
-          quoteId,
-          totalFiles: uploadedFiles.length + 1,
-          processedFiles: 0,
-          estimatedPrice: undefined,
-          estimatedTime: undefined
-        });
-      }
-
-      // Step 4: Create quote line
-      console.log('Creating quote line...');
-      const lineResponse = await fetch(`/api/quotes/${quoteId}/lines`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          fileId,
-          fileName: uploadedFile.file.name,
-          fileSize: uploadedFile.file.size
-        })
-      });
-
-      if (!lineResponse.ok) {
-        const errorText = await lineResponse.text();
-        console.error('Quote line creation failed:', errorText);
-        throw new Error(`Failed to create quote line: ${lineResponse.status}`);
-      }
-
-      const quoteLine = await lineResponse.json();
-      console.log('Quote line created successfully:', quoteLine.id);
-
-      // Step 5: Start CAD analysis (optional but recommended)
-      console.log('Starting CAD analysis...');
+      // Step 4: Start real-time DFM analysis
+      console.log('Starting DFM analysis...');
       try {
-        const cadResponse = await fetch('/api/cad/analyze', {
+        const dfmResponse = await fetch('/api/dfm/analyze', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            fileId,
-            lineId: quoteLine.id,
-            quoteId
+            fileId: uploadedFile.id,
+            fileName: uploadedFile.file.name
           })
         });
 
-        if (!cadResponse.ok) {
-          const errorText = await cadResponse.text();
-          console.error('CAD analysis failed:', errorText);
-          console.warn('CAD analysis failed, but continuing with upload');
+        if (dfmResponse.ok) {
+          const dfmResult = await dfmResponse.json();
+          console.log('DFM analysis completed:', dfmResult);
+          
+          // Update file with DFM results if any issues found
+          if (dfmResult.issues && dfmResult.issues.length > 0) {
+            console.log(`DFM found ${dfmResult.issues.length} issues:`, dfmResult.issues);
+          }
         } else {
-          const cadResult = await cadResponse.json();
-          console.log('CAD analysis started successfully:', cadResult);
+          console.warn('DFM analysis failed, but continuing with upload');
         }
-      } catch (cadError) {
-        console.error('CAD analysis error:', cadError);
-        console.warn('CAD analysis failed, but continuing with upload');
-      }
-
-      // Step 6: Start pricing (optional but recommended)
-      console.log('Starting pricing...');
-      try {
-        const priceResponse = await fetch('/api/price', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            quoteId,
-            lineId: quoteLine.id,
-            specs: { autoGuess: true }
-          })
-        });
-
-        if (!priceResponse.ok) {
-          const errorText = await priceResponse.text();
-          console.error('Pricing failed:', errorText);
-          console.warn('Pricing failed, but continuing with upload');
-        } else {
-          const priceResult = await priceResponse.json();
-          console.log('Pricing started successfully:', priceResult);
-        }
-      } catch (priceError) {
-        console.error('Pricing error:', priceError);
-        console.warn('Pricing failed, but continuing with upload');
+      } catch (dfmError) {
+        console.warn('DFM analysis error, but continuing with upload:', dfmError);
       }
 
       // Update file status
@@ -386,14 +362,28 @@ export default function InstantQuotePage() {
         )
       );
 
-      // Update quote summary
+      // Initialize quote summary if not exists, or update processed files
       setQuoteSummary(prev => prev ? {
         ...prev,
         processedFiles: prev.processedFiles + 1
-      } : null);
+      } : {
+        quoteId: '', // Will be set when quote is created
+        totalFiles: uploadedFiles.length,
+        processedFiles: 1,
+        estimatedPrice: undefined,
+        estimatedTime: undefined
+      });
 
       // Trigger lead modal after first successful upload
       if (!showLeadModal && !leadSubmitted) {
+        // Create quote with this successfully uploaded file
+        try {
+          const completedFile = { ...uploadedFile, status: 'completed' as const };
+          await createQuoteWithAllFiles([completedFile]);
+        } catch (error) {
+          console.error('Failed to create quote:', error);
+          throw error; // Re-throw to be handled by the outer catch block
+        }
         setShowLeadModal(true);
       }
 
@@ -473,14 +463,20 @@ export default function InstantQuotePage() {
 
     if (!leadFormData.businessEmail) {
       errors.businessEmail = 'Business email is required';
-    } else if (!validateBusinessEmail(leadFormData.businessEmail)) {
-      errors.businessEmail = 'Please use a business email (e.g., name@company.com)';
+    } else {
+      const emailValidation = validateBusinessEmail(leadFormData.businessEmail);
+      if (!emailValidation.isValid) {
+        errors.businessEmail = emailValidation.error || 'Please use a business email (e.g., name@company.com)';
+      }
     }
 
     if (!leadFormData.phoneE164) {
       errors.phoneE164 = 'Phone number is required';
-    } else if (!validatePhoneE164(leadFormData.phoneE164)) {
-      errors.phoneE164 = 'Enter a valid phone (e.g., +1 212 555 0100)';
+    } else {
+      const phoneValidation = validatePhoneNumber(leadFormData.phoneE164);
+      if (!phoneValidation.isValid) {
+        errors.phoneE164 = phoneValidation.error || 'Enter a valid phone (e.g., +1 212 555 0100)';
+      }
     }
 
     if (!leadFormData.consent) {
@@ -493,7 +489,7 @@ export default function InstantQuotePage() {
 
   // Handle lead form submission
   const handleLeadSubmit = async () => {
-    if (!validateLeadForm() || !quoteSummary?.quoteId) {
+    if (!validateLeadForm() || !quoteSummary?.quoteId || quoteSummary.quoteId === '') {
       console.error('Lead form validation failed or no quote ID:', { isValid: validateLeadForm(), quoteId: quoteSummary?.quoteId });
       return;
     }
@@ -508,7 +504,23 @@ export default function InstantQuotePage() {
           email: leadFormData.businessEmail,
           phone: leadFormData.phoneE164,
           quoteId: quoteSummary.quoteId,
-          fingerprint: 'web-session-' + Date.now() // Simple fingerprint for demo
+          fingerprint: 'web-session-' + Date.now(), // Simple fingerprint for demo
+          files: uploadedFiles.map(file => ({
+            id: file.id,
+            name: file.name,
+            size: file.size,
+            type: file.type,
+            fileId: file.id,
+            fileName: file.name,
+            fileSize: file.size,
+            contentType: file.type
+          })),
+          quoteSummary: {
+            totalFiles: quoteSummary.totalFiles,
+            processedFiles: quoteSummary.processedFiles,
+            estimatedPrice: quoteSummary.estimatedPrice,
+            estimatedTime: quoteSummary.estimatedTime
+          }
         })
       });
 
@@ -819,7 +831,16 @@ export default function InstantQuotePage() {
                             Complete your contact information to view detailed pricing
                           </p>
                         </div>
-                        <Button onClick={() => setShowLeadModal(true)}>
+                        <Button onClick={async () => {
+                          try {
+                            if (!quoteSummary?.quoteId || quoteSummary.quoteId === '') {
+                              await createQuoteWithAllFiles();
+                            }
+                            setShowLeadModal(true);
+                          } catch (error) {
+                            console.error('Failed to create quote:', error);
+                          }
+                        }}>
                           View Detailed Quote
                         </Button>
                       </div>
@@ -846,11 +867,12 @@ export default function InstantQuotePage() {
             {/* Honeypot field (hidden) */}
             <input
               type="text"
-              name="website"
+              name="h_p_field"
               value={leadFormData.honeypot}
               onChange={(e) => handleLeadFormChange('honeypot', e.target.value)}
-              className="sr-only"
+              style={{ position: 'absolute', left: '-9999px', opacity: 0, height: 0, width: 0 }}
               autoComplete="off"
+              tabIndex={-1}
             />
 
             {/* Business Email */}

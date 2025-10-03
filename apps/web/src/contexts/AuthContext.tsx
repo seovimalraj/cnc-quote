@@ -6,10 +6,13 @@ export interface User {
   id: string;
   email: string;
   name: string;
-  role: 'owner' | 'admin' | 'member' | 'reviewer' | 'operator' | 'finance';
-  company?: string;
+  role: 'admin' | 'engineer' | 'buyer' | 'security_analyst';
+  org?: {
+    id: string;
+    name: string;
+    domain?: string;
+  };
   avatar?: string;
-  organizationId?: string;
 }
 
 interface AuthContextType {

@@ -179,7 +179,7 @@ export default function SimulatePage() {
                   {selectedFile ? (
                     <>
                       {previewUrl ? (
-                        <ModelViewer url={previewUrl} showWireframe />
+                        <ModelViewer modelUrl={previewUrl} />
                       ) : (
                         <div className="flex items-center justify-center h-[400px] bg-background border rounded-lg">
                           <Loader2 className="h-8 w-8 animate-spin" />

@@ -3,10 +3,13 @@ import { ApiTags, ApiBearerAuth } from "@nestjs/swagger";
 import { JwtAuthGuard } from "../../auth/jwt.guard";
 import { OrgGuard } from "../../auth/org.guard";
 import { QueueMonitorService } from "./queue-monitor.service";
+import { RolesGuard } from "../../auth/roles.guard";
+import { Roles } from "../../auth/roles.decorator";
 
 @ApiTags("Queue Monitor")
 @Controller("admin")
-@UseGuards(JwtAuthGuard, OrgGuard)
+@UseGuards(JwtAuthGuard, OrgGuard, RolesGuard)
+@Roles('admin')
 @ApiBearerAuth()
 export class QueueMonitorController {
   constructor(private readonly queueMonitorService: QueueMonitorService) {}
@@ -93,8 +96,34 @@ export class QueueMonitorController {
     return this.queueMonitorService.getQueueMetrics();
   }
 
+  @Get("queues/performance")
+  async getQueuePerformance() {
+    return this.queueMonitorService.getQueuePerformance();
+  }
+
+  @Get('dashboard/aggregate')
+  async getAggregateAdminDashboard() {
+    const [queues, slo, db] = await Promise.all([
+      this.queueMonitorService.getQueueMetrics(),
+      this.queueMonitorService.getSLOMetrics('1h'),
+      this.queueMonitorService.getDatabaseMetrics('1h')
+    ]);
+    return {
+      timestamp: new Date().toISOString(),
+      queues,
+      slo,
+      db,
+      overall_health: (queues as any).overall_health
+    };
+  }
+
   @Get("queues/counts")
   async getQueueCounts() {
     return this.queueMonitorService.getQueueCounts();
+  }
+
+  @Get("queues/health")
+  async getQueueHealth() {
+    return this.queueMonitorService.getQueueHealthSummary();
   }
 }

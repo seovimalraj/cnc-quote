@@ -23,6 +23,30 @@ export const DfmRuleSchema = z.object({
 });
 
 // DFM Validation Issue Schema
+const Vector3Schema = z.tuple([z.number(), z.number(), z.number()]);
+
+export const DfmSelectionHintSchema = z.object({
+  mesh_id: z.string(),
+  mesh_version: z.string(),
+  feature_id: z.string().optional(),
+  triangle_indices: z.array(z.number()).default([]),
+  face_indices: z.array(z.number()).default([]),
+  camera: z
+    .object({
+      target: Vector3Schema,
+      radius: z.number().optional(),
+      up: Vector3Schema.optional(),
+    })
+    .optional(),
+  aabb: z
+    .object({
+      min: Vector3Schema,
+      max: Vector3Schema,
+    })
+    .optional(),
+  tooltip: z.string().optional(),
+});
+
 export const DfmValidationIssueSchema = z.object({
   rule_id: z.string().uuid(),
   name: z.string(),
@@ -35,6 +59,7 @@ export const DfmValidationIssueSchema = z.object({
     z: z.number(),
   }).optional(),
   suggestion: z.string().optional(),
+  selection_hint: DfmSelectionHintSchema.optional(),
 });
 
 // DFM Validation Response Schema
@@ -149,6 +174,7 @@ export const DfmBatchValidationResponseSchema = z.object({
 
 // Type exports
 export type DfmRule = z.infer<typeof DfmRuleSchema>;
+export type DfmSelectionHint = z.infer<typeof DfmSelectionHintSchema>;
 export type DfmValidationIssue = z.infer<typeof DfmValidationIssueSchema>;
 export type DfmValidationResponse = z.infer<typeof DfmValidationResponseSchema>;
 export type CncDfmParams = z.infer<typeof CncDfmParamsSchema>;

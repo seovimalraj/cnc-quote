@@ -1,10 +1,10 @@
 import { Suspense } from 'react';
-import QuoteClient from './QuoteClient';
+import XometryStyleQuotePage from '@/components/XometryStyleQuotePage';
 
 export default function QuotePage() {
   return (
     <Suspense fallback={<div>Loading...</div>}>
-      <QuoteClient />
+      <XometryStyleQuotePage />
     </Suspense>
   );
 }

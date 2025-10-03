@@ -35,6 +35,39 @@ interface QuoteLine {
   qty: number
   pricing_breakdown: PricingBreakdown
   lead_time_options: LeadOption[]
+  features?: {
+    detected_features: Array<{
+      type: string
+      dimensions?: Record<string, number>
+      machining_difficulty: number
+      dff_issues?: string[]
+    }>
+    summary: {
+      total_features: number
+      complexity_score: number
+      dff_violations: string[]
+    }
+  }
+  process_recommendation?: {
+    recommended_process: {
+      code: string
+      name: string
+      confidence: number
+      reasoning: string[]
+      limitations: string[]
+    }
+    alternatives: Array<{
+      code: string
+      name: string
+      confidence: number
+    }>
+    analysis: {
+      primary_driver: string
+      cost_impact: string
+      lead_time_impact: string
+      quality_notes: string[]
+    }
+  }
 }
 
 interface Quote {
@@ -86,6 +119,64 @@ const mockQuote: Quote = {
         margin: 25.00,
         unit_price: 12.55
       },
+      features: {
+        detected_features: [
+          {
+            type: 'hole',
+            dimensions: { diameter: 8.5, depth: 15.2 },
+            machining_difficulty: 4,
+            dff_issues: []
+          },
+          {
+            type: 'pocket',
+            dimensions: { width: 25.0, length: 30.0, depth: 5.0 },
+            machining_difficulty: 3,
+            dff_issues: []
+          }
+        ],
+        summary: {
+          total_features: 2,
+          complexity_score: 3.2,
+          dff_violations: []
+        }
+      },
+      process_recommendation: {
+        recommended_process: {
+          code: 'CNC-MILL-3AX',
+          name: '3-Axis CNC Milling',
+          confidence: 0.85,
+          reasoning: [
+            'Complex 3D geometry with multiple features',
+            'Good balance of capability and cost',
+            'Suitable for aluminum material'
+          ],
+          limitations: [
+            'May require multiple setups for complex features',
+            'Limited to 3-axis movement'
+          ]
+        },
+        alternatives: [
+          {
+            code: 'CNC-MILL-5AX',
+            name: '5-Axis CNC Milling',
+            confidence: 0.75
+          },
+          {
+            code: 'SLA-3D',
+            name: 'SLA 3D Printing',
+            confidence: 0.6
+          }
+        ],
+        analysis: {
+          primary_driver: 'Complex geometry with holes and pockets',
+          cost_impact: 'Comparable cost to CNC milling',
+          lead_time_impact: 'Standard lead time (3-7 days)',
+          quality_notes: [
+            'Excellent dimensional accuracy and surface finish',
+            'Good for tight tolerances with proper fixturing'
+          ]
+        }
+      },
       lead_time_options: [
         {
           id: 'usa-expedite',
@@ -135,21 +226,33 @@ export async function GET(
   try {
     const { id: quoteId } = await params;
 
-    // Generate dynamic mock data based on quote ID
+    // Generate realistic pricing based on quote ID
     const seed = quoteId.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-    const randomPrice = Math.floor((seed % 400) + 100); // $100-$500 range
-    const randomQty = Math.floor((seed % 20) + 1); // 1-20 quantity
+    const basePrice = Math.floor((seed % 300) + 50); // $50-$350 base price
+    const quantity = Math.floor((seed % 50) + 1); // 1-50 quantity
+
+    // Calculate bulk discount multiplier (like Xometry)
+    let bulkMultiplier = 1.0;
+    if (quantity >= 100) bulkMultiplier = 0.7;      // 30% discount for 100+
+    else if (quantity >= 50) bulkMultiplier = 0.8;  // 20% discount for 50-99
+    else if (quantity >= 25) bulkMultiplier = 0.9;  // 10% discount for 25-49
+    else if (quantity >= 10) bulkMultiplier = 0.95; // 5% discount for 10-24
+
+    const unitPrice = basePrice * bulkMultiplier;
 
     // Mock file names based on seed
     const fileNames = ['bracket.step', 'housing.stl', 'mount.iges', 'plate.dxf', 'cover.x_t'];
     const fileName = fileNames[seed % fileNames.length];
 
+    // Calculate lead times with 7-day minimum
+    const baseLeadTime = Math.max(7, Math.floor((seed % 10) + 7)); // 7-16 days base
+
     // In a real implementation, this would fetch from your database
-    // For now, we'll return dynamic mock data
+    // For now, we'll return realistic pricing data
     const mockQuote = {
       id: quoteId,
       status: 'Priced',
-      subtotal: randomPrice * randomQty,
+      subtotal: unitPrice * quantity,
       currency: 'USD',
       lines: [
         {
@@ -159,49 +262,49 @@ export async function GET(
           process: 'CNC',
           material: 'Aluminum 6061',
           finish: 'Anodized',
-          qty: randomQty,
+          qty: quantity,
           status: 'Priced',
           pricingBreakdown: {
             setup_time_min: 30,
             cycle_time_min: 15,
             machine_rate_per_hr: 75,
-            material_buy_cost: randomPrice * 0.4,
+            material_buy_cost: unitPrice * 0.4,
             material_waste_factor: 1.1,
-            tooling_wear_cost: randomPrice * 0.05,
-            finish_cost: randomPrice * 0.1,
-            inspection_cost: randomPrice * 0.1,
-            risk_adder: randomPrice * 0.05,
-            overhead: randomPrice * 0.2,
-            margin: randomPrice * 0.15,
-            unit_price: randomPrice
+            tooling_wear_cost: unitPrice * 0.05,
+            finish_cost: unitPrice * 0.1,
+            inspection_cost: unitPrice * 0.1,
+            risk_adder: unitPrice * 0.05,
+            overhead: unitPrice * 0.2,
+            margin: unitPrice * 0.15,
+            unit_price: unitPrice
           },
           leadTimeOptions: [
             {
               id: 'usa-expedite',
               region: 'USA',
               speed: 'Expedite',
-              business_days: 3,
-              unit_price: randomPrice * 1.5,
-              msrp: randomPrice * 1.8,
-              savings_text: `Save $${(randomPrice * 0.3).toFixed(2)}`
+              business_days: Math.max(3, Math.floor(baseLeadTime * 0.3)),
+              unit_price: unitPrice * 2.0,
+              msrp: unitPrice * 2.3,
+              savings_text: `Save $${(unitPrice * 0.3).toFixed(2)}`
             },
             {
               id: 'usa-standard',
               region: 'USA',
               speed: 'Standard',
-              business_days: 7,
-              unit_price: randomPrice * 1.2,
-              msrp: randomPrice * 1.5,
-              savings_text: `Save $${(randomPrice * 0.3).toFixed(2)}`
+              business_days: Math.max(7, Math.floor(baseLeadTime * 0.6)),
+              unit_price: unitPrice * 1.3,
+              msrp: unitPrice * 1.6,
+              savings_text: `Save $${(unitPrice * 0.3).toFixed(2)}`
             },
             {
               id: 'usa-economy',
               region: 'USA',
               speed: 'Economy',
-              business_days: 14,
-              unit_price: randomPrice,
-              msrp: randomPrice * 1.2,
-              savings_text: `Save $${(randomPrice * 0.2).toFixed(2)}`
+              business_days: Math.max(7, baseLeadTime),
+              unit_price: unitPrice,
+              msrp: unitPrice * 1.2,
+              savings_text: `Save $${(unitPrice * 0.2).toFixed(2)}`
             }
           ]
         }

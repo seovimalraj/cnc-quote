@@ -7,15 +7,15 @@ const requiredEnvVars = {
     'NEXT_PUBLIC_SUPABASE_URL',
     'NEXT_PUBLIC_SUPABASE_ANON_KEY',
     'NEXT_PUBLIC_API_URL',
-    'NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY'
+    'NEXT_PUBLIC_PAYPAL_CLIENT_ID'
   ],
   api: [
     'SUPABASE_URL',
     'SUPABASE_SERVICE_ROLE_KEY',
     'JWT_SECRET',
     'REDIS_URL',
-    'STRIPE_SECRET_KEY',
     'PAYPAL_CLIENT_ID',
+    'PAYPAL_CLIENT_SECRET',
     'CAD_SERVICE_URL'
   ],
   cadService: [
@@ -41,8 +41,9 @@ function parseEnvFile(filePath: string): Record<string, string> {
   const content = fs.readFileSync(filePath, 'utf8');
   const env: Record<string, string> = {};
 
+  const lineRegex = /^([^=]+)=(.*)$/;
   content.split('\n').forEach(line => {
-    const match = line.match(/^([^=]+)=(.*)$/);
+    const match = lineRegex.exec(line);
     if (match) {
       const key = match[1].trim();
       env[key] = match[2].trim();
@@ -55,38 +56,28 @@ function parseEnvFile(filePath: string): Record<string, string> {
 function checkEnvironmentVariables(): boolean {
   const projectRoot = process.cwd();
   let allValid = true;
-  let missingVars: Record<string, string[]> = {};
+  const missingVars: Record<string, string[]> = {};
 
-  // Check each service
   Object.entries(envFilePaths).forEach(([service, relativePath]) => {
     const envPath = path.join(projectRoot, relativePath);
     const env = parseEnvFile(envPath);
-    
-    // Check process.env as well for environment variables
     const combinedEnv = { ...env, ...process.env };
-    
-    const missing = requiredEnvVars[service as keyof typeof requiredEnvVars]
-      .filter(key => !combinedEnv[key]);
-
-    if (missing.length > 0) {
+    const required = requiredEnvVars[service as keyof typeof requiredEnvVars];
+    const missing = required.filter(key => !combinedEnv[key]);
+    if (missing.length) {
       allValid = false;
       missingVars[service] = missing;
     }
   });
 
-  // Print results
-
-  if (allValid) {
-  } else {
-
+  if (!allValid) {
+    console.log('Missing environment variables:\n');
     Object.entries(missingVars).forEach(([service, vars]) => {
-      if (vars.length > 0) {
-        vars.forEach(v => {});
+      if (vars.length) {
+        console.log(`- ${service}: ${vars.join(', ')}`);
       }
     });
-
-  }
-    console.log('- CAD Service: apps/cad-service/.env\n');
+    console.log('\nAdd them to the corresponding .env files before continuing.');
   }
 
   return allValid;

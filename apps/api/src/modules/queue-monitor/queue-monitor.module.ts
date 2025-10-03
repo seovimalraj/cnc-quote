@@ -1,5 +1,4 @@
 import { Module, MiddlewareConsumer, NestModule } from "@nestjs/common";
-import { BullModule } from "@nestjs/bullmq";
 import { ConfigService } from "@nestjs/config";
 import { createBullBoard } from "@bull-board/api";
 import { BullMQAdapter } from "@bull-board/api/bullMQAdapter";
@@ -7,6 +6,7 @@ import { ExpressAdapter } from "@bull-board/express";
 import { Queue as BullMQQueue } from "bullmq";
 import { QueueMonitorController } from "./queue-monitor.controller";
 import { QueueMonitorService } from "./queue-monitor.service";
+import { QueueStatusGateway } from "./queue-status.gateway";
 import { QueueMonitorMiddleware } from "./queue-monitor.middleware";
 import { QueueModule } from "../../queues";
 
@@ -17,7 +17,8 @@ type _QueueName = (typeof QUEUE_NAMES)[number];
   imports: [QueueModule],
   controllers: [QueueMonitorController],
   providers: [
-    QueueMonitorService,
+  QueueMonitorService,
+  QueueStatusGateway,
     {
       provide: "BULL_BOARD",
       useFactory: async (configService: ConfigService) => {
@@ -40,10 +41,7 @@ type _QueueName = (typeof QUEUE_NAMES)[number];
           }),
         );
 
-        const board = createBullBoard({
-          queues,
-          serverAdapter: serverAdapter as ExpressAdapter,
-        });
+        const board = createBullBoard({ queues, serverAdapter });
 
         return {
           serverAdapter,

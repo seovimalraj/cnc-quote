@@ -1,15 +1,17 @@
 module.exports = {
-  moduleFileExtensions: ['js', 'json', 'ts'],
-  rootDir: 'src',
-  testRegex: '.*\\.spec\\.ts$',
-  transform: {
-    '^.+\\.(t|j)s$': 'ts-jest',
-  },
-  collectCoverageFrom: ['**/*.(t|j)s'],
-  coverageDirectory: '../coverage',
+  preset: 'ts-jest',
+  rootDir: '.',
   testEnvironment: 'node',
-  moduleNameMapper: {
-    '^@app/(.*)$': '<rootDir>/$1',
+  moduleFileExtensions: ['ts', 'js', 'json'],
+  testMatch: ['<rootDir>/src/**/*.spec.ts'],
+  transform: {
+    '^.+\\.(t|j)s$': ['ts-jest', { tsconfig: '<rootDir>/tsconfig.json', diagnostics: false }],
   },
-  setupFiles: ['../test/setup.ts'],
+  collectCoverageFrom: ['src/**/*.(t|j)s'],
+  coverageDirectory: 'coverage',
+  moduleNameMapper: {
+    '^@cnc-quote/shared$': '<rootDir>/../../packages/shared/src',
+    '^@app/(.*)$': '<rootDir>/src/$1'
+  },
+  setupFiles: ['<rootDir>/test/setup.ts'],
 };

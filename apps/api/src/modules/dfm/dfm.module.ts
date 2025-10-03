@@ -2,17 +2,26 @@ import { Module } from "@nestjs/common";
 import { DfmController } from "./dfm.controller";
 import { DfmService } from "./dfm.service";
 import { DfmAnalysisProcessor } from "../../queues/jobs/dfm-analysis.processor";
+import { RiskController } from './risk.controller';
+import { RiskService } from './risk.service';
 import { SupabaseModule } from "../../lib/supabase/supabase.module";
 import { CacheModule } from "../../lib/cache/cache.module";
-import { BullModule } from "@nestjs/bullmq";
+import { AdminFeatureFlagsModule } from '../admin-feature-flags/admin-feature-flags.module';
+import { AnalyticsModule } from '../analytics/analytics.module';
+import { GeometryModule } from '../geometry/geometry.module';
+import { AIModule } from '../ai/ai.module';
 
 @Module({
   imports: [
     SupabaseModule,
     CacheModule,
+    AdminFeatureFlagsModule,
+    AnalyticsModule,
+    GeometryModule,
+    AIModule,
   ],
-  controllers: [DfmController],
-  providers: [DfmService, DfmAnalysisProcessor],
-  exports: [DfmService],
+  controllers: [DfmController, RiskController],
+  providers: [DfmService, DfmAnalysisProcessor, RiskService],
+  exports: [DfmService, RiskService],
 })
 export class DfmModule {}

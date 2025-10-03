@@ -28,17 +28,12 @@ interface PaymentMethod {
 }
 
 export function PaymentStep({ quote, onSave, saving }: PaymentStepProps) {
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string>('stripe_card');
+  // PayPal is now the only supported method
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string>('paypal');
   const [processing, setProcessing] = useState(false);
 
   // Mock saved payment methods
   const savedMethods: PaymentMethod[] = [
-    {
-      id: 'card-1',
-      type: 'card',
-      last4: '4242',
-      brand: 'visa',
-    },
     {
       id: 'paypal-1',
       type: 'paypal',
@@ -82,10 +77,6 @@ export function PaymentStep({ quote, onSave, saving }: PaymentStepProps) {
     }
   };
 
-  const formatCardBrand = (brand?: string) => {
-    if (!brand) return 'Card';
-    return brand.charAt(0).toUpperCase() + brand.slice(1);
-  };
 
   const getPaymentMethodIcon = (type: string) => {
     switch (type) {
@@ -113,50 +104,6 @@ export function PaymentStep({ quote, onSave, saving }: PaymentStepProps) {
 
           <RadioGroup value={selectedPaymentMethod} onValueChange={setSelectedPaymentMethod}>
             <div className="space-y-3">
-              {/* Stripe Card */}
-              <div className="border rounded-lg p-4 cursor-pointer transition-colors hover:border-gray-300">
-                <div className="flex items-center space-x-3">
-                  <RadioGroupItem value="stripe_card" />
-                  <div className="flex items-center space-x-3 flex-1">
-                    <CreditCardIcon className="h-6 w-6 text-blue-600" />
-                    <div>
-                      <div className="font-medium">Credit/Debit Card</div>
-                      <div className="text-sm text-gray-600">Powered by Stripe - Secure payment processing</div>
-                    </div>
-                    <div className="ml-auto flex items-center space-x-2">
-                      <ShieldCheckIcon className="h-4 w-4 text-green-600" />
-                      <span className="text-xs text-green-600">3D Secure</span>
-                    </div>
-                  </div>
-                </div>
-                {selectedPaymentMethod === 'stripe_card' && (
-                  <div className="mt-4 pl-8">
-                    <div className="space-y-3">
-                      {savedMethods.filter(m => m.type === 'card').map((method) => (
-                        <div
-                          key={method.id}
-                          className="flex items-center justify-between bg-gray-50 p-3 rounded"
-                        >
-                          <div className="flex items-center space-x-3">
-                            {getPaymentMethodIcon(method.type)}
-                            <div>
-                              <div className="font-medium">
-                                {formatCardBrand(method.brand)} •••• {method.last4}
-                              </div>
-                              <div className="text-sm text-gray-600">Expires 12/25</div>
-                            </div>
-                          </div>
-                          <Badge variant="secondary">Saved</Badge>
-                        </div>
-                      ))}
-                      <Button variant="outline" size="sm" className="w-full">
-                        Add New Card
-                      </Button>
-                    </div>
-                  </div>
-                )}
-              </div>
-
               {/* PayPal */}
               <div className="border rounded-lg p-4 cursor-pointer transition-colors hover:border-gray-300">
                 <div className="flex items-center space-x-3">
@@ -211,7 +158,7 @@ export function PaymentStep({ quote, onSave, saving }: PaymentStepProps) {
               <div className="flex justify-between text-sm">
                 <span>Payment Method:</span>
                 <span>
-                  {selectedPaymentMethod === 'stripe_card' ? 'Credit/Debit Card' : 'PayPal'}
+                  PayPal
                 </span>
               </div>
 

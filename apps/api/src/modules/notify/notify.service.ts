@@ -10,6 +10,24 @@ import {
   NotificationTemplate,
 } from "./notify.types";
 
+// Narrow order notification shape for internal events
+export interface OrderNotification {
+  type: string; // e.g. 'order_status_changed', 'payment_received'
+  orderId: string;
+  amount?: number;
+  currency?: string;
+  status?: string; // canonical/db status after change
+}
+
+export interface QuoteStatusNotification {
+  quoteId: string;
+  status: string;
+  previousStatus?: string;
+  recipientEmail?: string | null;
+  slackChannel?: string;
+  metadata?: Record<string, any>;
+}
+
 @Injectable()
 export class NotifyService {
   private readonly senderEmail: string;
@@ -30,6 +48,8 @@ export class NotifyService {
 
     // Initialize Slack client
     this.slack = new WebClient(this.configService.get("SLACK_BOT_TOKEN"));
+    // Cache sender email (prevents undefined usage in sendOrderEmail)
+    this.senderEmail = this.configService.get("SMTP_FROM") || "no-reply@example.com";
   }
 
   async sendReviewNotification(notification: ReviewNotification): Promise<void> {
@@ -72,9 +92,51 @@ export class NotifyService {
 
   async sendEmail(options: { to: string; subject: string; text: string; html?: string }): Promise<void> {
     await this.transporter.sendMail({
-      from: this.configService.get("SMTP_FROM"),
+      from: this.senderEmail,
       ...options,
     });
+  }
+
+  async notifyQuoteStatusChange(notification: QuoteStatusNotification): Promise<void> {
+    const recipientEmail = notification.recipientEmail
+      || this.configService.get("ADMIN_EMAIL")
+      || this.senderEmail;
+    const slackChannel = notification.slackChannel
+      || this.configService.get("SLACK_QUOTES_CHANNEL");
+
+    const readableNext = notification.status.replace(/_/g, " ").toUpperCase();
+    const readablePrev = notification.previousStatus
+      ? notification.previousStatus.replace(/_/g, " ").toUpperCase()
+      : undefined;
+    const defaultSubject = `Quote ${notification.quoteId} → ${readableNext}`;
+    const defaultText = `Quote ${notification.quoteId} transitioned${readablePrev ? ` from ${readablePrev}` : ''} to ${readableNext}.`;
+    const metaLines = notification.metadata
+      ? Object.entries(notification.metadata)
+          .filter(([, value]) => value !== undefined && value !== null)
+          .map(([key, value]) => `${key}: ${value}`)
+      : [];
+    const textBody = metaLines.length
+      ? `${defaultText}\n\n${metaLines.join('\n')}`
+      : defaultText;
+    const htmlBody = metaLines.length
+      ? `<p>${defaultText}</p><ul>${metaLines.map((line) => `<li>${line}</li>`).join('')}</ul>`
+      : `<p>${defaultText}</p>`;
+
+    if (recipientEmail) {
+      await this.sendEmail({
+        to: recipientEmail,
+        subject: defaultSubject,
+        text: textBody,
+        html: htmlBody,
+      });
+    }
+
+    if (slackChannel) {
+      await this.slack.chat.postMessage({
+        channel: slackChannel,
+        text: `${defaultText}${metaLines.length ? `\n${metaLines.join('\n')}` : ''}`,
+      });
+    }
   }
 
   private async sendOrderEmail(orderId: string, template: NotificationTemplate): Promise<void> {
@@ -128,17 +190,14 @@ export class NotifyService {
     await this.sendOrderEmail(reviewDetails.itemId, template);
   }
 
-  async sendOrderNotification(notification: {
-    type: string;
-    orderId: string;
-    amount?: number;
-    currency?: string;
-  }): Promise<void> {
+  async sendOrderNotification(notification: OrderNotification): Promise<void> {
     // Basic order notification - can be expanded as needed
-    const subject = `Order ${notification.type.replace("_", " ").toUpperCase()} - ${notification.orderId}`;
-    const body = `Order ${notification.orderId} has been ${notification.type.replace("_", " ")}.`;
+    const readableType = notification.type.replace(/_/g, " ").toUpperCase();
+    const subject = `Order ${readableType} - ${notification.orderId}`;
+    const statusPart = notification.status ? ` (status: ${notification.status})` : "";
+    const body = `Order ${notification.orderId} event: ${notification.type}${statusPart}.`;
 
-    // Log the notification for now - using console.info instead of logger
+    // For now we only log; future: route to email/slack templates
     // eslint-disable-next-line no-console
     console.info(`Order notification: ${subject} - ${body}`);
   }

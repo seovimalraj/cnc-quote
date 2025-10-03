@@ -1,6 +1,5 @@
 import { User } from "../../types/user";
-// import { Quote } from "../quotes/quotes.dto"; // Use shared types instead
-import type { QuoteResponse } from "@cnc-quote/shared";
+import { type QuoteResponse } from "@cnc-quote/shared";
 
 export interface OrderResponse {
   id: string;
@@ -9,6 +8,7 @@ export interface OrderResponse {
   status: string;
   createdAt: Date;
   updatedAt: Date;
+  org_id?: string; // Added to satisfy usage in service when generating QAP docs
   quote?: QuoteResponse;
   user?: User;
 }

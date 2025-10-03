@@ -65,12 +65,13 @@ class DfmAcceptanceTester {
           : 'Missing authentication flexibility',
         details: { hasJwtValidation, hasSessionValidation, hasFlexibleAuth }
       });
-    } catch (error) {
+    } catch (error: unknown) {
+      const errorDetails = this.getErrorDetails(error);
       this.results.push({
         test: 'DFM Authentication Guards',
         status: 'FAIL',
         message: 'DfmAuthGuard file not found',
-        details: error.message
+        details: errorDetails
       });
     }
   }
@@ -94,12 +95,13 @@ class DfmAcceptanceTester {
           : 'Incomplete rate limiting implementation',
         details: { hasDatabaseFunction, hasConfigurableLimits, hasIntegration }
       });
-    } catch (error) {
+    } catch (error: unknown) {
+      const errorDetails = this.getErrorDetails(error);
       this.results.push({
         test: 'Rate Limiting Implementation',
         status: 'FAIL',
         message: 'Rate limiting service not found',
-        details: error.message
+        details: errorDetails
       });
     }
   }
@@ -123,12 +125,13 @@ class DfmAcceptanceTester {
           : 'Missing file security validations',
         details: { hasMimeValidation, hasSizeValidation, hasVirusScan }
       });
-    } catch (error) {
+    } catch (error: unknown) {
+      const errorDetails = this.getErrorDetails(error);
       this.results.push({
         test: 'File Security Validation',
         status: 'FAIL',
         message: 'File security service not found',
-        details: error.message
+        details: errorDetails
       });
     }
   }
@@ -153,12 +156,13 @@ class DfmAcceptanceTester {
           : 'Missing security headers',
         details: { hasHelmet, hasSecurityMiddleware, hasCsp, hasHsts }
       });
-    } catch (error) {
+    } catch (error: unknown) {
+      const errorDetails = this.getErrorDetails(error);
       this.results.push({
         test: 'Security Headers Implementation',
         status: 'FAIL',
         message: 'Main application file not found',
-        details: error.message
+        details: errorDetails
       });
     }
   }
@@ -182,12 +186,13 @@ class DfmAcceptanceTester {
           : 'Incomplete analytics implementation',
         details: { hasTrackMethods, hasEventTypes, hasDatabaseIntegration }
       });
-    } catch (error) {
+    } catch (error: unknown) {
+      const errorDetails = this.getErrorDetails(error);
       this.results.push({
         test: 'Analytics Tracking Implementation',
         status: 'FAIL',
         message: 'Analytics service not found',
-        details: error.message
+        details: errorDetails
       });
     }
   }
@@ -212,12 +217,13 @@ class DfmAcceptanceTester {
           : 'Missing analytics event tracking',
         details: { hasRequestCreated, hasResultViewed, hasAnalysisStarted, hasStatusChecked }
       });
-    } catch (error) {
+    } catch (error: unknown) {
+      const errorDetails = this.getErrorDetails(error);
       this.results.push({
         test: 'Analytics Events Integration',
         status: 'FAIL',
         message: 'DFM controller not found',
-        details: error.message
+        details: errorDetails
       });
     }
   }
@@ -235,11 +241,13 @@ class DfmAcceptanceTester {
         status: 'PASS',
         message: 'Cache module available for performance optimization'
       });
-    } catch (error) {
+    } catch (error: unknown) {
+      const errorDetails = this.getErrorDetails(error);
       this.results.push({
         test: 'Performance Caching',
         status: 'SKIP',
-        message: 'Cache module not found - performance optimization pending'
+        message: 'Cache module not found - performance optimization pending',
+        details: errorDetails
       });
     }
 
@@ -263,18 +271,22 @@ class DfmAcceptanceTester {
       'FileSecurityService'
     ];
 
-    let integrationScore = 0;
-    const details: any = {};
+  let integrationScore = 0;
+  const details: Record<string, unknown> = {};
 
     for (const component of components) {
       try {
         // Check if component is imported in controller
         const controllerPath = join(process.cwd(), 'src/modules/dfm/dfm.controller.ts');
         const controllerContent = readFileSync(controllerPath, 'utf-8');
-        details[component] = controllerContent.includes(component);
-        if (details[component]) integrationScore++;
-      } catch (error) {
-        details[component] = false;
+        const integrated = controllerContent.includes(component);
+        details[component] = { integrated };
+        if (integrated) integrationScore++;
+      } catch (error: unknown) {
+        details[component] = {
+          integrated: false,
+          error: this.getErrorDetails(error),
+        };
       }
     }
 
@@ -286,6 +298,29 @@ class DfmAcceptanceTester {
     });
   }
 
+  private getErrorDetails(error: unknown): Record<string, unknown> | string {
+    if (error instanceof Error) {
+      return {
+        message: error.message,
+        stack: error.stack,
+      };
+    }
+    if (typeof error === 'string') {
+      return error;
+    }
+    if (typeof error === 'number' || typeof error === 'boolean' || typeof error === 'bigint' || typeof error === 'symbol') {
+      return { message: String(error) };
+    }
+    if (typeof error === 'object' && error !== null) {
+      try {
+        return JSON.parse(JSON.stringify(error));
+      } catch {
+        return { message: 'Unknown error object' };
+      }
+    }
+    return { message: 'Unknown error value' };
+  }
+
   private printResults(): void {
     console.log('\n📋 Test Results Summary:\n');
 
@@ -295,7 +330,12 @@ class DfmAcceptanceTester {
     const total = this.results.length;
 
     this.results.forEach(result => {
-      const icon = result.status === 'PASS' ? '✅' : result.status === 'FAIL' ? '❌' : '⏭️';
+      let icon = '⏭️';
+      if (result.status === 'PASS') {
+        icon = '✅';
+      } else if (result.status === 'FAIL') {
+        icon = '❌';
+      }
       console.log(`${icon} ${result.test}: ${result.status}`);
       console.log(`   ${result.message}`);
       if (result.details) {

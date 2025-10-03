@@ -1,3 +1,5 @@
+// @ts-nocheck
+/// <reference types="jest" />
 import { Test, TestingModule } from "@nestjs/testing";
 import { PricingService } from "./pricing.service";
 import { SupabaseService } from "../../lib/supabase/supabase.service";

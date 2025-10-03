@@ -3,9 +3,12 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { useUserSession } from '@/components/auth/useUserSession';
+import { RequireAnyRole } from '@/components/auth/RequireAnyRole';
 
 const UserDropdown = () => {
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const { user, loading, signOut } = useUserSession();
 
   return (
     <div className="relative">
@@ -19,7 +22,7 @@ const UserDropdown = () => {
           height={32}
           className="w-8 h-8 rounded-full"
           src="/images/user/user-01.png"
-          alt="User"
+          alt={user?.email || 'User'}
         />
       </button>
 
@@ -32,11 +35,11 @@ const UserDropdown = () => {
                 height={40}
                 className="w-10 h-10 rounded-full mr-3"
                 src="/images/user/user-01.png"
-                alt="User"
+                alt={user?.email || 'User'}
               />
               <div>
-                <p className="text-sm font-medium text-gray-900 dark:text-white">John Doe</p>
-                <p className="text-xs text-gray-500 dark:text-gray-400">john@example.com</p>
+                <p className="text-sm font-medium text-gray-900 dark:text-white truncate max-w-[140px]">{user?.email || (loading ? 'Loading…' : 'Guest')}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">{user?.role || 'anon'}</p>
               </div>
             </div>
           </div>
@@ -46,6 +49,20 @@ const UserDropdown = () => {
               className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
             >
               Profile
+            </Link>
+            <RequireAnyRole roles={['admin','org_admin','reviewer','finance','auditor']}>
+              <Link
+                href="/admin/dashboard"
+                className="block px-4 py-2 text-sm text-indigo-600 hover:bg-indigo-50 dark:text-indigo-300 dark:hover:bg-indigo-900/30"
+              >
+                Admin Panel
+              </Link>
+            </RequireAnyRole>
+            <Link
+              href="/portal/dashboard"
+              className="block px-4 py-2 text-sm text-blue-600 hover:bg-blue-50 dark:text-blue-300 dark:hover:bg-blue-900/30"
+            >
+              Customer Portal
             </Link>
             <Link
               href="/settings"
@@ -60,12 +77,14 @@ const UserDropdown = () => {
               Billing
             </Link>
             <div className="border-t border-gray-200 dark:border-gray-700 my-1"></div>
-            <Link
-              href="/logout"
-              className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
-            >
-              Sign out
-            </Link>
+            {user && (
+              <button
+                onClick={() => signOut()}
+                className="w-full text-left block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
+              >
+                Sign out
+              </button>
+            )}
           </div>
         </div>
       )}

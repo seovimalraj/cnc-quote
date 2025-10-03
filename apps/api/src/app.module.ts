@@ -1,7 +1,5 @@
 import { Module } from "@nestjs/common";
 import { ConfigModule } from "@nestjs/config";
-import { AuthModule } from "./auth/auth.module";
-import { QueueModule } from "./queues";
 import { HealthModule } from "./modules/health/health.module";
 import { MachineModule } from "./modules/machines/machine.module";
 import { PricingModule } from "./modules/pricing/pricing.module";
@@ -10,29 +8,28 @@ import { LeadsModule } from "./modules/leads/leads.module";
 import { SupabaseModule } from "./lib/supabase/supabase.module";
 import { CacheModule } from "./lib/cache/cache.module";
 import { PaymentsModule } from "./modules/payments/payments.module";
-import { OrdersModule } from "./modules/orders/orders.module";
-import { QapModule } from "./modules/qap/qap.module";
-import { ManualReviewModule } from "./modules/manual-review/manual-review.module";
-import { ObservabilityModule } from "./observability/observability.module";
 import { TestModule } from "./modules/test/test.module";
-import { QueueMonitorModule } from "./modules/queue-monitor/queue-monitor.module";
-import { AdminModule } from "./modules/admin/admin.module";
-import { ReviewModule } from "./modules/review/review.module";
 import { RateLimitModule } from "./lib/rate-limit/rate-limit.module";
-import { DocumentsModule } from "./modules/documents/documents.module";
-import { FilesModule } from "./modules/files/files.module";
 import { CatalogModule } from "./modules/catalog/catalog.module";
-import { AdminFilesModule } from "./modules/admin-files/admin-files.module";
-import { FinanceModule } from "./modules/finance/finance.module";
-import { AdminUsersModule } from "./modules/admin-users/admin-users.module";
-import { AdminOrgsModule } from "./modules/admin-orgs/admin-orgs.module";
-import { AdminHealthModule } from "./modules/admin-health/admin-health.module";
-import { AdminMetricsModule } from "./modules/admin-metrics/admin-metrics.module";
-import { AdminErrorsModule } from "./modules/admin-errors/admin-errors.module";
-import { AdminAlertsModule } from "./modules/admin-alerts/admin-alerts.module";
-import { AdminDfmModule } from "./modules/admin-dfm/admin-dfm.module";
-// import { MiddlewareModule } from "./middleware/middleware.module";
-import { AuthModule as AuthEndpointsModule } from "./modules/auth/auth.module";
+import { GeometryModule } from "./modules/geometry/geometry.module";
+// NOTE: Additional modules (files, orders, qap, admin, monitoring) intentionally disabled until queue standardization.
+import { QueueModule } from "./queues";
+import { MetricsModule } from './modules/metrics/metrics.module';
+import { QueueMonitorModule } from './modules/queue-monitor/queue-monitor.module';
+import { OrgsModule } from './modules/orgs/orgs.module';
+import { InvitesModule } from './modules/invites/invites.module';
+import { AuditModule } from './audit/audit.module';
+import { RbacModule } from './auth/rbac.module';
+import { RoutingModule } from './routing/routing.module';
+import { LeadtimeModule } from './leadtime/leadtime.module';
+import { OutcomesModule } from './quotes/outcomes/outcomes.module';
+import { MarginsModule } from './quotes/margins/margins.module';
+import { ExportModule } from './quotes/export/export.module';
+import { LookupsModule } from './lookups/lookups.module';
+import { QuoteRevisionsModule } from './quotes/revisions/revisions.module';
+import { SchedulerModule } from './scheduler/scheduler.module';
+import { RevisionsModule } from './revisions/revisions.module';
+import { AIModule } from './modules/ai/ai.module';
 
 @Module({
   imports: [
@@ -48,23 +45,35 @@ import { AuthModule as AuthEndpointsModule } from "./modules/auth/auth.module";
         return config;
       },
     }),
-    QueueModule,
     SupabaseModule,
     HealthModule,
     TestModule,
     MachineModule,
-    // ObservabilityModule,
-    // PricingModule,
-    // DfmModule,
-    // LeadsModule,
-    // QapModule,
-    // QueueMonitorModule,
-    // AdminModule,
-    // ReviewModule,
-    // DocumentsModule,
-    // FilesModule,
-    // CatalogModule,
-    // FinanceModule,
+    PricingModule,
+    LeadsModule,
+    CatalogModule,
+    GeometryModule,
+    RateLimitModule,
+    CacheModule,
+    QueueModule,
+    DfmModule,
+  PaymentsModule,
+  MetricsModule,
+  QueueMonitorModule,
+  OrgsModule,
+  InvitesModule,
+  AuditModule,
+  RbacModule,
+  RoutingModule,
+  LeadtimeModule,
+  OutcomesModule,
+  MarginsModule,
+  ExportModule,
+  LookupsModule,
+  QuoteRevisionsModule,
+  SchedulerModule,
+  RevisionsModule,
+  AIModule,
   ],
 })
 export class AppModule {}

@@ -14,36 +14,14 @@ import {
 } from '@heroicons/react/24/outline';
 
 const adminNavItems = [
-  {
-    name: 'Pricing Engine',
-    href: '/admin/pricing',
-    icon: CurrencyDollarIcon,
-    description: 'Configure pricing rules and rates'
-  },
-  {
-    name: 'Analytics',
-    href: '/admin/analytics',
-    icon: ChartBarIcon,
-    description: 'View system metrics and reports'
-  },
-  {
-    name: 'Users',
-    href: '/admin/users',
-    icon: UserGroupIcon,
-    description: 'Manage user accounts and permissions'
-  },
-  {
-    name: 'Content',
-    href: '/admin/content',
-    icon: DocumentTextIcon,
-    description: 'Manage website content and pages'
-  },
-  {
-    name: 'Security',
-    href: '/admin/security',
-    icon: ShieldCheckIcon,
-    description: 'Security settings and audit logs'
-  }
+  { name: 'Dashboard', href: '/admin/dashboard', icon: ChartBarIcon, description: 'Operational overview' },
+  { name: 'Quotes', href: '/admin/quotes', icon: DocumentTextIcon, description: 'Manage customer quotes' },
+  { name: 'Pricing Engine', href: '/admin/pricing', icon: CurrencyDollarIcon, description: 'Configure pricing rules' },
+  { name: 'Queue Monitor', href: '/admin/queues', icon: ShieldCheckIcon, description: 'Job processing health' },
+  { name: 'Metrics', href: '/admin/metrics', icon: ChartBarIcon, description: 'Prometheus & SLO charts' },
+  { name: 'Users & Orgs', href: '/admin/users', icon: UserGroupIcon, description: 'Accounts and permissions' },
+  { name: 'Content', href: '/admin/content', icon: DocumentTextIcon, description: 'CMS pages & docs' },
+  { name: 'Security', href: '/admin/security', icon: ShieldCheckIcon, description: 'Audit & auth settings' }
 ];
 
 export default function AdminNavigation() {

@@ -62,4 +62,69 @@ export class CatalogController {
       );
     }
   }
+
+  // Instant Quote Catalog Endpoints (Public)
+  @Get('materials')
+  async getMaterials(@Query('process_type') processType?: string, @Query('available_only') availableOnly?: string) {
+    try {
+      const materials = await this.catalogService.getMaterials({
+        process_type: processType as any,
+        available_only: availableOnly === 'true',
+      });
+      return { data: materials };
+    } catch (error) {
+      throw new HttpException(
+        { error: 'Failed to fetch materials', details: error.message },
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  @Get('finishes')
+  async getFinishes(@Query('process_type') processType?: string, @Query('material_id') materialId?: string) {
+    try {
+      const finishes = await this.catalogService.getFinishes({
+        process_type: processType as any,
+        material_id: materialId,
+      });
+      return { data: finishes };
+    } catch (error) {
+      throw new HttpException(
+        { error: 'Failed to fetch finishes', details: error.message },
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  @Get('materials/:id')
+  async getMaterialById(@Query('id') id: string) {
+    try {
+      const material = await this.catalogService.getMaterialById(id);
+      if (!material) {
+        throw new HttpException('Material not found', HttpStatus.NOT_FOUND);
+      }
+      return { data: material };
+    } catch (error) {
+      throw new HttpException(
+        { error: 'Failed to fetch material', details: error.message },
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
+
+  @Get('finishes/:id')
+  async getFinishById(@Query('id') id: string) {
+    try {
+      const finish = await this.catalogService.getFinishById(id);
+      if (!finish) {
+        throw new HttpException('Finish not found', HttpStatus.NOT_FOUND);
+      }
+      return { data: finish };
+    } catch (error) {
+      throw new HttpException(
+        { error: 'Failed to fetch finish', details: error.message },
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+  }
 }

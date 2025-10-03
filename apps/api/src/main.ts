@@ -1,7 +1,6 @@
 import "reflect-metadata";
 import { NestFactory } from "@nestjs/core";
 import { ValidationPipe, VersioningType } from "@nestjs/common";
-import { SwaggerModule, DocumentBuilder } from "@nestjs/swagger";
 import helmet from "helmet";
 import * as bodyParser from "body-parser";
 import timeout from "connect-timeout";
@@ -9,7 +8,14 @@ import { Request, Response, NextFunction } from "express";
 // import * as Sentry from "@sentry/node";
 // import { nodeProfilingIntegration } from "@sentry/profiling-node";
 import { AppModule } from "./app.module";
-import { SecurityMiddleware } from "./middleware/security.middleware";
+import { AuditInterceptor } from "./common/interceptors/audit.interceptor";
+import { ResponseInterceptor } from "./common/interceptors/response.interceptor";
+import { HttpExceptionFilter } from "./common/filters/http-exception.filter";
+import { AuditService } from "./audit/audit.service";
+import { startOTel, shutdownOTel } from "./observability/otel";
+import { httpLogger } from "./observability/logger";
+import { RequestContextMiddleware } from "./common/middleware/request-context.middleware";
+import { setupOpenAPI } from "./docs/openapi";
 
 // Initialize Sentry
 // Sentry.init({
@@ -20,8 +26,23 @@ import { SecurityMiddleware } from "./middleware/security.middleware";
 // });
 
 async function bootstrap() {
+  // Initialize OpenTelemetry first, before any other code
+  await startOTel();
+
   const app = await NestFactory.create(AppModule, {
-    logger: ['error', 'warn', 'log', 'debug', 'verbose'],
+    bufferLogs: true, // Buffer logs until httpLogger is ready
+  });
+
+  // Disable NestJS default logger, use Pino instead
+  app.useLogger(false);
+
+  // Apply HTTP request/response logger (Pino with trace correlation)
+  app.use(httpLogger);
+
+  // Apply request context middleware (trace ID propagation, AsyncLocalStorage)
+  const reqCtxMiddleware = new RequestContextMiddleware();
+  app.use((req: Request, res: Response, next: NextFunction) => {
+    reqCtxMiddleware.use(req, res, next);
   });
 
   // Enable API versioning
@@ -91,7 +112,7 @@ async function bootstrap() {
       ...(process.env.NODE_ENV === "development" ? ["http://localhost:3000"] : []),
     ],
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
-    allowedHeaders: ["Content-Type", "Authorization"],
+    allowedHeaders: ["Content-Type", "Authorization", "X-Org-Id", "X-Trace-Id", "X-Request-Id"],
     credentials: true,
     maxAge: 3600,
   });
@@ -106,17 +127,36 @@ async function bootstrap() {
     }),
   );
 
-  // Swagger setup
-  const config = new DocumentBuilder()
-    .setTitle("CNC Quote API")
-    .setDescription("API for CNC, Sheet Metal, and Injection Molding quoting platform")
-    .setVersion("1.0")
-    .addBearerAuth()
-    .build();
+  // Global exception filter (standardized error responses with requestId/traceId)
+  app.useGlobalFilters(new HttpExceptionFilter());
 
-  const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup("api/docs", app, document);
+  // Global response interceptor (add requestId/traceId to success responses)
+  app.useGlobalInterceptors(new ResponseInterceptor());
 
-  await app.listen(process.env.PORT || 3001, '0.0.0.0');
+  // Global audit interceptor
+  const auditService = app.get(AuditService);
+  app.useGlobalInterceptors(new AuditInterceptor(auditService));
+
+  // Setup OpenAPI documentation (/docs and /openapi.json with sanitization)
+  setupOpenAPI(app);
+
+  const port = process.env.PORT || 3001;
+  await app.listen(port, '0.0.0.0');
+  console.log(`API listening on port ${port}`);
+
+  // Graceful shutdown
+  process.on('SIGTERM', async () => {
+    console.log('SIGTERM received, shutting down gracefully');
+    await shutdownOTel();
+    await app.close();
+    process.exit(0);
+  });
+
+  process.on('SIGINT', async () => {
+    console.log('SIGINT received, shutting down gracefully');
+    await shutdownOTel();
+    await app.close();
+    process.exit(0);
+  });
 }
 bootstrap();

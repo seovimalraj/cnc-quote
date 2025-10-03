@@ -1,15 +1,11 @@
-import { Module } from "@nestjs/common";
-import { FilesController } from "./files.controller";
-import { FilesService } from "./files.service";
-import { BullModule } from "@nestjs/bull";
-import { SupabaseModule } from "../../lib/supabase/supabase.module";
+import { Module } from '@nestjs/common';
+import { FilesController } from './files.controller';
+import { StorageService } from './storage.service';
+import { SupabaseService } from '../../lib/supabase/supabase.service';
 
 @Module({
-  imports: [
-    SupabaseModule,
-  ],
   controllers: [FilesController],
-  providers: [FilesService],
-  exports: [FilesService],
+  providers: [StorageService, SupabaseService],
+  exports: [StorageService]
 })
 export class FilesModule {}

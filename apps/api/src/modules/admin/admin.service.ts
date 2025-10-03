@@ -2,6 +2,51 @@ import { Injectable } from "@nestjs/common";
 
 @Injectable()
 export class AdminService {
+  private readonly mockUsers = [
+    { id: 'u_1', email: 'john.doe@example.com', role: 'admin', org: 'Acme Corp', status: 'active', created_at: '2025-01-02T10:00:00Z' },
+    { id: 'u_2', email: 'designer@example.com', role: 'customer', org: 'Beta LLC', status: 'pending', created_at: '2025-02-15T09:30:00Z' },
+    { id: 'u_3', email: 'ops@example.com', role: 'reviewer', org: 'Acme Corp', status: 'active', created_at: '2025-03-05T12:10:00Z' },
+    { id: 'u_4', email: 'finance@example.com', role: 'finance', org: 'Acme Corp', status: 'active', created_at: '2025-04-11T08:45:00Z' },
+    { id: 'u_5', email: 'maker@example.com', role: 'customer', org: 'Makers Ltd', status: 'active', created_at: '2025-05-22T14:30:00Z' }
+  ];
+
+  private readonly mockOrgs = [
+    { id: 'org_1', name: 'Acme Corp', user_count: 14, plan: 'pro', created_at: '2024-12-12T12:00:00Z' },
+    { id: 'org_2', name: 'Beta LLC', user_count: 4, plan: 'free', created_at: '2025-02-01T12:00:00Z' },
+    { id: 'org_3', name: 'Makers Ltd', user_count: 9, plan: 'pro', created_at: '2025-03-14T09:00:00Z' }
+  ];
+
+  async listUsers(page = 1, pageSize = 25, q?: string) {
+    let src = this.mockUsers;
+    if (q) {
+      const term = q.toLowerCase();
+      src = src.filter(u =>
+        u.email.toLowerCase().includes(term) ||
+        u.role.toLowerCase().includes(term) ||
+        u.org.toLowerCase().includes(term) ||
+        u.status.toLowerCase().includes(term)
+      );
+    }
+    const total = src.length;
+    const start = (page - 1) * pageSize;
+    const data = src.slice(start, start + pageSize);
+    return { data, total, page, page_size: pageSize, q: q || null };
+  }
+
+  async listOrgs(page = 1, pageSize = 25, q?: string) {
+    let src = this.mockOrgs;
+    if (q) {
+      const term = q.toLowerCase();
+      src = src.filter(o =>
+        o.name.toLowerCase().includes(term) ||
+        o.plan.toLowerCase().includes(term)
+      );
+    }
+    const total = src.length;
+    const start = (page - 1) * pageSize;
+    const data = src.slice(start, start + pageSize);
+    return { data, total, page, page_size: pageSize, q: q || null };
+  }
   async getReviewSummary(window: string = '1h') {
     // Mock review summary - in real implementation, this would query the manual review service
     return {
@@ -110,10 +155,11 @@ export class AdminService {
   }
 
   private parseTimeWindow(window: string): number {
-    const match = window.match(/^(\d+)([smhd])$/);
-    if (!match) return 60 * 60 * 1000; // Default 1h
-
-    const [, num, unit] = match;
+  const re = /^(\d+)([smhd])$/;
+  const execResult = re.exec(window);
+  if (!execResult) return 60 * 60 * 1000;
+  const num = execResult[1];
+  const unit = execResult[2];
     const multipliers = { s: 1000, m: 60 * 1000, h: 60 * 60 * 1000, d: 24 * 60 * 60 * 1000 };
     return parseInt(num) * multipliers[unit as keyof typeof multipliers];
   }

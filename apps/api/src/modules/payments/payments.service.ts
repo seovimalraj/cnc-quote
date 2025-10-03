@@ -1,26 +1,22 @@
 import { Injectable, Logger } from "@nestjs/common";
-import Stripe from "stripe";
 import { SupabaseService } from "../../lib/supabase/supabase.service";
 import { NotifyService } from "../notify/notify.service";
+import { OrdersService } from "../orders/orders.service";
 import * as paypalServerSDK from "@paypal/paypal-server-sdk";
-import { PaymentProvider, PaymentSessionResult } from "./payments.types";
+import { PaymentSessionResult } from "./payments.types";
 import { Quote } from "./payments.types.quotes";
 import { PaymentProviderError, QuoteNotFoundError } from "./payments.errors";
 
 @Injectable()
 export class PaymentsService {
   private readonly logger = new Logger(PaymentsService.name);
-  private readonly stripe: Stripe;
   private readonly paypal: paypalServerSDK.Client;
 
   constructor(
     private readonly supabase: SupabaseService,
     private readonly notify: NotifyService,
+    private readonly ordersService: OrdersService,
   ) {
-    this.stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-      apiVersion: "2025-08-27.basil",
-    });
-
     const environment = process.env.NODE_ENV === "production"
       ? paypalServerSDK.Environment.Production
       : paypalServerSDK.Environment.Sandbox;
@@ -96,6 +92,7 @@ export class PaymentsService {
     return order;
   }
 
+  // Deprecated local helper kept temporarily for backward compatibility (use OrdersService.updateOrderStatus)
   private async addOrderStatusHistory(orderId: string, status: string, notes: string, changedBy: string) {
     await this.supabase.client.from("order_status_history").insert({
       order_id: orderId,
@@ -105,38 +102,6 @@ export class PaymentsService {
     });
   }
 
-  private async createStripeCheckoutSession(quote: Quote): Promise<PaymentSessionResult> {
-    const lineItems = quote.items.map((item) => ({
-      price_data: {
-        currency: quote.currency.toLowerCase(),
-        unit_amount: Math.round(item.unit_price * 100), // Convert to cents
-        product_data: {
-          name: "Manufacturing Services",
-          description: `Quantity: ${item.quantity}`,
-        },
-      },
-      quantity: item.quantity,
-    }));
-
-    const session = await this.stripe.checkout.sessions.create({
-      customer_email: quote.customer.email,
-      line_items: lineItems,
-      mode: "payment",
-      success_url: `${process.env.APP_URL}/portal/orders?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${process.env.APP_URL}/portal/quotes/${quote.id}`,
-      metadata: {
-        quote_id: quote.id,
-        org_id: quote.org_id,
-      },
-    });
-
-    return {
-      provider: "stripe",
-      sessionId: session.id,
-      url: session.url,
-    };
-  }
-
   private async createPayPalCheckoutSession(quote: Quote): Promise<PaymentSessionResult> {
     const ordersController = new paypalServerSDK.OrdersController(this.paypal);
     
@@ -144,8 +109,8 @@ export class PaymentsService {
       body: {
         intent: paypalServerSDK.CheckoutPaymentIntent.Capture,
         applicationContext: {
-          returnUrl: `${process.env.APP_URL}/portal/orders/paypal/success`,
-          cancelUrl: `${process.env.APP_URL}/portal/quotes/${quote.id}`,
+          returnUrl: `${process.env.APP_URL}/portal/checkout/${quote.id}/result/success`,
+          cancelUrl: `${process.env.APP_URL}/portal/checkout/${quote.id}/result/cancel`,
           brandName: process.env.APP_NAME,
           landingPage: paypalServerSDK.OrderApplicationContextLandingPage.Login,
           userAction: paypalServerSDK.OrderApplicationContextUserAction.PayNow,
@@ -189,7 +154,7 @@ export class PaymentsService {
     };
   }
 
-  async createCheckoutSession(quoteId: string, provider: PaymentProvider = "stripe"): Promise<PaymentSessionResult> {
+  async createCheckoutSession(quoteId: string): Promise<PaymentSessionResult> {
     try {
       const { data: quote } = await this.supabase.client
         .from("quotes")
@@ -211,80 +176,14 @@ export class PaymentsService {
         throw new QuoteNotFoundError(quoteId);
       }
 
-      if (provider === "stripe") {
-        return await this.createStripeCheckoutSession(quote);
-      } else {
-        return await this.createPayPalCheckoutSession(quote);
-      }
+      return await this.createPayPalCheckoutSession(quote);
     } catch (error) {
       this.logger.error("Error creating checkout session:", error);
       if (error instanceof QuoteNotFoundError) {
         throw error;
       }
-      throw new PaymentProviderError(`Failed to create ${provider} checkout session`);
+      throw new PaymentProviderError("Failed to create PayPal checkout session");
     }
-  }
-
-  async handleWebhook(signature: string, rawBody: Buffer) {
-    try {
-      const event = this.stripe.webhooks.constructEvent(rawBody, signature, process.env.STRIPE_WEBHOOK_SECRET);
-
-      switch (event.type) {
-        case "checkout.session.completed": {
-          const session = event.data.object as Stripe.Checkout.Session;
-          await this.handleSuccessfulPayment(session);
-          break;
-        }
-        case "payment_intent.payment_failed": {
-          const paymentIntent = event.data.object as Stripe.PaymentIntent;
-          await this.handleFailedPayment(paymentIntent);
-          break;
-        }
-      }
-    } catch (err) {
-      this.logger.error("Error processing webhook:", err);
-      throw err;
-    }
-  }
-
-  private async handleSuccessfulPayment(session: Stripe.Checkout.Session) {
-    const quoteId = session.metadata.quote_id;
-    const orgId = session.metadata.org_id;
-    const quote = await this.getQuoteDetails(quoteId);
-
-    const order = await this.createOrderFromQuote(quote, orgId);
-
-    await this.supabase.client.from("payments").insert({
-      order_id: order.id,
-      stripe_checkout_session_id: session.id,
-      stripe_payment_intent_id: session.payment_intent as string,
-      amount: quote.total_amount,
-      currency: quote.currency,
-      status: "succeeded",
-      metadata: session,
-    });
-
-    await this.addOrderStatusHistory(order.id, "new", "Order created from successful payment", quote.created_by);
-
-    const { data: customer } = await this.supabase.client
-      .from("customers")
-      .select("email")
-      .eq("id", quote.customer_id)
-      .single();
-
-    await this.notify.notifyOrderCreated({
-      orderId: order.id,
-      customerEmail: customer.email,
-    });
-  }
-
-  private async handleFailedPayment(paymentIntent: Stripe.PaymentIntent) {
-    this.logger.error("Payment failed", {
-      paymentIntentId: paymentIntent.id,
-      amount: paymentIntent.amount / 100,
-      currency: paymentIntent.currency,
-      error: paymentIntent.last_payment_error?.message,
-    });
   }
 
   async capturePayPalOrder(paypalOrderId: string) {
@@ -295,44 +194,103 @@ export class PaymentsService {
         id: paypalOrderId,
       };
 
-      const { result } = await ordersController.captureOrder(captureRequest);
-      const captureData = result;
+  const { result } = await ordersController.captureOrder(captureRequest);
+  const captureData = result;
 
       const { quote_id, org_id } = JSON.parse(captureData.purchaseUnits[0].customId);
 
-      const quote = await this.getQuoteDetails(quote_id);
-      const order = await this.createOrderFromQuote(quote, org_id);
+      // Idempotency: check if payment already recorded
+      const { data: existingPayment } = await this.supabase.client
+        .from("payments")
+        .select("id, order_id")
+        .eq("paypal_order_id", paypalOrderId)
+        .maybeSingle();
 
-      await this.supabase.client.from("payments").insert({
-        order_id: order.id,
-        paypal_order_id: paypalOrderId,
-        paypal_capture_id: captureData.purchaseUnits[0].payments.captures[0].id,
-        amount: quote.total_amount,
-        currency: quote.currency,
-        status: "succeeded",
-        metadata: captureData,
-      });
+      let orderId: string;
+      let orderCreated = false;
+      let capturedQuote: Quote | null = null;
 
-      await this.addOrderStatusHistory(
-        order.id,
-        "new",
-        "Order created from successful PayPal payment",
-        quote.created_by,
-      );
+      if (existingPayment) {
+        orderId = existingPayment.order_id;
+      } else {
+        const quote = await this.getQuoteDetails(quote_id);
+        capturedQuote = quote;
+        const order = await this.createOrderFromQuote(quote, org_id);
+        orderId = order.id;
+        orderCreated = true;
 
-      const { data: customer } = await this.supabase.client
-        .from("customers")
-        .select("email")
-        .eq("id", quote.customer_id)
-        .single();
+        const statusActor = quote.created_by ?? "system";
 
-      await this.notify.notifyOrderCreated({
-        orderId: order.id,
-        customerEmail: customer.email,
-      });
+        // Record payment
+        await this.supabase.client.from("payments").insert({
+          order_id: order.id,
+          paypal_order_id: paypalOrderId,
+          paypal_capture_id: captureData.purchaseUnits[0].payments.captures[0].id,
+          amount: quote.total_amount,
+          currency: quote.currency,
+          status: "succeeded",
+          metadata: captureData,
+        });
+
+        // Record status transitions via OrdersService to enforce validation & history
+        try {
+          // Ensure starting state (if DB inserted as 'new' lowercase map to canonical NEW)
+          await this.ordersService.updateOrderStatus(order.id, "NEW", statusActor, "Order created from successful PayPal payment");
+          await this.ordersService.updateOrderStatus(order.id, "PAID", statusActor, "Payment captured (PayPal)");
+        } catch (statusErr) {
+          this.logger.warn(`Order status update via OrdersService failed, falling back direct: ${(statusErr as Error).message}`);
+          // Fallback direct updates (should rarely trigger)
+          await this.addOrderStatusHistory(order.id, "new", "Order created from successful PayPal payment", statusActor);
+          await this.addOrderStatusHistory(order.id, "paid", "Payment captured (PayPal)", statusActor);
+          await this.supabase.client.from("orders").update({ status: "paid" }).eq("id", order.id);
+        }
+
+        // Update quote status if still open
+        await this.supabase.client
+          .from("quotes")
+          .update({ status: "Ordered" })
+          .eq("id", quote.id)
+          .eq("status", quote.status); // prevent overriding progress if changed
+
+        // Analytics event stub (assuming analytics_events table exists)
+        try {
+          await this.supabase.client.from("analytics_events").insert({
+            event_type: "payment_captured",
+            quote_id,
+            organization_id: org_id,
+            properties: {
+              provider: "paypal",
+              paypal_order_id: paypalOrderId,
+              capture_id: captureData.purchaseUnits[0].payments.captures[0].id,
+              amount: quote.total_amount,
+              currency: quote.currency,
+            },
+            created_at: new Date().toISOString(),
+          });
+        } catch (analyticsError) {
+          this.logger.debug(`Analytics insert failed (non-fatal): ${ (analyticsError as Error).message }`);
+        }
+      }
+
+      let customerEmail: string | undefined;
+      if (capturedQuote) {
+        const { data: customer } = await this.supabase.client
+          .from("customers")
+          .select("email")
+          .eq("id", capturedQuote.customer_id)
+          .single();
+        customerEmail = customer?.email;
+      }
+      if (orderCreated) {
+        // Notify only on first creation
+        await this.notify.notifyOrderCreated({
+          orderId,
+          customerEmail,
+        });
+      }
 
       return {
-        orderId: order.id,
+        orderId,
         status: "succeeded",
       };
     } catch (error) {

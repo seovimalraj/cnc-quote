@@ -235,9 +235,9 @@ export default function QuotePage() {
       case 'Analyzing':
         return <Badge variant="secondary">Analyzing...</Badge>;
       case 'Priced':
-        return <Badge className="bg-green-100 text-green-800">Priced</Badge>;
+        return <Badge variant="success">Priced</Badge>;
       case 'Needs_Review':
-        return <Badge className="bg-yellow-100 text-yellow-800">Needs Review</Badge>;
+        return <Badge variant="warning">Needs Review</Badge>;
       case 'Error':
         return <Badge variant="destructive">Error</Badge>;
       default:
@@ -486,61 +486,79 @@ export default function QuotePage() {
                   <div>
                     <h4 className="font-medium text-gray-900 mb-3">Made in USA</h4>
                     <div className="space-y-2">
-                      {[
-                        { id: 'usa-expedite', speed: 'Expedite', days: 3, price: 439.30 },
-                        { id: 'usa-standard', speed: 'Standard', days: 4, price: 227.98 },
-                        { id: 'usa-economy', speed: 'Economy', days: 7, price: 186.28 }
-                      ].map((option) => (
-                        <button
-                          key={option.id}
-                          type="button"
-                          className={`p-3 rounded-lg border cursor-pointer transition-colors text-left w-full ${
-                            quote.selectedLeadOptionId === option.id
-                              ? 'border-blue-500 bg-blue-50'
-                              : 'border-gray-200 hover:border-gray-300'
-                          }`}
-                          onClick={() => handleLeadTimeSelect(option.id)}
-                        >
-                          <div className="flex justify-between items-center">
-                            <div>
-                              <p className="font-medium">{option.speed}</p>
-                              <p className="text-sm text-gray-600">{option.days} business days</p>
+                      {selectedLineId && quote.lines && (() => {
+                        const selectedLine = quote.lines.find(line => line.id === selectedLineId);
+                        return selectedLine?.leadTimeOptions?.filter(option => option.region === 'USA').map((option) => (
+                          <button
+                            key={option.id}
+                            type="button"
+                            className={`p-3 rounded-lg border cursor-pointer transition-colors text-left w-full ${
+                              quote.selectedLeadOptionId === option.id
+                                ? 'border-blue-500 bg-blue-50'
+                                : 'border-gray-200 hover:border-gray-300'
+                            }`}
+                            onClick={() => handleLeadTimeSelect(option.id)}
+                          >
+                            <div className="flex justify-between items-center">
+                              <div>
+                                <p className="font-medium">{option.speed}</p>
+                                <p className="text-sm text-gray-600">{option.business_days} business days</p>
+                              </div>
+                              <div className="text-right">
+                                <p className="font-semibold">${option.unit_price.toFixed(2)}</p>
+                                <p className="text-xs text-gray-500">per part</p>
+                                {option.savings_text && (
+                                  <p className="text-xs text-green-600">{option.savings_text}</p>
+                                )}
+                              </div>
                             </div>
-                            <div className="text-right">
-                              <p className="font-semibold">${option.price}</p>
-                              <p className="text-xs text-gray-500">per part</p>
-                            </div>
-                          </div>
-                        </button>
-                      ))}
+                          </button>
+                        )) || [];
+                      })()}
                     </div>
                   </div>
 
-                  <div>
-                    <h4 className="font-medium text-gray-900 mb-3">Made Internationally</h4>
-                    <div className="space-y-2">
-                      <button
-                        type="button"
-                        className={`p-3 rounded-lg border cursor-pointer transition-colors text-left w-full ${
-                          quote.selectedLeadOptionId === 'intl-economy'
-                            ? 'border-blue-500 bg-blue-50'
-                            : 'border-gray-200 hover:border-gray-300'
-                        }`}
-                        onClick={() => handleLeadTimeSelect('intl-economy')}
-                      >
-                        <div className="flex justify-between items-center">
-                          <div>
-                            <p className="font-medium">Economy</p>
-                            <p className="text-sm text-gray-600">7 business days</p>
-                          </div>
-                          <div className="text-right">
-                            <p className="font-semibold">$132.07</p>
-                            <p className="text-xs text-gray-500">per part</p>
+                  {selectedLineId && quote.lines && (() => {
+                    const selectedLine = quote.lines.find(line => line.id === selectedLineId);
+                    const intlOptions = selectedLine?.leadTimeOptions?.filter(option => option.region === 'International') || [];
+                    
+                    if (intlOptions.length > 0) {
+                      return (
+                        <div>
+                          <h4 className="font-medium text-gray-900 mb-3">Made Internationally</h4>
+                          <div className="space-y-2">
+                            {intlOptions.map((option) => (
+                              <button
+                                key={option.id}
+                                type="button"
+                                className={`p-3 rounded-lg border cursor-pointer transition-colors text-left w-full ${
+                                  quote.selectedLeadOptionId === option.id
+                                    ? 'border-blue-500 bg-blue-50'
+                                    : 'border-gray-200 hover:border-gray-300'
+                                }`}
+                                onClick={() => handleLeadTimeSelect(option.id)}
+                              >
+                                <div className="flex justify-between items-center">
+                                  <div>
+                                    <p className="font-medium">{option.speed}</p>
+                                    <p className="text-sm text-gray-600">{option.business_days} business days</p>
+                                  </div>
+                                  <div className="text-right">
+                                    <p className="font-semibold">${option.unit_price.toFixed(2)}</p>
+                                    <p className="text-xs text-gray-500">per part</p>
+                                    {option.savings_text && (
+                                      <p className="text-xs text-green-600">{option.savings_text}</p>
+                                    )}
+                                  </div>
+                                </div>
+                              </button>
+                            ))}
                           </div>
                         </div>
-                      </button>
-                    </div>
-                  </div>
+                      );
+                    }
+                    return null; // No international options available
+                  })()}
                 </CardContent>
               </Card>
 

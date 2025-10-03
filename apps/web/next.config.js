@@ -2,7 +2,6 @@ const { withSentryConfig } = require("@sentry/nextjs");
 
 const nextConfig = {
   reactStrictMode: true,
-  output: 'standalone',
   experimental: {
     serverActions: {
       allowedOrigins: ['localhost:3000', 'quote.frigate.ai']
@@ -27,43 +26,45 @@ const nextConfig = {
     return 'build-' + Date.now()
   },
 
-  async headers() {
-    return [
-      {
-        source: '/:path*',
-        headers: [
-          {
-            key: 'X-Frame-Options',
-            value: 'DENY',
-          },
-          {
-            key: 'X-Content-Type-Options',
-            value: 'nosniff',
-          },
-          {
-            key: 'X-XSS-Protection',
-            value: '1; mode=block',
-          },
-          {
-            key: 'Referrer-Policy',
-            value: 'same-origin',
-          },
-          {
-            key: 'Cache-Control',
-            value: 'no-cache, no-store, must-revalidate',
-          },
-          {
-            key: 'Pragma',
-            value: 'no-cache',
-          },
-          {
-            key: 'Expires',
-            value: '0',
-          },
-        ],
-      },
-    ];
-  },
+  // Commenting out aggressive headers for now to fix static asset loading
+  // async headers() {
+  //   return [
+  //     {
+  //       // Apply security headers only to pages, not static assets
+  //       source: '/((?!_next|favicon.ico|.*\\.).*)',
+  //       headers: [
+  //         {
+  //           key: 'X-Frame-Options',
+  //           value: 'DENY',
+  //         },
+  //         {
+  //           key: 'X-Content-Type-Options',
+  //           value: 'nosniff',
+  //         },
+  //         {
+  //           key: 'X-XSS-Protection',
+  //           value: '1; mode=block',
+  //         },
+  //         {
+  //           key: 'Referrer-Policy',
+  //           value: 'same-origin',
+  //         },
+  //         {
+  //           key: 'Cache-Control',
+  //           value: 'no-cache, no-store, must-revalidate',
+  //         },
+  //         {
+  //           key: 'Pragma',
+  //           value: 'no-cache',
+  //         },
+  //         {
+  //           key: 'Expires',
+  //           value: '0',
+  //         },
+  //       ],
+  //     },
+  //   ];
+  // },
 };
 
 module.exports = withSentryConfig(nextConfig, {

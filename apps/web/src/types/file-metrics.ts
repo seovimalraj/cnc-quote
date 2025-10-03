@@ -19,4 +19,10 @@ export interface FileMetrics {
     slots: number;
     faces: number;
   };
+  feature_summary?: {
+    total?: number;
+    counts: Record<string, number>;
+    dominant_feature?: string;
+    risk_flags?: string[];
+  };
 }

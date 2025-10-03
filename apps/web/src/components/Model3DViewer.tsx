@@ -31,6 +31,6 @@ const Canvas3D = dynamic(() => import('./Canvas3D').then(mod => ({ default: mod.
   )
 });
 
-export default function Model3DViewer({ fileName, fileType, dfmHighlights }: Model3DViewerProps) {
-  return <Canvas3D fileName={fileName} fileType={fileType} dfmHighlights={dfmHighlights} />;
+export default function Model3DViewer(_: Model3DViewerProps) {
+  return <Canvas3D meshUrl={null} className="h-full" />;
 }

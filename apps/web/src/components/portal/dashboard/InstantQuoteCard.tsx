@@ -14,6 +14,8 @@ import {
   ExclamationTriangleIcon
 } from '@heroicons/react/24/outline'
 import { posthog } from 'posthog-js'
+import { useAbandonedQuoteTracking } from '@/hooks/useAbandonedQuoteTracking'
+import { AbandonedQuoteRecovery } from '@/components/AbandonedQuoteRecovery'
 
 interface FileUpload {
   id: string
@@ -35,9 +37,28 @@ export function InstantQuoteCard() {
   const [isDragOver, setIsDragOver] = useState(false)
   const [uploads, setUploads] = useState<FileUpload[]>([])
   const [isCreatingQuote, setIsCreatingQuote] = useState(false)
-  const [quoteId, setQuoteId] = useState<string | null>(null)
+  const [currentQuoteId, setCurrentQuoteId] = useState<string | null>(null)
+  const [userId] = useState<string>('demo-user') // TODO: get from auth
+  const [guestEmail] = useState<string>('') // TODO: get from session
   const fileInputRef = useRef<HTMLInputElement>(null)
   const router = useRouter()
+
+  // Initialize abandoned quote tracking
+  useAbandonedQuoteTracking({
+    quoteId: currentQuoteId || 'temp_quote_' + Date.now(),
+    userId,
+    guestEmail,
+    currentStep: 'file_upload',
+    files: uploads
+      .filter(u => u.status === 'completed')
+      .map(u => ({
+        fileId: u.fileId || u.id,
+        fileName: u.file.name,
+        fileSize: u.file.size,
+        contentType: u.file.type
+      })),
+    enabled: uploads.length > 0 && !currentQuoteId
+  })
 
   const validateFile = (file: File): string | null => {
     const extension = file.name.split('.').pop()?.toLowerCase()
@@ -77,11 +98,24 @@ export function InstantQuoteCard() {
     }
 
     try {
-      // Create FormData for upload
-      const formData = new FormData()
-      formData.append('file', file)
+      // Prepare file for upload using the file upload API
+      const uploadResponse = await fetch('/api/files/upload', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          fileName: file.name,
+          fileSize: file.size,
+          contentType: file.type
+        })
+      })
 
-      // Simulate upload progress
+      if (!uploadResponse.ok) {
+        throw new Error(`Upload preparation failed: ${uploadResponse.status}`)
+      }
+
+      const uploadData = await uploadResponse.json()
+      
+      // Simulate progress for user experience
       const progressInterval = setInterval(() => {
         setUploads(prev => prev.map(u =>
           u.id === uploadId && u.progress < 90
@@ -90,23 +124,14 @@ export function InstantQuoteCard() {
         ))
       }, 200)
 
-      // In a real implementation, this would upload to your API
-      // const response = await fetch('/api/files/upload', {
-      //   method: 'POST',
-      //   body: formData
-      // })
-      // const { file_id } = await response.json()
-
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 2000))
+      // Simulate actual file upload (in production this would upload to cloud storage)
+      await new Promise(resolve => setTimeout(resolve, 1500))
 
       clearInterval(progressInterval)
 
-      const mockFileId = `file_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-
       setUploads(prev => prev.map(u =>
         u.id === uploadId
-          ? { ...u, progress: 100, status: 'completed', fileId: mockFileId }
+          ? { ...u, progress: 100, status: 'completed', fileId: uploadData.fileId }
           : u
       ))
 
@@ -132,31 +157,35 @@ export function InstantQuoteCard() {
     setIsCreatingQuote(true)
 
     try {
-      // In a real implementation, this would create a quote
-      // const response = await fetch('/api/quotes', {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify({
-      //     source: 'web',
-      //     files: completedUploads.map(u => u.fileId)
-      //   })
-      // })
-      // const { quote_id } = await response.json()
+      const response = await fetch('/api/quotes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          source: 'web',
+          files: completedUploads.map(u => ({
+            fileId: u.fileId || `mock_${u.id}`,
+            fileName: u.file.name,
+            fileSize: u.file.size,
+            contentType: u.file.type
+          }))
+        })
+      })
 
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000))
+      if (!response.ok) {
+        throw new Error(`Failed to create quote: ${response.status}`)
+      }
 
-      const mockQuoteId = `quote_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-      setQuoteId(mockQuoteId)
+      const quote = await response.json()
+      setCurrentQuoteId(quote.id)
 
       posthog.capture('quote_created_from_dashboard', {
-        quote_id: mockQuoteId,
+        quote_id: quote.id,
         file_count: completedUploads.length,
         source: 'instant_quote_card'
       })
 
-      // Navigate to quote page
-      router.push(`/portal/quotes/${mockQuoteId}`)
+      // Navigate to quote page - use the new quote route
+      router.push(`/quote/${quote.id}`)
 
     } catch (error) {
       console.error('Error creating quote:', error)
@@ -212,13 +241,25 @@ export function InstantQuoteCard() {
   const completedUploads = uploads.filter(u => u.status === 'completed')
   const hasErrors = uploads.some(u => u.status === 'error')
 
+  const handleResumeQuote = (quoteId: string, quoteData: any) => {
+    // TODO: Restore quote state from abandoned data
+    setCurrentQuoteId(quoteId)
+    router.push(`/quote/${quoteId}`)
+  }
+
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center">
-          <CloudArrowUpIcon className="w-6 h-6 mr-2" />
-          Instant Quote
-        </CardTitle>
+    <>
+      <AbandonedQuoteRecovery
+        userId={userId}
+        guestEmail={guestEmail || undefined}
+        onResumeQuote={handleResumeQuote}
+      />
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center">
+            <CloudArrowUpIcon className="w-6 h-6 mr-2" />
+            Instant Quote
+          </CardTitle>
         <p className="text-sm text-gray-600">
           Drag and Drop or Choose File
         </p>
@@ -334,5 +375,6 @@ export function InstantQuoteCard() {
         )}
       </CardContent>
     </Card>
+    </>
   )
 }

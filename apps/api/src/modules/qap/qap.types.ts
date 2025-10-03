@@ -70,7 +70,7 @@ export type QapTemplate = z.infer<typeof qapTemplateSchema> & {
 export const qapDocumentSchema = z.object({
   templateId: z.string().uuid(),
   orderId: z.string().uuid(),
-  orderItemId: z.string().uuid(),
+  orderItemId: z.string().uuid().optional().nullable(),
   documentData: z.record(z.string(), z.unknown()),
 });
 
@@ -87,8 +87,8 @@ export class QapDocumentResponse {
   @ApiProperty()
   order_id: string;
 
-  @ApiProperty()
-  order_item_id: string;
+  @ApiProperty({ required: false, nullable: true })
+  order_item_id?: string | null;
 
   @ApiProperty()
   data: Record<string, unknown>;
@@ -142,7 +142,7 @@ export type QapDocument = {
   org_id: string;
   template_id: string;
   order_id: string;
-  order_item_id: string;
+  order_item_id?: string | null;
   data: Record<string, unknown>;
   status: QapDocumentStatus;
   file_path: string;

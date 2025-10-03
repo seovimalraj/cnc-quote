@@ -1,21 +1,37 @@
 import {
+  Body,
   Controller,
   Get,
+  Param,
   Post,
   Put,
-  Delete,
-  Body,
-  Param,
   Query,
+  Req,
   UseGuards,
-  HttpException,
-  HttpStatus,
+  UsePipes,
+  ValidationPipe,
 } from '@nestjs/common';
-import { MaterialsService } from './materials.service';
+import { Request } from 'express';
 import { AuthGuard } from '@nestjs/passport';
 import { OrgGuard } from '../../auth/org.guard';
-import { ReqUser } from '../../auth/req-user.decorator';
-import { Material } from '../../../../../packages/shared/src/types/schema';
+import { RbacGuard } from '../../auth/rbac.middleware';
+import { MaterialsService } from './materials.service';
+import { CreateMaterialDto, REGION_WHITELIST } from '../../materials/dto/create-material.dto';
+import { UpdateMaterialDto } from '../../materials/dto/update-material.dto';
+import { MaterialRegion } from '../../../../../packages/shared/src/types/schema';
+
+type MaterialRequest = Request & {
+  rbac?: {
+    orgId: string;
+  };
+  setAudit?: (preset: {
+    action: string;
+    resourceType: string;
+    resourceId?: string | null;
+    before?: unknown;
+    after?: unknown;
+  }) => void;
+};
 
 @Controller('admin/materials')
 @UseGuards(AuthGuard, OrgGuard)
@@ -23,132 +39,146 @@ export class MaterialsController {
   constructor(private readonly materialsService: MaterialsService) {}
 
   @Get()
-  async getMaterials(
-    @Query() filters: any,
-    @ReqUser() user: any,
-  ) {
-    try {
-      const materials = await this.materialsService.getMaterials(user.org_id, filters);
-      return { data: materials };
-    } catch (error) {
-      throw new HttpException(
-        { error: 'Failed to fetch materials', details: error.message },
-        HttpStatus.INTERNAL_SERVER_ERROR,
-      );
-    }
+  @UseGuards(RbacGuard('material_properties:read', 'material_properties'))
+  async getMaterials(@Req() req: MaterialRequest, @Query() query: Record<string, string | string[]>) {
+    const search = typeof query.search === 'string' ? query.search.trim() || undefined : undefined;
+    const process = typeof query.process === 'string' ? query.process : undefined;
+
+    const regionCandidate = typeof query.region === 'string' ? query.region.toUpperCase() : undefined;
+    const region = regionCandidate && REGION_WHITELIST.has(regionCandidate)
+      ? (regionCandidate as MaterialRegion)
+      : undefined;
+
+    const categoryCode = typeof query.category_code === 'string' ? query.category_code.toUpperCase() : undefined;
+    const includeInactive = query.include_inactive === 'true' || query.includeInactive === 'true';
+
+    const filters = {
+      search,
+      process,
+      region,
+      categoryCode,
+      includeInactive,
+    };
+
+    const materials = await this.materialsService.getMaterials(req.rbac?.orgId ?? '', filters);
+    return { data: materials };
+  }
+
+  @Get('categories')
+  @UseGuards(RbacGuard('material_properties:read', 'material_properties'))
+  async listCategories() {
+    const categories = await this.materialsService.listCategories();
+    return { data: categories };
   }
 
   @Get(':id')
-  async getMaterial(
-    @Param('id') id: string,
-    @ReqUser() user: any,
-  ) {
-    try {
-      const material = await this.materialsService.getMaterial(id, user.org_id);
-      if (!material) {
-        throw new HttpException('Material not found', HttpStatus.NOT_FOUND);
-      }
-      return { data: material };
-    } catch (error) {
-      if (error instanceof HttpException) throw error;
-      throw new HttpException(
-        { error: 'Failed to fetch material', details: error.message },
-        HttpStatus.INTERNAL_SERVER_ERROR,
-      );
-    }
+  @UseGuards(RbacGuard('material_properties:read', 'material_properties'))
+  async getMaterial(@Param('id') id: string) {
+    const material = await this.materialsService.getMaterial(id);
+    return { data: material };
   }
 
   @Post()
-  async createMaterial(
-    @Body() materialData: Partial<Material>,
-    @ReqUser() user: any,
-  ) {
-    try {
-      const material = await this.materialsService.createMaterial(materialData, user.org_id, user.id);
-      return { data: material };
-    } catch (error) {
-      throw new HttpException(
-        { error: 'Failed to create material', details: error.message },
-        HttpStatus.INTERNAL_SERVER_ERROR,
-      );
-    }
+  @UseGuards(RbacGuard('material_properties:create', 'material_properties'))
+  @UsePipes(new ValidationPipe({ whitelist: true, transform: true }))
+  async createMaterial(@Req() req: MaterialRequest, @Body() body: CreateMaterialDto) {
+    const material = await this.materialsService.createMaterial(body, {
+      orgId: req.rbac?.orgId,
+      actorId: req.user?.sub,
+    });
+
+    req.setAudit?.({
+      action: 'MATERIAL_CREATED',
+      resourceType: 'material',
+      resourceId: material.id,
+      before: null,
+      after: material,
+    });
+
+    return { data: material };
   }
 
   @Put(':id')
-  async updateMaterial(
-    @Param('id') id: string,
-    @Body() updates: Partial<Material>,
-    @ReqUser() user: any,
-  ) {
-    try {
-      const material = await this.materialsService.updateMaterial(id, updates, user.id);
-      return { data: material };
-    } catch (error) {
-      throw new HttpException(
-        { error: 'Failed to update material', details: error.message },
-        HttpStatus.INTERNAL_SERVER_ERROR,
-      );
-    }
+  @UseGuards(RbacGuard('material_properties:update', 'material_properties'))
+  @UsePipes(new ValidationPipe({ whitelist: true, transform: true }))
+  async updateMaterial(@Req() req: MaterialRequest, @Param('id') id: string, @Body() body: UpdateMaterialDto) {
+    const before = await this.materialsService.getMaterial(id);
+    const material = await this.materialsService.updateMaterial(id, body, {
+      orgId: req.rbac?.orgId,
+      actorId: req.user?.sub,
+    });
+
+    req.setAudit?.({
+      action: 'MATERIAL_UPDATED',
+      resourceType: 'material',
+      resourceId: material.id,
+      before,
+      after: material,
+    });
+
+    return { data: material };
   }
 
   @Put(':id/retire')
-  async retireMaterial(
-    @Param('id') id: string,
-    @ReqUser() user: any,
-  ) {
-    try {
-      const material = await this.materialsService.retireMaterial(id, user.id);
-      return { data: material };
-    } catch (error) {
-      throw new HttpException(
-        { error: 'Failed to retire material', details: error.message },
-        HttpStatus.INTERNAL_SERVER_ERROR,
-      );
-    }
+  @UseGuards(RbacGuard('material_properties:update', 'material_properties'))
+  async retireMaterial(@Req() req: MaterialRequest, @Param('id') id: string) {
+    const before = await this.materialsService.getMaterial(id);
+    const material = await this.materialsService.retireMaterial(id, {
+      orgId: req.rbac?.orgId,
+      actorId: req.user?.sub,
+    });
+
+    req.setAudit?.({
+      action: 'MATERIAL_RETIRED',
+      resourceType: 'material',
+      resourceId: material.id,
+      before,
+      after: material,
+    });
+
+    return { data: material };
   }
 
   @Post(':id/duplicate')
-  async duplicateMaterial(
-    @Param('id') id: string,
-    @ReqUser() user: any,
-  ) {
-    try {
-      const material = await this.materialsService.duplicateMaterial(id, user.org_id, user.id);
-      return { data: material };
-    } catch (error) {
-      throw new HttpException(
-        { error: 'Failed to duplicate material', details: error.message },
-        HttpStatus.INTERNAL_SERVER_ERROR,
-      );
-    }
+  @UseGuards(RbacGuard('material_properties:create', 'material_properties'))
+  async duplicateMaterial(@Req() req: MaterialRequest, @Param('id') id: string) {
+    const source = await this.materialsService.getMaterial(id);
+    const material = await this.materialsService.duplicateMaterial(id, {
+      orgId: req.rbac?.orgId,
+      actorId: req.user?.sub,
+    });
+
+    req.setAudit?.({
+      action: 'MATERIAL_DUPLICATED',
+      resourceType: 'material',
+      resourceId: material.id,
+      before: source,
+      after: material,
+    });
+
+    return { data: material };
   }
 
   @Post(':id/invalidate-cache')
-  async invalidateCache(
-    @Param('id') id: string,
-    @ReqUser() user: any,
-  ) {
-    try {
-      const result = await this.materialsService.invalidateCache(id, user.id);
-      return { data: result };
-    } catch (error) {
-      throw new HttpException(
-        { error: 'Failed to invalidate cache', details: error.message },
-        HttpStatus.INTERNAL_SERVER_ERROR,
-      );
-    }
+  @UseGuards(RbacGuard('material_properties:update', 'material_properties'))
+  async invalidateCache(@Req() req: MaterialRequest, @Param('id') id: string) {
+    const result = await this.materialsService.invalidateCache(id);
+
+    req.setAudit?.({
+      action: 'MATERIAL_CACHE_INVALIDATED',
+      resourceType: 'material',
+      resourceId: id,
+      before: null,
+      after: result,
+    });
+
+    return { data: result };
   }
 
   @Get('families/list')
+  @UseGuards(RbacGuard('material_properties:read', 'material_properties'))
   async getMaterialFamilies() {
-    try {
-      const families = await this.materialsService.getMaterialFamilies();
-      return { data: families };
-    } catch (error) {
-      throw new HttpException(
-        { error: 'Failed to fetch material families', details: error.message },
-        HttpStatus.INTERNAL_SERVER_ERROR,
-      );
-    }
+    const families = await this.materialsService.getMaterialFamilies();
+    return { data: families };
   }
 }

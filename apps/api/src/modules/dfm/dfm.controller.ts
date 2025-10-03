@@ -1,4 +1,4 @@
-import { Controller, Post, Body, UseGuards, Get, Query, Param, UnauthorizedException, Inject, Req, Ip } from "@nestjs/common";
+import { Controller, Post, Body, UseGuards, Get, Query, Param, UnauthorizedException, Req, Ip } from "@nestjs/common";
 import { DfmService } from "./dfm.service";
 import { DfmAuthGuard } from "../../auth/dfm-auth.guard";
 import { AllowSession } from "../../auth/allow-session.decorator";
@@ -7,6 +7,7 @@ import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery, ApiParam }
 import { SupabaseService } from "../../lib/supabase/supabase.service";
 import { AnalyticsService } from "../analytics/analytics.service";
 import { RateLimitService } from "../../lib/rate-limit/rate-limit.service";
+import { AdvancedDfmService, MaterialProperties } from "../ai/advanced-dfm.service";
 import { Request } from "express";
 import {
   CncDfmParams,
@@ -26,6 +27,7 @@ import {
 export class DfmController {
   constructor(
     private readonly dfmService: DfmService,
+    private readonly advancedDfmService: AdvancedDfmService,
     private readonly supabaseService: SupabaseService,
     private readonly analyticsService: AnalyticsService,
     private readonly rateLimitService: RateLimitService,
@@ -82,6 +84,124 @@ export class DfmController {
   @ApiResponse({ status: 400, description: "Invalid DFM validation request" })
   async validateDesign(@Body() request: DfmValidationRequest): Promise<DfmValidationResponse> {
     return this.dfmService.validateDesign(request);
+  }
+
+  @Post("analyze")
+  @ApiOperation({
+    summary: "Advanced DFM analysis with manufacturability scoring",
+    description: "Perform comprehensive DFM analysis with manufacturability scoring, recommendations, and cost impact analysis"
+  })
+  @ApiResponse({
+    status: 200,
+    description: "Advanced DFM analysis completed",
+    schema: {
+      type: "object",
+      properties: {
+        valid: { type: "boolean" },
+        issues: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              rule_id: { type: "string" },
+              name: { type: "string" },
+              severity: { type: "string", enum: ["warn", "block"] },
+              message: { type: "string" },
+              details: { type: "object" },
+              location: {
+                type: "object",
+                properties: {
+                  x: { type: "number" },
+                  y: { type: "number" },
+                  z: { type: "number" }
+                }
+              },
+              suggestion: { type: "string" }
+            }
+          }
+        },
+        manual_review_required: { type: "boolean" },
+        summary: {
+          type: "object",
+          properties: {
+            total_issues: { type: "number" },
+            blocker_count: { type: "number" },
+            warning_count: { type: "number" },
+            info_count: { type: "number" }
+          }
+        },
+        processing_time_ms: { type: "number" },
+        manufacturability_score: { type: "number", description: "Score from 0-100 indicating manufacturability" },
+        recommendations: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              type: { type: "string", enum: ["process", "material", "design", "finish"] },
+              priority: { type: "string", enum: ["high", "medium", "low"] },
+              title: { type: "string" },
+              description: { type: "string" },
+              impact: {
+                type: "object",
+                properties: {
+                  cost_savings_percent: { type: "number" },
+                  lead_time_reduction_days: { type: "number" },
+                  quality_improvement: { type: "string" }
+                }
+              },
+              alternatives: {
+                type: "array",
+                items: {
+                  type: "object",
+                  properties: {
+                    option: { type: "string" },
+                    cost_impact: { type: "number" },
+                    feasibility_score: { type: "number" }
+                  }
+                }
+              }
+            }
+          }
+        },
+        cost_impact_analysis: {
+          type: "object",
+          properties: {
+            current_estimated_cost: { type: "number" },
+            optimized_cost: { type: "number" },
+            savings_potential_percent: { type: "number" },
+            cost_breakdown: {
+              type: "object",
+              properties: {
+                material_cost: { type: "number" },
+                machining_cost: { type: "number" },
+                finishing_cost: { type: "number" },
+                overhead_cost: { type: "number" }
+              }
+            }
+          }
+        },
+        process_recommendations: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              process: { type: "string" },
+              suitability_score: { type: "number" },
+              reasoning: {
+                type: "array",
+                items: { type: "string" }
+              },
+              estimated_cost: { type: "number" },
+              estimated_lead_time_days: { type: "number" }
+            }
+          }
+        }
+      }
+    }
+  })
+  @ApiResponse({ status: 400, description: "Invalid DFM analysis request" })
+  async analyzeDesignAdvanced(@Body() request: DfmValidationRequest) {
+    return this.dfmService.analyzeDesignAdvanced(request);
   }
 
   @Post("validate/batch")
@@ -222,6 +342,7 @@ export class DfmController {
     @User('id') userId: string,
     @Body() request: {
       fileId: string;
+      materialId: string;
       tolerancePack: string;
       surfaceFinish: string;
       industry: string;
@@ -247,6 +368,8 @@ export class DfmController {
     // Track analytics
     await this.analyticsService.trackRequestCreated(result.id, {
       fileId: request.fileId,
+      materialId: request.materialId,
+      materialCode: result.materialCode,
       tolerancePack: request.tolerancePack,
       surfaceFinish: request.surfaceFinish,
       industry: request.industry,
@@ -435,8 +558,8 @@ export class DfmController {
   })
   async getDfmResultWithSession(
     @Param('id') requestId: string,
-    @Query('sessionToken') sessionToken?: string,
     @Req() req: Request,
+    @Query('sessionToken') sessionToken?: string,
   ) {
     // Validate session token
     if (!sessionToken) {
@@ -478,8 +601,6 @@ export class DfmController {
       isSessionAuth: true,
       sessionToken: sessionToken,
     });
-
-    return result;
 
     return result;
   }
@@ -532,6 +653,38 @@ export class DfmController {
   })
   async getPublishedFinishOptions() {
     return this.dfmService.getPublishedOptions('finishes');
+  }
+
+  @Get("options/materials")
+  @ApiOperation({
+    summary: "Get published material options",
+    description: "Retrieve all published material options for DFM analysis"
+  })
+  @ApiResponse({
+    status: 200,
+    description: "Published material options retrieved",
+    schema: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          id: { type: "string" },
+          code: { type: "string" },
+          name: { type: "string" },
+          description: { type: "string" },
+          category: { type: "string" },
+          is_metal: { type: "boolean" },
+          density_g_cm3: { type: "number" },
+          elastic_modulus_gpa: { type: "number" },
+          hardness_hv: { type: "number" },
+          max_operating_temp_c: { type: "number" },
+          machinability_rating: { type: "number" }
+        }
+      }
+    }
+  })
+  async getPublishedMaterialOptions() {
+    return this.dfmService.getPublishedOptions('materials');
   }
 
   @Get("options/industries")
@@ -605,5 +758,185 @@ export class DfmController {
   })
   async getPublishedCriticalityOptions() {
     return this.dfmService.getPublishedOptions('criticality');
+  }
+
+  // === New endpoints for unified contracts ===
+
+  @Post("quote-item/:id/analyze")
+  @ApiOperation({
+    summary: "Analyze quote item for DFM",
+    description: "Perform DFM analysis on a quote item and store results"
+  })
+  @ApiParam({ name: "id", description: "Quote item ID", type: "string" })
+  @ApiResponse({
+    status: 200,
+    description: "DFM analysis completed",
+    schema: {
+      type: "object",
+      properties: {
+        overall_score: { type: "number" },
+        manufacturability: { type: "string" },
+        issues: { type: "array" },
+        time_estimate: { type: "object" },
+        material_usage: { type: "object" }
+      }
+    }
+  })
+  async analyzeQuoteItem(
+    @Param("id") quoteItemId: string,
+    @Body() body: { geometry_data?: any } = {}
+  ) {
+    return this.dfmService.analyzeQuoteItem(quoteItemId, body.geometry_data);
+  }
+
+  @Get("quote-item/:id/result")
+  @ApiOperation({
+    summary: "Get DFM result for quote item",
+    description: "Retrieve stored DFM analysis results for a quote item"
+  })
+  @ApiParam({ name: "id", description: "Quote item ID", type: "string" })
+  @ApiResponse({
+    status: 200,
+    description: "DFM result retrieved",
+    schema: {
+      type: "object",
+      properties: {
+        overall_score: { type: "number" },
+        manufacturability: { type: "string" },
+        issues: { type: "array" },
+        time_estimate: { type: "object" },
+        material_usage: { type: "object" }
+      }
+    }
+  })
+  async getQuoteItemDfmResult(@Param("id") quoteItemId: string) {
+    return this.dfmService.getQuoteItemDfmResult(quoteItemId);
+  }
+
+  @Post("quote-item/:id/issue/:issueId/status")
+  @ApiOperation({
+    summary: "Update DFM issue status",
+    description: "Update the status of a specific DFM issue (dismiss, fix, acknowledge)"
+  })
+  @ApiParam({ name: "id", description: "Quote item ID", type: "string" })
+  @ApiParam({ name: "issueId", description: "DFM issue ID", type: "string" })
+  @ApiResponse({
+    status: 200,
+    description: "Issue status updated",
+    schema: {
+      type: "object",
+      properties: {
+        overall_score: { type: "number" },
+        manufacturability: { type: "string" },
+        issues: { type: "array" }
+      }
+    }
+  })
+  async updateIssueStatus(
+    @Param("id") quoteItemId: string,
+    @Param("issueId") issueId: string,
+    @Body() body: { status: 'dismissed' | 'fixed' | 'acknowledged' }
+  ) {
+    return this.dfmService.updateDfmIssueStatus(quoteItemId, issueId, body.status);
+  }
+
+  @Post("analyze-advanced")
+  @AllowSession()
+  @ApiOperation({
+    summary: "Advanced DFM analysis with AI/ML",
+    description: "Comprehensive design analysis including material recommendations, feature analysis, and AI-powered optimization suggestions"
+  })
+  @ApiResponse({
+    status: 200,
+    description: "Advanced DFM analysis completed with AI insights"
+  })
+  async analyzeAdvanced(
+    @Body() body: {
+      name: string;
+      material: string;
+      dimensions: { x: number; y: number; z: number };
+      volume: number;
+      surfaceArea: number;
+      features: {
+        holes?: Array<{ id: string; diameter: number; depth: number; position?: any }>;
+        pockets?: Array<{ id: string; depth: number; width: number; position?: any }>;
+        threads?: Array<{ id: string; size: string; depth: number; type?: string }>;
+        thinWalls?: Array<{ location: string; thickness: number }>;
+        complexity: number;
+      };
+      tolerance: string;
+      finish: string;
+      quantity: number;
+      process: string;
+      application?: string;
+    },
+    @User() user: any,
+    @Req() req: Request,
+    @Ip() ip: string
+  ) {
+    // Rate limiting
+    const identifier = user?.id || ip;
+    const canProceed = await this.rateLimitService.checkRateLimit(
+      identifier,
+      'dfm-advanced',
+      { limit: 10, windowMinutes: 1 } // 10 requests per minute
+    );
+
+    if (!canProceed.allowed) {
+      throw new UnauthorizedException('Rate limit exceeded for advanced DFM analysis');
+    }
+
+    // Run analysis
+    const analysis = await this.advancedDfmService.analyzePartAdvanced(body);
+
+    // Track analytics
+    if (user) {
+      await this.analyticsService.trackDfmEvent({
+        event: 'dfm_advanced_analysis',
+        userId: user.id,
+        properties: {
+          material: body.material,
+          process: body.process,
+          quantity: body.quantity,
+          manufacturabilityScore: analysis.manufacturabilityScore,
+          potentialSavings: analysis.costOptimization.potentialSavings,
+        },
+      });
+    }
+
+    return analysis;
+  }
+
+  @Get("materials")
+  @AllowSession()
+  @ApiOperation({
+    summary: "Get available materials database",
+    description: "Returns comprehensive material properties for all supported materials"
+  })
+  @ApiResponse({
+    status: 200,
+    description: "Material database retrieved"
+  })
+  async getMaterials(): Promise<MaterialProperties[]> {
+    return this.advancedDfmService.getAllMaterials();
+  }
+
+  @Get("materials/:name")
+  @AllowSession()
+  @ApiOperation({
+    summary: "Get specific material properties",
+    description: "Returns detailed properties for a specific material"
+  })
+  @ApiParam({ name: "name", description: "Material name", type: "string" })
+  @ApiResponse({
+    status: 200,
+    description: "Material properties retrieved"
+  })
+  async getMaterial(@Param("name") name: string): Promise<MaterialProperties> {
+    const material = this.advancedDfmService.getMaterial(name);
+    if (!material) {
+      throw new UnauthorizedException(`Material "${name}" not found`);
+    }
+    return material;
   }
 }

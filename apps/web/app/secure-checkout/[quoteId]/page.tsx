@@ -2,8 +2,6 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
-import { Elements } from '@stripe/react-stripe-js';
-import { loadStripe } from '@stripe/stripe-js';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -23,8 +21,7 @@ import {
 } from '@heroicons/react/24/outline';
 import { analytics } from '@/lib/analytics';
 
-// Initialize Stripe
-const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
+// PayPal redirect based flow (no client SDK here yet – simple approval URL redirect)
 
 interface CheckoutStep {
   id: string;
@@ -132,6 +129,7 @@ export default function CheckoutPage() {
         setError('Failed to load quote');
       }
     } catch (err) {
+      console.error('Failed to load quote', err);
       setError('Failed to load quote');
     } finally {
       setIsLoading(false);
@@ -158,7 +156,7 @@ export default function CheckoutPage() {
     }
   };
 
-    const handlePayment = async () => {
+  const handlePayment = async () => {
     if (!quote) return;
 
     try {
@@ -174,23 +172,22 @@ export default function CheckoutPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          quoteId: quoteId as string,
-          currency: quote.currency,
-          billingInfo,
-          shippingInfo: sameAsBilling ? billingInfo : shippingInfo
+          quoteId: quoteId as string
         })
       });
 
       if (response.ok) {
-        const { sessionId } = await response.json();
-        const stripe = await stripePromise;
-        if (stripe) {
-          await stripe.redirectToCheckout({ sessionId });
+        const { url } = await response.json();
+        if (url) {
+          window.location.href = url; // Redirect to PayPal approval page
+        } else {
+          setError('Invalid PayPal session response');
         }
       } else {
         setError('Failed to create checkout session');
       }
     } catch (err) {
+      console.error('Payment processing failed', err);
       setError('Payment processing failed');
     } finally {
       setIsProcessing(false);
@@ -486,42 +483,40 @@ export default function CheckoutPage() {
                   <CardTitle>Payment Information</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <Elements stripe={stripePromise}>
-                    <div className="space-y-4">
-                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                        <div className="flex items-center">
-                          <ShieldCheckIcon className="h-5 w-5 text-blue-600 mr-2" />
-                          <span className="text-sm text-blue-800">
-                            Your payment information is encrypted and secure
-                          </span>
-                        </div>
-                      </div>
-
-                      <div className="text-center">
-                        <p className="text-gray-600 mb-4">
-                          You will be redirected to Stripe's secure payment page
-                        </p>
-                        <Button
-                          onClick={handlePayment}
-                          disabled={isProcessing}
-                          className="w-full"
-                          size="lg"
-                        >
-                          {isProcessing ? (
-                            <div className="flex items-center">
-                              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                              Processing...
-                            </div>
-                          ) : (
-                            <div className="flex items-center">
-                              <CreditCardIcon className="w-5 h-5 mr-2" />
-                              Complete Payment
-                            </div>
-                          )}
-                        </Button>
+                  <div className="space-y-4">
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                      <div className="flex items-center">
+                        <ShieldCheckIcon className="h-5 w-5 text-blue-600 mr-2" />
+                        <span className="text-sm text-blue-800">
+                          You will be redirected to PayPal to complete your payment securely.
+                        </span>
                       </div>
                     </div>
-                  </Elements>
+
+                    <div className="text-center">
+                      <p className="text-gray-600 mb-4">
+                        Click the button below to proceed to PayPal's secure checkout page.
+                      </p>
+                      <Button
+                        onClick={handlePayment}
+                        disabled={isProcessing}
+                        className="w-full"
+                        size="lg"
+                      >
+                        {isProcessing ? (
+                          <div className="flex items-center">
+                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                            Redirecting...
+                          </div>
+                        ) : (
+                          <div className="flex items-center">
+                            <CreditCardIcon className="w-5 h-5 mr-2" />
+                            Continue to PayPal
+                          </div>
+                        )}
+                      </Button>
+                    </div>
+                  </div>
                 </CardContent>
               </Card>
             )}

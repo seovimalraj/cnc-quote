@@ -1,6 +1,6 @@
-import { Process, Processor } from "@nestjs/bull";
+import { Processor } from "@nestjs/bullmq";
 import { Logger } from "@nestjs/common";
-import { Job } from "bull";
+import { Job } from "bullmq";
 import { QapService } from "./qap.service";
 
 @Processor("qap")
@@ -9,7 +9,7 @@ export class QapProcessor {
 
   constructor(private readonly qapService: QapService) {}
 
-  @Process("generate-pdf")
+  // BullMQ handler for job name 'generate-pdf'
   async generatePdf(job: Job) {
     try {
       const { documentId, templateHtml, documentData } = job.data;

@@ -1,4 +1,4 @@
-import { Process, Processor } from "@nestjs/bull";
+import { Processor, WorkerHost } from "@nestjs/bullmq";
 import { Job } from "bullmq";
 import { Injectable, Logger } from "@nestjs/common";
 import { SupabaseService } from "../../lib/supabase/supabase.service";
@@ -11,13 +11,14 @@ export interface DfmAnalysisJobData {
 
 @Injectable()
 @Processor("dfm-analysis")
-export class DfmAnalysisProcessor {
+export class DfmAnalysisProcessor extends WorkerHost {
   private readonly logger = new Logger(DfmAnalysisProcessor.name);
 
-  constructor(private readonly supabase: SupabaseService) {}
+  constructor(private readonly supabase: SupabaseService) {
+    super();
+  }
 
-  @Process("analyze")
-  async analyze(job: Job<DfmAnalysisJobData>) {
+  async process(job: Job<DfmAnalysisJobData>) {
     const { requestId, fileId, downloadUrl } = job.data;
 
     this.logger.log(`Starting DFM analysis for request ${requestId}, file ${fileId}`);

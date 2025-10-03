@@ -1,254 +1,103 @@
-import {
-  Controller,
-  Get,
-  Post,
-  Put,
-  Delete,
-  Body,
-  Param,
-  Query,
-  UseGuards,
-  HttpException,
-  HttpStatus,
-} from '@nestjs/common';
-import { FilesService } from './files.service';
-import { AuthGuard } from '@nestjs/passport';
+import { Controller, Post, Body, Param, UseGuards, Get, UploadedFile, UseInterceptors, BadRequestException, Req } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { JwtAuthGuard } from '../../auth/jwt.guard';
 import { OrgGuard } from '../../auth/org.guard';
-import { ReqUser } from '../../auth/req-user.decorator';
-import { FileMeta } from '../../../../../packages/shared/src/types/schema';
+import { StorageService } from './storage.service';
+import { RbacGuard } from '../../auth/rbac.middleware';
 
-@Controller('files')
-@UseGuards(AuthGuard, OrgGuard)
+@Controller('api/files')
+@UseGuards(JwtAuthGuard, OrgGuard)
 export class FilesController {
-  constructor(private readonly filesService: FilesService) {}
+  constructor(private readonly storage: StorageService) {}
 
-  @Get()
-  async getFiles(
-    @Query() filters: any,
-    @ReqUser() user: any,
+  @Post('initiate')
+  @UseGuards(RbacGuard('files:create', 'file'))
+  async initiate(
+    @Req() req: any,
+    @Body() body: { filename: string; size?: number; content_type?: string },
   ) {
-    try {
-      const files = await this.filesService.getFiles(user.orgId, filters);
-      return { data: files };
-    } catch (error) {
-      throw new HttpException(
-        { error: 'Failed to fetch files', details: error.message },
-        HttpStatus.INTERNAL_SERVER_ERROR,
-      );
-    }
+    const result = await this.storage.initiateUpload({ ...body, org_id: req.rbac?.orgId });
+    req.audit = {
+      action: 'FILE_UPLOADED',
+      resourceType: 'file',
+      resourceId: result.file?.id ?? null,
+      before: null,
+      after: { filename: body.filename, size: body.size ?? null },
+    };
+    return result;
   }
 
-  @Get(':id')
-  async getFile(
-    @Param('id') fileId: string,
-    @ReqUser() user: any,
+  @Post(':id/complete')
+  @UseGuards(RbacGuard('files:update', 'file'))
+  async complete(
+    @Req() req: any,
+    @Param('id') id: string,
+    @Body() body: { sha256?: string; quote_id?: string; quote_item_id?: string },
   ) {
-    try {
-      const file = await this.filesService.getFile(fileId, user.orgId);
-      if (!file) {
-        throw new HttpException('File not found', HttpStatus.NOT_FOUND);
-      }
-      return { data: file };
-    } catch (error) {
-      if (error instanceof HttpException) throw error;
-      throw new HttpException(
-        { error: 'Failed to fetch file', details: error.message },
-        HttpStatus.INTERNAL_SERVER_ERROR,
-      );
-    }
+    const result = await this.storage.completeUpload(id, req.rbac?.orgId, body);
+    req.audit = {
+      action: 'FILE_UPLOADED',
+      resourceType: 'file',
+      resourceId: id,
+      before: null,
+      after: { sha256: body.sha256 ?? null, linked_id: body.quote_item_id ?? body.quote_id ?? null },
+    };
+    return result;
   }
 
-  @Post()
-  async createFile(
-    @Body() fileData: Partial<FileMeta>,
-    @ReqUser() user: any,
+  @Post('direct')
+  @UseInterceptors(FileInterceptor('file'))
+  @UseGuards(RbacGuard('files:create', 'file'))
+  async directUpload(
+    @Req() req: any,
+    @UploadedFile() file: any,
+    @Body()
+    body: {
+      sensitivity?: 'standard' | 'itar' | 'cui';
+      linked_type?: string;
+      linked_id?: string;
+    },
   ) {
-    try {
-      const file = await this.filesService.createFile(fileData, user.id);
-      return { data: file };
-    } catch (error) {
-      throw new HttpException(
-        { error: 'Failed to create file', details: error.message },
-        HttpStatus.INTERNAL_SERVER_ERROR,
-      );
+    const orgId = req.rbac?.orgId;
+    if (!orgId) {
+      throw new BadRequestException('Organization context missing');
     }
-  }
 
-  @Put(':id')
-  async updateFile(
-    @Param('id') fileId: string,
-    @Body() updates: Partial<FileMeta>,
-    @ReqUser() user: any,
-  ) {
-    try {
-      const file = await this.filesService.updateFile(fileId, updates, user.id);
-      return { data: file };
-    } catch (error) {
-      throw new HttpException(
-        { error: 'Failed to update file', details: error.message },
-        HttpStatus.INTERNAL_SERVER_ERROR,
-      );
-    }
-  }
+    const payloadFile = file
+      ? {
+          buffer: file.buffer as Buffer,
+          mimetype: file.mimetype as string,
+          originalname: file.originalname as string,
+          size: file.size as number,
+        }
+      : null;
 
-  @Post(':id/link')
-  async linkFileToObject(
-    @Param('id') fileId: string,
-    @Body() body: { type: string; objectId: string; tags?: string[] },
-    @ReqUser() user: any,
-  ) {
-    try {
-      const file = await this.filesService.linkFileToObject(
-        fileId,
-        body.type,
-        body.objectId,
-        body.tags,
-        user.id,
-      );
-      return { data: file };
-    } catch (error) {
-      throw new HttpException(
-        { error: 'Failed to link file', details: error.message },
-        HttpStatus.INTERNAL_SERVER_ERROR,
-      );
-    }
-  }
-
-  @Delete(':id/link')
-  async unlinkFileFromObject(
-    @Param('id') fileId: string,
-    @Body() body: { type: string; objectId: string },
-    @ReqUser() user: any,
-  ) {
-    try {
-      const file = await this.filesService.unlinkFileFromObject(
-        fileId,
-        body.type,
-        body.objectId,
-        user.id,
-      );
-      return { data: file };
-    } catch (error) {
-      throw new HttpException(
-        { error: 'Failed to unlink file', details: error.message },
-        HttpStatus.INTERNAL_SERVER_ERROR,
-      );
-    }
-  }
-
-  @Delete(':id')
-  async deleteFile(
-    @Param('id') fileId: string,
-    @ReqUser() user: any,
-  ) {
-    try {
-      const file = await this.filesService.deleteFile(fileId, user.id);
-      return { data: file };
-    } catch (error) {
-      throw new HttpException(
-        { error: 'Failed to delete file', details: error.message },
-        HttpStatus.INTERNAL_SERVER_ERROR,
-      );
-    }
+    const result = await this.storage.directUpload({
+      org_id: orgId,
+      file: payloadFile,
+      sensitivity: body?.sensitivity,
+      linked_type: body?.linked_type ?? null,
+      linked_id: body?.linked_id ?? null,
+    });
+    req.audit = {
+      action: 'FILE_UPLOADED',
+      resourceType: 'file',
+      resourceId: result?.file?.id ?? null,
+      before: null,
+      after: { filename: payloadFile?.originalname ?? null, size: payloadFile?.size ?? null },
+    };
+    return result;
   }
 
   @Get(':id/download')
-  async getDownloadUrl(
-    @Param('id') fileId: string,
-    @Query('disposition') disposition: 'inline' | 'attachment' = 'inline',
-    @ReqUser() user: any,
-  ) {
-    try {
-      const signedUrl = await this.filesService.getSignedUrl(fileId, disposition);
-      return { data: { url: signedUrl } };
-    } catch (error) {
-      throw new HttpException(
-        { error: 'Failed to generate download URL', details: error.message },
-        HttpStatus.INTERNAL_SERVER_ERROR,
-      );
-    }
+  @UseGuards(RbacGuard('files:read', 'file'))
+  async getDownloadUrl(@Req() req: any, @Param('id') id: string) {
+    return this.storage.getDownloadUrl(id, req.rbac?.orgId);
   }
 
-  // Bulk operations
-  @Post('bulk/download')
-  async bulkDownload(
-    @Body() body: { fileIds: string[] },
-    @ReqUser() user: any,
-  ) {
-    try {
-      const result = await this.filesService.bulkDownload(body.fileIds, user.id);
-      return { data: result };
-    } catch (error) {
-      throw new HttpException(
-        { error: 'Failed to create bulk download', details: error.message },
-        HttpStatus.INTERNAL_SERVER_ERROR,
-      );
-    }
-  }
-
-  @Delete('bulk')
-  async bulkDelete(
-    @Body() body: { fileIds: string[] },
-    @ReqUser() user: any,
-  ) {
-    try {
-      const result = await this.filesService.bulkDelete(body.fileIds, user.id);
-      return { data: result };
-    } catch (error) {
-      throw new HttpException(
-        { error: 'Failed to bulk delete files', details: error.message },
-        HttpStatus.INTERNAL_SERVER_ERROR,
-      );
-    }
-  }
-
-  @Post('bulk/tag')
-  async bulkTag(
-    @Body() body: { fileIds: string[]; tags: string[] },
-    @ReqUser() user: any,
-  ) {
-    try {
-      const result = await this.filesService.bulkTag(body.fileIds, body.tags, user.id);
-      return { data: result };
-    } catch (error) {
-      throw new HttpException(
-        { error: 'Failed to bulk tag files', details: error.message },
-        HttpStatus.INTERNAL_SERVER_ERROR,
-      );
-    }
-  }
-
-  // Preview operations
-  @Post(':id/preview')
-  async generatePreview(
-    @Param('id') fileId: string,
-    @ReqUser() user: any,
-  ) {
-    try {
-      const result = await this.filesService.generatePreview(fileId);
-      return { data: result };
-    } catch (error) {
-      throw new HttpException(
-        { error: 'Failed to generate preview', details: error.message },
-        HttpStatus.INTERNAL_SERVER_ERROR,
-      );
-    }
-  }
-
-  // Virus scanning
-  @Post(':id/scan')
-  async scanForVirus(
-    @Param('id') fileId: string,
-    @ReqUser() user: any,
-  ) {
-    try {
-      const result = await this.filesService.scanForVirus(fileId);
-      return { data: result };
-    } catch (error) {
-      throw new HttpException(
-        { error: 'Failed to scan file', details: error.message },
-        HttpStatus.INTERNAL_SERVER_ERROR,
-      );
-    }
+  @Get(':id/metadata')
+  @UseGuards(RbacGuard('files:read', 'file'))
+  async getMetadata(@Req() req: any, @Param('id') id: string) {
+    return this.storage.getFileById(id, req.rbac?.orgId);
   }
 }

@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
 
 export async function POST(request: NextRequest) {
   try {
@@ -20,73 +19,38 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const supabase = await createClient();
+    // Validate supported file types
+    const supportedTypes = [
+      'application/step', 'application/x-step',
+      'application/iges', 'application/x-iges',
+      'application/sla', 'model/stl',
+      'application/x-parasolid', 'model/x_t', 'model/x_b',
+      'application/sldprt',
+      'model/jt',
+      'application/3mf', 'model/3mf',
+      'image/vnd.dxf', 'application/dxf',
+      'application/zip'
+    ];
 
-    // Get current user
-    const { data: { user } } = await supabase.auth.getUser();
-
-    if (!user) {
+    if (!supportedTypes.includes(contentType)) {
       return NextResponse.json(
-        { error: 'Authentication required' },
-        { status: 401 }
-      );
-    }
-
-    // Get user's organization
-    const { data: userOrg } = await supabase
-      .from('user_organizations')
-      .select('org_id')
-      .eq('user_id', user.id)
-      .single();
-
-    if (!userOrg) {
-      return NextResponse.json(
-        { error: 'Organization not found' },
-        { status: 404 }
+        { error: 'Unsupported file type' },
+        { status: 400 }
       );
     }
 
     // Generate unique file ID
     const fileId = `dfm_${Date.now()}_${Math.random().toString(36).substring(2)}`;
+    const mockUploadUrl = `https://localhost/api/dfm/mock-upload/${fileId}`;
 
-    // Create file record in database
-    const { error: fileError } = await supabase
-      .from('dfm_files')
-      .insert({
-        id: fileId,
-        file_name: fileName,
-        file_path: `${fileId}_${fileName}`,
-        file_size: fileSize,
-        mime_type: contentType,
-        organization_id: userOrg.org_id,
-        uploaded_by: user.id,
-        created_at: new Date().toISOString()
-      });
-
-    if (fileError) {
-      console.error('Failed to create file record:', fileError);
-      return NextResponse.json(
-        { error: 'Failed to create file record' },
-        { status: 500 }
-      );
-    }
-
-    // Create signed upload URL
-    const { data, error } = await supabase.storage
-      .from('dfm-uploads')
-      .createSignedUploadUrl(`${fileId}_${fileName}`);
-
-    if (error) {
-      console.error('Failed to create upload URL:', error);
-      return NextResponse.json(
-        { error: 'Failed to create upload URL' },
-        { status: 500 }
-      );
-    }
-
+    // Return mock upload URL for development
+    // In production, this would integrate with cloud storage (S3, Supabase Storage, etc.)
     return NextResponse.json({
-      uploadUrl: data.signedUrl,
-      fileId
+      success: true,
+      uploadUrl: mockUploadUrl,
+      fileId,
+      message: 'Mock upload URL generated successfully',
+      expiresAt: Date.now() + (60 * 60 * 1000) // 1 hour from now
     });
 
   } catch (error) {

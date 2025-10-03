@@ -1,7 +1,7 @@
 export interface QapDocumentInput {
   templateId: string;
   orderId: string;
-  orderItemId: string;
+  orderItemId?: string | null;
   orgId: string;
   userId: string;
   documentData: QapDocumentData;

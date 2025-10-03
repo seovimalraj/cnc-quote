@@ -99,18 +99,18 @@ export const FileSchema = z.object({
   bucket: z.string(),
   path: z.string(),
   org_id: z.string().uuid(),
-  linked_type: z.enum(['org', 'quote', 'order', 'qap', 'invoice', 'other']),
+  linked_type: z.enum(['org', 'quote', 'quote_item', 'order', 'qap', 'invoice', 'other']).nullable(),
   linked_id: z.string().uuid().nullable(),
   name: z.string(),
   mime: z.string(),
   size_bytes: z.number().positive(),
-  checksum_sha256: z.string(),
-  uploaded_by: z.string().uuid(),
+  checksum_sha256: z.string().nullable(),
+  uploaded_by: z.string().uuid().nullable(),
   uploaded_at: z.string().datetime(),
   signed_url: z.string().url().nullable(),
   signed_url_expires_at: z.string().datetime().nullable(),
-  sensitivity: z.enum(['standard', 'itar', 'cui']),
-  virus_scan: z.enum(['pending', 'clean', 'infected']),
+  sensitivity: z.enum(['standard', 'itar', 'cui']).default('standard'),
+  virus_scan: z.enum(['pending', 'scanning', 'clean', 'infected', 'error']),
   download_count: z.number().default(0),
   last_access_at: z.string().datetime().nullable(),
   deleted_at: z.string().datetime().nullable(),
@@ -762,6 +762,62 @@ export const MaterialSchema = z.object({
   created_at: z.string().datetime(),
   updated_at: z.string().datetime(),
 });
+
+export const MaterialRegionSchema = z.enum(['US', 'EU', 'IN', 'UK', 'CA', 'AU']);
+
+export const MaterialCategorySchema = z.object({
+  id: z.string().uuid(),
+  code: z.string().min(2).max(16),
+  name: z.string().min(2),
+  created_at: z.string().datetime(),
+});
+
+export const MaterialPropertySchema = z.object({
+  id: z.string().uuid(),
+  category_id: z.string().uuid(),
+  code: z.string().min(3).max(64),
+  name: z.string().min(2),
+  standard: z.string().nullable().optional(),
+  composition_json: z.record(z.string(), z.unknown()).nullable().optional(),
+  processes: z.array(z.string()).default([]),
+  available_regions: z.array(MaterialRegionSchema).default([]),
+  density_kg_m3: z.number().positive(),
+  machinability_index: z.number().int().min(0).max(100),
+  hardness_hb: z.number().positive().nullable().optional(),
+  tensile_mpa: z.number().positive().nullable().optional(),
+  melting_c: z.number().positive().nullable().optional(),
+  cost_per_kg_base: z.number().min(0),
+  supplier_ref: z.string().nullable().optional(),
+  is_active: z.boolean().default(true),
+  created_at: z.string().datetime(),
+  updated_at: z.string().datetime(),
+});
+
+export const MaterialRegionMultiplierSchema = z.object({
+  id: z.string().uuid(),
+  material_id: z.string().uuid(),
+  region: MaterialRegionSchema,
+  multiplier: z.number().positive(),
+});
+
+export const MaterialAliasSchema = z.object({
+  id: z.string().uuid(),
+  material_id: z.string().uuid(),
+  alias: z.string().min(1),
+});
+
+export const MaterialDetailSchema = MaterialPropertySchema.extend({
+  category: MaterialCategorySchema.pick({ id: true, code: true, name: true }).optional(),
+  aliases: z.array(MaterialAliasSchema).default([]),
+  region_multipliers: z.array(MaterialRegionMultiplierSchema).default([]),
+});
+
+export type MaterialRegion = z.infer<typeof MaterialRegionSchema>;
+export type MaterialCategory = z.infer<typeof MaterialCategorySchema>;
+export type MaterialProperty = z.infer<typeof MaterialPropertySchema>;
+export type MaterialRegionMultiplier = z.infer<typeof MaterialRegionMultiplierSchema>;
+export type MaterialAlias = z.infer<typeof MaterialAliasSchema>;
+export type MaterialDetail = z.infer<typeof MaterialDetailSchema>;
 
 export const FinishSchema = z.object({
   id: z.string().uuid(),

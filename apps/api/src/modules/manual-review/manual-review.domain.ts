@@ -1,23 +1,9 @@
 import { ApiProperty } from "@nestjs/swagger";
 import { IsString, IsNumber, IsOptional } from "class-validator";
+import { ContractsV1 } from '@cnc-quote/shared';
 
-export interface Quote {
-  id?: string;
-  org_id?: string;
-  user_id?: string;
-  status?: string;
-  process_type?: string;
-  features?: string[];
-  quantity?: number;
-  dimensions?: {
-    length?: number;
-    width?: number;
-    height?: number;
-  };
-  material_id?: string;
-  price?: number;
-  currency?: string;
-}
+// Deprecated: Use ContractsV1.QuoteV1 instead
+export type Quote = ContractsV1.QuoteV1;
 
 export interface ReviewNotification {
   quoteId: string;

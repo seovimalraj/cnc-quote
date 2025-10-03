@@ -7,6 +7,9 @@ import time
 import asyncio
 from datetime import datetime
 
+# Import conversion router
+from app.api.conversion import router as conversion_router
+
 # Type alias for DFM check data
 DFMCheckData = Dict[str, Any]
 
@@ -19,6 +22,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Include conversion router
+app.include_router(conversion_router, prefix="/api", tags=["conversion"])
 
 # In-memory storage for demo purposes
 dfm_tasks: Dict[str, Any] = {}

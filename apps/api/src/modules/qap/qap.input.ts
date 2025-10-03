@@ -13,7 +13,7 @@ export interface QapInput {
   documentData?: {
     templateId: string;
     orderId: string;
-    orderItemId: string;
+    orderItemId?: string | null;
     documentData: Record<string, unknown>;
   };
 }

@@ -1,190 +1,232 @@
 'use client';
 
-import React, { Suspense, useRef, useState } from 'react';
-import { Canvas } from '@react-three/fiber';
-import { OrbitControls, Grid, Environment, Html, Box, Cylinder } from '@react-three/drei';
+/* eslint-disable react/no-unknown-property */
+
+import React, { useEffect, useMemo, useState } from 'react';
+import { Canvas, useThree } from '@react-three/fiber';
+import { OrbitControls, Environment, Html } from '@react-three/drei';
 import * as THREE from 'three';
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore - three examples typings are provided by three
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
+import type { DfmSelectionHint } from '@cnc-quote/shared';
+
+interface SelectedIssue {
+  id: string;
+  label?: string;
+  selection_hint?: DfmSelectionHint;
+}
 
 interface Canvas3DProps {
-  readonly fileName?: string;
-  readonly fileType?: string;
-  readonly dfmHighlights?: ReadonlyArray<{
-    readonly id: string;
-    readonly title: string;
-    readonly status: 'passed' | 'warning' | 'blocker';
-    readonly highlights: {
-      readonly face_ids: readonly number[];
-      readonly edge_ids: readonly number[];
-    };
-    readonly suggestions: readonly string[];
-  }>;
+  meshUrl: string | null;
+  meshVersion?: string;
+  selectedIssue?: SelectedIssue | null;
+  highlightColor?: string;
+  className?: string;
 }
 
-// Mock 3D model component that can show DFM highlights
-function CADModel({ fileName, dfmHighlights = [] }: { readonly fileName?: string; readonly dfmHighlights?: readonly any[] }) {
-  const meshRef = useRef<THREE.Mesh>(null);
-  const [hoveredHighlight, setHoveredHighlight] = useState<string | null>(null);
+interface LoadedMesh {
+  scene: THREE.Group;
+  primaryMesh: THREE.Mesh | null;
+}
 
-  // Create mock geometry based on file type
-  const createGeometry = () => {
-    if (fileName?.toLowerCase().includes('bracket')) {
-      return new THREE.BoxGeometry(2, 1, 0.2);
-    } else if (fileName?.toLowerCase().includes('shaft')) {
-      return new THREE.CylinderGeometry(0.1, 0.1, 2, 16);
-    } else if (fileName?.toLowerCase().includes('plate')) {
-      return new THREE.BoxGeometry(3, 2, 0.1);
+interface GLTFLike {
+  scene: THREE.Group;
+}
+
+function findFirstMesh(object: THREE.Object3D): THREE.Mesh | null {
+  if ((object as THREE.Mesh).isMesh) {
+    return object as THREE.Mesh;
+  }
+  for (const child of object.children) {
+    const mesh = findFirstMesh(child);
+    if (mesh) return mesh;
+  }
+  return null;
+}
+
+function cloneScene(scene: THREE.Group | null) {
+  return scene ? scene.clone(true) : null;
+}
+
+async function parseGlb(arrayBuffer: ArrayBuffer): Promise<GLTFLike> {
+  const loader = new GLTFLoader();
+  return new Promise((resolve, reject) => {
+    loader.parse(arrayBuffer, '', resolve, reject);
+  });
+}
+
+function buildHighlightGeometry(source: THREE.BufferGeometry, triangles: readonly number[]): THREE.BufferGeometry | null {
+  const positionAttr = source.getAttribute('position');
+  if (!positionAttr) return null;
+  const indexAttr = source.getIndex();
+  const totalTriangles = indexAttr ? indexAttr.count / 3 : positionAttr.count / 3;
+  if (!Number.isFinite(totalTriangles) || totalTriangles <= 0) return null;
+
+  const validTriangles = triangles.filter((tri) => tri >= 0 && tri < totalTriangles);
+  if (!validTriangles.length) return null;
+
+  const highlight = new THREE.BufferGeometry();
+  const vertices = new Float32Array(validTriangles.length * 9);
+  let offset = 0;
+
+  for (const tri of validTriangles) {
+    const baseIndex = tri * 3;
+    const i0 = indexAttr ? (indexAttr.array as any)[baseIndex] : baseIndex;
+    const i1 = indexAttr ? (indexAttr.array as any)[baseIndex + 1] : baseIndex + 1;
+    const i2 = indexAttr ? (indexAttr.array as any)[baseIndex + 2] : baseIndex + 2;
+    const v0 = [positionAttr.getX(i0), positionAttr.getY(i0), positionAttr.getZ(i0)];
+    const v1 = [positionAttr.getX(i1), positionAttr.getY(i1), positionAttr.getZ(i1)];
+    const v2 = [positionAttr.getX(i2), positionAttr.getY(i2), positionAttr.getZ(i2)];
+    vertices.set([...v0, ...v1, ...v2], offset);
+    offset += 9;
+  }
+
+  highlight.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
+  highlight.computeVertexNormals();
+  highlight.computeBoundingBox();
+  highlight.computeBoundingSphere();
+  return highlight;
+}
+
+const HighlightMesh: React.FC<{ geometry: THREE.BufferGeometry | null; color: string }> = ({ geometry, color }) => {
+  const material = useMemo(() => new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.45, side: THREE.DoubleSide }), [color]);
+
+  useEffect(() => () => material.dispose(), [material]);
+
+  if (!geometry) return null;
+  return <mesh geometry={geometry} material={material} />;
+};
+
+const CameraFocus: React.FC<{ geometry: THREE.BufferGeometry | null }> = ({ geometry }) => {
+  const { camera, controls } = useThree((state) => ({ camera: state.camera, controls: state.controls as any }));
+
+  useEffect(() => {
+    if (!geometry || !controls) return;
+    geometry.computeBoundingSphere();
+    const sphere = geometry.boundingSphere;
+    if (!sphere) return;
+
+    const target = sphere.center.clone();
+    const currentDir = camera.position.clone().sub(controls.target).normalize();
+    const distance = Math.max(sphere.radius * 3, 10);
+    const newPosition = target.clone().add(currentDir.multiplyScalar(distance));
+
+    camera.position.lerp(newPosition, 0.45);
+    controls.target.copy(target);
+    controls.update();
+  }, [geometry, camera, controls]);
+
+  return null;
+};
+
+export const Canvas3D: React.FC<Canvas3DProps> = ({ meshUrl, meshVersion, selectedIssue, highlightColor = '#f97316', className }) => {
+  const [loaded, setLoaded] = useState<LoadedMesh | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!meshUrl) {
+      setLoaded(null);
+      return;
     }
-    return new THREE.BoxGeometry(1.5, 1, 0.5);
-  };
 
-  const geometry = createGeometry();
+    const load = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const response = await fetch(meshUrl, {
+          method: 'GET',
+          credentials: 'include',
+          cache: 'no-store',
+          headers: {
+            Accept: 'model/gltf-binary',
+          },
+        });
+        if (!response.ok) {
+          throw new Error(`Mesh request failed (${response.status})`);
+        }
+        const arrayBuffer = await response.arrayBuffer();
+        const gltf = await parseGlb(arrayBuffer);
+        if (!cancelled) {
+          const primaryMesh = findFirstMesh(gltf.scene);
+          setLoaded({ scene: gltf.scene, primaryMesh });
+        }
+      } catch (err) {
+        if (!cancelled) {
+          const message = err instanceof Error ? err.message : String(err);
+          setError(message);
+          setLoaded(null);
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    };
 
-  // Create highlight overlays for DFM issues
-  const highlightMeshes = dfmHighlights.map((highlight, index) => {
-    if (highlight.highlights.face_ids.length === 0 && highlight.highlights.edge_ids.length === 0) {
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, [meshUrl, meshVersion]);
+
+  const highlightGeometry = useMemo(() => {
+    if (!loaded?.primaryMesh || !selectedIssue?.selection_hint?.triangle_indices?.length) {
       return null;
     }
+    const geometry = loaded.primaryMesh.geometry;
+    try {
+      return buildHighlightGeometry(geometry, selectedIssue.selection_hint.triangle_indices);
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.warn('Failed to build highlight geometry', err);
+      return null;
+    }
+  }, [loaded, selectedIssue]);
 
-    const color = highlight.status === 'blocker' ? '#ef4444' :
-                  highlight.status === 'warning' ? '#f59e0b' : '#10b981';
+  useEffect(() => () => {
+    highlightGeometry?.dispose();
+  }, [highlightGeometry]);
 
-    return (
-      <group key={highlight.id}>
-        {/* Highlight overlay */}
-        <Box
-          args={[1.6, 1.1, 0.6]}
-          position={[0, 0, 0]}
-          onPointerOver={() => setHoveredHighlight(highlight.id)}
-          onPointerOut={() => setHoveredHighlight(null)}
-        >
-          <meshBasicMaterial
-            color={color}
-            transparent
-            opacity={hoveredHighlight === highlight.id ? 0.3 : 0.1}
-            side={THREE.BackSide}
-          />
-        </Box>
+  const sceneClone = useMemo(() => cloneScene(loaded?.scene ?? null), [loaded]);
 
-        {/* Tooltip */}
-        {hoveredHighlight === highlight.id && (
-          <Html position={[0, 1.5, 0]} center>
-            <div className="bg-white p-2 rounded shadow-lg max-w-xs">
-              <div className="font-semibold text-sm">{highlight.title}</div>
-              <div className="text-xs text-gray-600 mt-1">
-                {highlight.suggestions.length > 0 ? highlight.suggestions[0] : 'No suggestions available'}
-              </div>
-            </div>
+  return (
+    <div className={`relative h-full w-full ${className ?? ''}`}>
+      <Canvas camera={{ position: [120, 90, 120], fov: 45 }} dpr={[1, 2]}>
+        <color attach="background" args={['#f8f9fb']} />
+        <ambientLight intensity={0.6} />
+        <directionalLight intensity={0.9} position={[80, 120, 60]} />
+        {sceneClone ? (
+          <primitive object={sceneClone} />
+        ) : (
+          <Html center>
+            <div className="text-xs text-gray-500">{loading ? 'Loading mesh…' : 'Mesh unavailable'}</div>
           </Html>
         )}
-      </group>
-    );
-  });
-
-  return (
-    <group>
-      {/* Main model */}
-      <mesh ref={meshRef} geometry={geometry} position={[0, 0, 0]}>
-        <meshStandardMaterial color="#e5e7eb" />
-      </mesh>
-
-      {/* DFM highlights */}
-      {highlightMeshes}
-
-      {/* Mock features (holes, etc.) */}
-      <Cylinder args={[0.05, 0.05, 0.3]} position={[0.3, 0.6, 0.15]} rotation={[Math.PI / 2, 0, 0]}>
-        <meshStandardMaterial color="#1f2937" />
-      </Cylinder>
-      <Cylinder args={[0.05, 0.05, 0.3]} position={[-0.3, 0.6, 0.15]} rotation={[Math.PI / 2, 0, 0]}>
-        <meshStandardMaterial color="#1f2937" />
-      </Cylinder>
-    </group>
-  );
-}
-
-function LoadingFallback() {
-  return (
-    <Html center>
-      <div className="flex items-center space-x-2 text-gray-600">
-        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-600"></div>
-        <span>Loading 3D model...</span>
-      </div>
-    </Html>
-  );
-}
-
-export function Canvas3D({ fileName, fileType, dfmHighlights = [] }: Canvas3DProps) {
-  return (
-    <div className="w-full h-full bg-gray-50 rounded-lg overflow-hidden relative">
-      <Canvas
-        camera={{ position: [5, 5, 5], fov: 50 }}
-        shadows
-        gl={{ antialias: true }}
-      >
-        <Suspense fallback={<LoadingFallback />}>
-          {/* Lighting */}
-          <ambientLight intensity={0.4} />
-          <directionalLight
-            position={[10, 10, 5]}
-            intensity={1}
-            castShadow
-            shadow-mapSize-width={2048}
-            shadow-mapSize-height={2048}
-          />
-          <pointLight position={[-10, -10, -10]} intensity={0.3} />
-
-          {/* Environment */}
-          <Environment preset="studio" />
-
-          {/* Grid */}
-          <Grid
-            args={[10, 10]}
-            cellSize={0.5}
-            cellThickness={0.5}
-            cellColor="#e5e7eb"
-            sectionSize={2}
-            sectionThickness={1}
-            sectionColor="#d1d5db"
-            fadeDistance={25}
-            fadeStrength={1}
-            infiniteGrid
-          />
-
-          {/* 3D Model with DFM highlights */}
-          <CADModel fileName={fileName} dfmHighlights={dfmHighlights} />
-
-          {/* Controls */}
-          <OrbitControls
-            enablePan={true}
-            enableZoom={true}
-            enableRotate={true}
-            minDistance={2}
-            maxDistance={20}
-          />
-        </Suspense>
+        <HighlightMesh geometry={highlightGeometry} color={highlightColor} />
+        <CameraFocus geometry={highlightGeometry} />
+        <OrbitControls makeDefault enablePan enableRotate enableZoom />
+        <Environment preset="city" />
       </Canvas>
-
-      {/* DFM Legend */}
-      {dfmHighlights.length > 0 && (
-        <div className="absolute top-4 right-4 bg-white p-3 rounded-lg shadow-lg">
-          <div className="text-sm font-semibold mb-2">DFM Analysis</div>
-          <div className="space-y-1">
-            {dfmHighlights.slice(0, 3).map((highlight) => (
-              <div key={highlight.id} className="flex items-center space-x-2 text-xs">
-                <div
-                  className={`w-3 h-3 rounded ${
-                    highlight.status === 'blocker' ? 'bg-red-500' :
-                    highlight.status === 'warning' ? 'bg-yellow-500' : 'bg-green-500'
-                  }`}
-                />
-                <span className="truncate max-w-32">{highlight.title}</span>
-              </div>
-            ))}
-            {dfmHighlights.length > 3 && (
-              <div className="text-xs text-gray-500">+{dfmHighlights.length - 3} more</div>
-            )}
-          </div>
+      {loading && (
+        <div className="absolute inset-0 flex items-center justify-center bg-white/70 text-sm text-gray-600">
+          Loading 3D model…
+        </div>
+      )}
+      {error && !loading && (
+        <div className="absolute inset-0 flex items-center justify-center bg-red-100 text-sm text-red-600">
+          {error}
+        </div>
+      )}
+      {selectedIssue?.label && (
+        <div className="absolute top-2 left-2 bg-black/70 text-white text-xs px-2 py-1 rounded">
+          {selectedIssue.label}
         </div>
       )}
     </div>
   );
-}
+};
+
+export default Canvas3D;

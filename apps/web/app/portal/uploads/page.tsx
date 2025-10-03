@@ -4,11 +4,13 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { Dropzone } from '@/components/upload/Dropzone';
+import { BulkUpload } from '@/components/upload/BulkUpload';
 import { ModelViewer } from '@/components/viewer/ModelViewer';
 import { MetricsPanel } from '@/components/viewer/MetricsPanel';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Loader2 } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Loader2, Upload, Package } from 'lucide-react';
 import type { FileMetrics } from '@/types/file-metrics';
 
 const supabase = createClient();
@@ -24,6 +26,7 @@ export default function UploadsPage() {
   const [metrics, setMetrics] = useState<FileMetrics | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [organizationId, setOrganizationId] = useState<string | null>(null);
+  const [uploadedFileIds, setUploadedFileIds] = useState<string[]>([]);
 
   useEffect(() => {
     // Get current organization
@@ -46,41 +49,55 @@ export default function UploadsPage() {
   useEffect(() => {
     if (!selectedFile) return;
 
-    // Start analysis if file is clean
-    if (selectedFile.status === 'clean') {
-      setIsAnalyzing(true);
-      fetch('/api/cad/analyze', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ fileId: selectedFile.id }),
-      })
-        .then((res) => res.json())
-        .then((data) => {
+    const analyzeFile = async () => {
+      // Start analysis if file is clean
+      if (selectedFile.status === 'clean') {
+        setIsAnalyzing(true);
+
+        try {
+          const analyzeResponse = await fetch('/api/cad/analyze', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ fileId: selectedFile.id }),
+          });
+
+          const analyzeData = await analyzeResponse.json();
+
           // Poll for analysis completion
-          const interval = setInterval(async () => {
-            const res = await fetch(`/api/cad/analysis/${data.taskId}`);
-            const result = await res.json();
-            
-            if (res.status === 200) {
-              clearInterval(interval);
+          const pollAnalysis = async () => {
+            const pollResponse = await fetch(`/api/cad/analysis/${analyzeData.taskId}`);
+            const result = await pollResponse.json();
+
+            if (pollResponse.status === 200) {
               setMetrics(result);
               setIsAnalyzing(false);
-              
-              // Get preview URL
-              fetch(`/api/cad/preview/${selectedFile.id}`)
-                .then((res) => res.json())
-                .then((data) => {
-                  if (data.url) {
-                    setPreviewUrl(data.url);
-                  }
-                });
-            }
-          }, 2000);
-        });
-    }
-  }, [selectedFile]);
 
-  const handleUploadComplete = (fileId: string) => {
+              // Get preview URL
+              try {
+                const previewResponse = await fetch(`/api/cad/preview/${selectedFile.id}`);
+                const previewData = await previewResponse.json();
+                if (previewData.url) {
+                  setPreviewUrl(previewData.url);
+                }
+              } catch (error) {
+                console.error('Failed to get preview URL:', error);
+              }
+            } else {
+              // Continue polling
+              setTimeout(pollAnalysis, 2000);
+            }
+          };
+
+          pollAnalysis();
+        } catch (error) {
+          console.error('Analysis failed:', error);
+          setIsAnalyzing(false);
+        }
+      }
+    };
+
+    analyzeFile();
+  }, [selectedFile]);  const handleSingleUploadComplete = (fileId: string) => {
     // Get file details
     supabase
       .from('files')
@@ -94,20 +111,55 @@ export default function UploadsPage() {
       });
   };
 
+  const handleBulkUploadComplete = (fileIds: string[]) => {
+    setUploadedFileIds(fileIds);
+    // Optionally redirect to quotes page or show success message
+    router.push('/portal/quotes?uploaded=' + fileIds.join(','));
+  };
+
   return (
     <div className="container py-6 space-y-6">
-      <h1 className="text-2xl font-bold">Upload CAD Files</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold">Upload CAD Files</h1>
+        {uploadedFileIds.length > 0 && (
+          <Button onClick={() => router.push('/portal/quotes')}>
+            Create Quote from Uploads
+          </Button>
+        )}
+      </div>
 
-      {/* Upload Zone */}
+      {/* Upload Options */}
       {!selectedFile && organizationId && (
-        <Card>
-          <CardContent className="pt-6">
-            <Dropzone
+        <Tabs defaultValue="single" className="w-full">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="single" className="flex items-center gap-2">
+              <Upload className="h-4 w-4" />
+              Single File Upload
+            </TabsTrigger>
+            <TabsTrigger value="bulk" className="flex items-center gap-2">
+              <Package className="h-4 w-4" />
+              Bulk Upload
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="single" className="mt-6">
+            <Card>
+              <CardContent className="pt-6">
+                <Dropzone
+                  organizationId={organizationId}
+                  onUploadComplete={handleSingleUploadComplete}
+                />
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="bulk" className="mt-6">
+            <BulkUpload
               organizationId={organizationId}
-              onUploadComplete={handleUploadComplete}
+              onUploadComplete={handleBulkUploadComplete}
             />
-          </CardContent>
-        </Card>
+          </TabsContent>
+        </Tabs>
       )}
 
       {/* Viewer and Metrics */}
@@ -115,7 +167,7 @@ export default function UploadsPage() {
         <div className="grid grid-cols-3 gap-6">
           <div className="col-span-2">
             {previewUrl ? (
-              <ModelViewer url={previewUrl} />
+              <ModelViewer modelUrl={previewUrl} />
             ) : (
               <div className="flex items-center justify-center h-[500px] bg-background border rounded-lg">
                 <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />

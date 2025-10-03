@@ -5,17 +5,19 @@ import { BullModule } from "@nestjs/bullmq";
 import { HttpModule } from "@nestjs/axios";
 import { FilesModule } from "../files/files.module";
 import { CadProcessor } from "./cad.processor";
+import { CadConversionController } from "./cad-conversion.controller";
+import { CadConversionService } from "./cad-conversion.service";
 
 @Module({
   imports: [
     HttpModule.register({
-      timeout: 60000, // 1 minute timeout for CAD operations
+      timeout: 120000, // 2 minutes timeout for CAD operations including conversion
       maxRedirects: 5,
     }),
     FilesModule,
   ],
-  controllers: [CadController],
-  providers: [CadService, CadProcessor],
-  exports: [CadService],
+  controllers: [CadController, CadConversionController],
+  providers: [CadService, CadProcessor, CadConversionService],
+  exports: [CadService, CadConversionService],
 })
 export class CadModule {}

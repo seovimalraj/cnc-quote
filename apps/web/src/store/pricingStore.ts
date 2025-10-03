@@ -1,0 +1,122 @@
+import { create } from 'zustand';
+import { ContractsV1 } from '@cnc-quote/shared';
+import { api } from '../lib/api';
+
+export interface PricingRowView {
+  quantity: number;
+  unit_price?: number;
+  total_price?: number;
+  lead_time_days?: number;
+  breakdown?: any;
+  status?: string;
+  optimistic?: boolean;
+}
+
+export interface ItemPricingView {
+  quote_item_id: string;
+  pricing_version?: number;
+  rows: PricingRowView[];
+  latency_ms?: number;
+  correlation_id?: string;
+  last_updated?: string;
+}
+
+interface PricingState {
+  quoteId?: string;
+  items: Record<string, ItemPricingView>;
+  lastSubtotalDelta?: number;
+  driftDetected: boolean;
+  reconciling: boolean;
+  setQuoteId: (id: string) => void;
+  applyPricingEvent: (evt: ContractsV1.PricingOptimisticEventV1 | ContractsV1.PricingUpdateEventV1) => void;
+  markDrift: () => void;
+  reconcile: (itemIds?: string[]) => Promise<void>;
+  reset: () => void;
+}
+
+function mergeRows(existing: PricingRowView[], patches: ContractsV1.PricingMatrixRowPatchV1[], optimistic: boolean) {
+  type RowMutable = PricingRowView;
+  const map = new Map<number, RowMutable>(existing.map(r => [r.quantity, { ...r }]));
+  for (const p of patches) {
+    const prev: RowMutable = map.get(p.quantity) || { quantity: p.quantity };
+    const next: RowMutable = {
+      quantity: p.quantity,
+      unit_price: p.unit_price !== undefined ? p.unit_price : prev.unit_price,
+      total_price: p.total_price !== undefined ? p.total_price : prev.total_price,
+      lead_time_days: p.lead_time_days !== undefined ? p.lead_time_days : prev.lead_time_days,
+      breakdown: p.breakdown !== undefined ? p.breakdown : prev.breakdown,
+      status: p.status !== undefined ? p.status : prev.status,
+      optimistic: optimistic || p.status === 'optimistic' || prev.optimistic,
+    };
+    map.set(p.quantity, next);
+  }
+  return Array.from(map.values()).sort((a,b) => a.quantity - b.quantity);
+}
+
+export const usePricingStore = create<PricingState>((set, get) => ({
+  quoteId: undefined,
+  items: {},
+  driftDetected: false,
+  reconciling: false,
+  lastSubtotalDelta: undefined,
+  setQuoteId: (id) => set({ quoteId: id }),
+  markDrift: () => set({ driftDetected: true }),
+  applyPricingEvent: (evt) => set(state => {
+    const { quote_item_id, matrix_patches, pricing_version, optimistic, subtotal_delta, latency_ms } = (evt as any).payload || {};
+    if (!quote_item_id) return state;
+    const current = state.items[quote_item_id] || { quote_item_id, rows: [] };
+    const rows = mergeRows(current.rows, matrix_patches || [], !!optimistic);
+    return {
+      ...state,
+      lastSubtotalDelta: subtotal_delta !== undefined ? subtotal_delta : state.lastSubtotalDelta,
+      items: {
+        ...state.items,
+        [quote_item_id]: {
+          ...current,
+            pricing_version: pricing_version || current.pricing_version,
+            rows,
+            latency_ms: latency_ms ?? current.latency_ms,
+            correlation_id: (evt as any).correlation_id || current.correlation_id,
+            last_updated: new Date().toISOString(),
+        }
+      }
+    };
+  }),
+  reconcile: async (itemIds) => {
+    const { quoteId } = get();
+    if (!quoteId) return;
+    set({ reconciling: true });
+    try {
+      const resp = await api.post('/price/v2/recalculate', { quote_id: quoteId, quote_item_ids: itemIds });
+      const results = resp.data?.results || [];
+      set(state => {
+        let lastSubtotalDelta = state.lastSubtotalDelta;
+        const updatedItems = { ...state.items };
+        for (const r of results) {
+          if (r.error) continue;
+          const current = updatedItems[r.quote_item_id] || { quote_item_id: r.quote_item_id, rows: [] };
+          const rows = mergeRows(current.rows, r.matrix_patches || [], false);
+          if (r.subtotal_delta !== undefined) lastSubtotalDelta = r.subtotal_delta;
+          updatedItems[r.quote_item_id] = {
+            ...current,
+            pricing_version: r.pricing_version || current.pricing_version,
+            rows,
+            last_updated: new Date().toISOString(),
+          };
+        }
+        return {
+          ...state,
+          items: updatedItems,
+          lastSubtotalDelta,
+          driftDetected: false,
+          reconciling: false,
+        };
+      });
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.warn('reconcile failed', err);
+      set({ reconciling: false });
+    }
+  },
+  reset: () => set({ quoteId: undefined, items: {}, driftDetected: false, lastSubtotalDelta: undefined }),
+}));

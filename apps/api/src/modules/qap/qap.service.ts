@@ -1,7 +1,8 @@
 import { Injectable, Logger } from "@nestjs/common";
 import { SupabaseService } from "../../lib/supabase/supabase.service";
-import { InjectQueue } from "@nestjs/bull";
-import { Queue } from "bull";
+// Migrated to BullMQ (@nestjs/bullmq)
+import { InjectQueue } from "@nestjs/bullmq";
+import { Queue } from "bullmq";
 import * as puppeteer from "puppeteer";
 import { QapTemplate, QapDocument, QapDocumentStatus, QapTemplateProcessType, qapTemplateSchema, qapDocumentSchema } from "./qap.types";
 import { QapTemplateSchema } from "./qap.types.schema";
@@ -170,7 +171,7 @@ export class QapService {
           org_id: data.orgId,
           template_id: validatedData.templateId,
           order_id: validatedData.orderId,
-          order_item_id: validatedData.orderItemId,
+          order_item_id: validatedData.orderItemId ?? null,
           data: validatedData.documentData,
           status: QapDocumentStatus.PENDING,
           file_path: "",

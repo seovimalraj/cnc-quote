@@ -46,6 +46,28 @@ export class AdminController {
     return this.adminService.getErrors(window);
   }
 
+  @Get('users')
+  async listUsers(
+    @Query('page') page = '1',
+    @Query('page_size') pageSize = '25',
+    @Query('q') q?: string
+  ) {
+    const p = parseInt(page) || 1;
+    const ps = Math.min(100, parseInt(pageSize) || 25);
+    return await this.adminService.listUsers(p, ps, q);
+  }
+
+  @Get('orgs')
+  async listOrgs(
+    @Query('page') page = '1',
+    @Query('page_size') pageSize = '25',
+    @Query('q') q?: string
+  ) {
+    const p = parseInt(page) || 1;
+    const ps = Math.min(100, parseInt(pageSize) || 25);
+    return await this.adminService.listOrgs(p, ps, q);
+  }
+
   @Post("issues")
   async createIssue(@Query('source') source: string, @Query('error_id') errorId: string) {
     return this.adminService.createIssue(source, errorId);

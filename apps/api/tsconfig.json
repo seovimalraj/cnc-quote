@@ -23,6 +23,8 @@
     "moduleResolution": "node",
     "resolveJsonModule": true,
     "typeRoots": ["../../node_modules/@types", "./types"],
+    // Include jest types so describe/it/expect are recognized in IDE and tsc. If conflicts arise, can move to separate tsconfig.test.json.
+    "types": ["node", "jest"],
     "paths": {
       "@cnc-quote/shared": ["../../packages/shared/src"]
     }

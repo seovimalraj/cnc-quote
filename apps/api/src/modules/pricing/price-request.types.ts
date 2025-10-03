@@ -6,6 +6,7 @@ export interface PricingRequest {
   quantity: number;
   finish_ids?: string[];
   is_rush?: boolean;
+  org_id?: string;
 }
 
 /** CNC machining price request */

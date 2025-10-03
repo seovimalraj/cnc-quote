@@ -2,6 +2,8 @@ import { Injectable } from "@nestjs/common";
 import { SupabaseService } from "../../lib/supabase/supabase.service";
 import { NotifyService } from "../notify/notify.service";
 import { QapService } from "../qap/qap.service";
+import { validateOrderStatusTransition, OrderStatus } from "@cnc-quote/shared";
+import { OrderResponse } from "./orders.types";
 
 @Injectable()
 export class OrdersService {
@@ -55,36 +57,49 @@ export class OrdersService {
   }
 
   async updateOrderStatus(orderId: string, status: string, userId: string, notes?: string) {
-    // Update order status
-    const { data: order } = await this.supabase.client
+    // Fetch current status for validation
+    const { data: existing } = await this.supabase.client
       .from("orders")
-      .update({ status, updated_at: new Date().toISOString() })
+      .select("id,status,total_amount,currency")
+      .eq("id", orderId)
+      .single();
+
+    if (!existing) {
+      throw new Error("Order not found");
+    }
+
+    const canonicalFrom = this.mapDbStatusToCanonical(existing.status);
+    const canonicalTo = this.normalizeIncomingStatus(status);
+
+    const validation = validateOrderStatusTransition(canonicalFrom, canonicalTo);
+    if (!validation.allowed) {
+      throw new Error(validation.reason || "Invalid order status transition");
+    }
+
+    const dbStatus = this.mapCanonicalToDbStatus(canonicalTo);
+
+    const { data: updated } = await this.supabase.client
+      .from("orders")
+      .update({ status: dbStatus, updated_at: new Date().toISOString() })
       .eq("id", orderId)
       .select()
       .single();
 
-    if (!order) {
-      throw new Error("Order not found");
+    if (!updated) {
+      throw new Error("Failed to update order status");
     }
 
-    // Add status history
-    await this.supabase.client.from("order_status_history").insert({
-      order_id: orderId,
-      new_status: status,
-      notes: notes || `Order status updated to ${status}`,
-      changed_by: userId,
-    });
+    await this.addOrderStatusHistory(orderId, dbStatus, notes || `Order status updated to ${dbStatus}` , userId);
 
-    // Send notifications
     await this.notify.sendOrderNotification({
       type: "order_status_changed",
       orderId,
-      status,
-      amount: order.total_amount,
-      currency: order.currency,
+      status: dbStatus,
+      amount: updated.total_amount,
+      currency: updated.currency,
     });
 
-    return order;
+    return updated;
   }
 
   async moveOrderInKanban(orderId: string, newStatus: string, userId: string) {
@@ -291,6 +306,35 @@ export class OrdersService {
     return documents || [];
   }
 
+  async deleteOrderDocument(documentId: string, userId: string) {
+    // Soft delete could be implemented; for now perform hard delete
+    const { error } = await this.supabase.client
+      .from("order_documents")
+      .delete()
+      .eq("id", documentId);
+
+    if (error) {
+      throw new Error(`Failed to delete document: ${error.message}`);
+    }
+
+    // Optional: add history note (attempt to resolve order id first)
+    try {
+      const { data: doc } = await this.supabase.client
+        .from("order_documents")
+        .select("order_id")
+        .eq("id", documentId)
+        .maybeSingle();
+      if (doc?.order_id) {
+        await this.addOrderStatusHistory(doc.order_id, null, `Order document ${documentId} deleted`, userId);
+      }
+    } catch (e) {
+      // eslint-disable-next-line no-console
+      console.debug?.("Non-critical: failed to append deletion note", e);
+    }
+
+    return { success: true };
+  }
+
   // Shipment Management
   async createShipment(orderId: string, shipmentData: any, userId: string) {
     const { data: shipment } = await this.supabase.client
@@ -363,13 +407,7 @@ export class OrdersService {
       throw new Error("Order not found");
     }
 
-    // Add to status history
-    await this.supabase.client.from("order_status_history").insert({
-      order_id: orderId,
-      new_status: order.status,
-      notes: `Priority updated to ${priority}`,
-      changed_by: userId,
-    });
+    await this.addOrderStatusHistory(orderId, order.status, `Priority updated to ${priority}`, userId);
 
     return order;
   }
@@ -469,6 +507,104 @@ export class OrdersService {
     return order;
   }
 
+  async getOrderTimeline(orderId: string) {
+    // Core order with status history & payments summary (leaner than full details)
+    const { data: order } = await this.supabase.client
+      .from("orders")
+      .select(
+        `id, order_number, status, created_at, updated_at,
+         status_history:order_status_history(id,new_status,notes,changed_by,created_at),
+         payments(id,amount,currency,status,created_at)`
+      )
+      .eq("id", orderId)
+      .single();
+
+    if (!order) return null;
+
+    // Map statuses to canonical for response (without changing DB layer yet)
+    const canonicalStatus = this.mapDbStatusToCanonical(order.status);
+    const history = (order.status_history || []).map((h: any) => ({
+      ...h,
+      new_status: this.mapDbStatusToCanonical(h.new_status),
+    }));
+
+    return {
+      id: order.id,
+      order_number: order.order_number,
+      status: canonicalStatus,
+      created_at: order.created_at,
+      updated_at: order.updated_at,
+      status_history: history,
+      payments: order.payments || [],
+    };
+  }
+
+  // --- Status Mapping & Validation Helpers ---
+  private mapDbStatusToCanonical(dbStatus: string): OrderStatus {
+    const map: Record<string, OrderStatus> = {
+      draft: 'NEW',
+      pending_approval: 'NEW',
+      approved: 'PAID',
+      in_production: 'IN_PRODUCTION',
+      quality_check: 'QC',
+      shipping: 'SHIPPED',
+      completed: 'COMPLETE',
+      cancelled: 'CANCELLED',
+      // Already canonical (if stored uppercase for some reason)
+      NEW: 'NEW',
+      PAID: 'PAID',
+      IN_PRODUCTION: 'IN_PRODUCTION',
+      QC: 'QC',
+      SHIPPED: 'SHIPPED',
+      COMPLETE: 'COMPLETE',
+      CANCELLED: 'CANCELLED',
+    };
+    return map[dbStatus] || 'NEW';
+  }
+
+  private mapCanonicalToDbStatus(status: OrderStatus): string {
+    const reverse: Record<OrderStatus, string> = {
+      NEW: 'draft',
+      PAID: 'approved',
+      IN_PRODUCTION: 'in_production',
+      QC: 'quality_check',
+      SHIPPED: 'shipping',
+      COMPLETE: 'completed',
+      CANCELLED: 'cancelled',
+    };
+    return reverse[status];
+  }
+
+  private normalizeIncomingStatus(input: string): OrderStatus {
+    const upper = (input || '').toUpperCase();
+    // Accept either canonical or legacy db status names
+    const direct = [
+      'NEW','PAID','IN_PRODUCTION','QC','SHIPPED','COMPLETE','CANCELLED'
+    ];
+    if (direct.includes(upper)) return upper as OrderStatus;
+    const legacyMap: Record<string, OrderStatus> = {
+      DRAFT: 'NEW',
+      PENDING_APPROVAL: 'NEW',
+      APPROVED: 'PAID',
+      IN_PRODUCTION: 'IN_PRODUCTION',
+      QUALITY_CHECK: 'QC',
+      SHIPPING: 'SHIPPED',
+      COMPLETED: 'COMPLETE',
+      CANCELLED: 'CANCELLED',
+    };
+    return legacyMap[upper] || 'NEW';
+  }
+
+  // Centralized history writer (newStatus can be null for non-status notes)
+  private async addOrderStatusHistory(orderId: string, newStatus: string | null, notes: string, userId: string) {
+    await this.supabase.client.from("order_status_history").insert({
+      order_id: orderId,
+      new_status: newStatus,
+      notes,
+      changed_by: userId,
+    });
+  }
+
   async getOrders(orgId: string) {
     const { data: orders } = await this.supabase.client
       .from("orders")
@@ -534,8 +670,8 @@ export class OrdersService {
 
         if (!quoteItem) continue;
 
-        // Use first matching template for now
-        // TODO: Add template selection logic based on material/complexity
+  // Use first matching template for now
+  // NOTE: Future enhancement: select template based on material/complexity criteria
         const template = templates[0];
 
         // Prepare QAP data

@@ -1,6 +1,8 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { RequireAnyRole } from '@/components/auth/RequireAnyRole';
+import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -8,13 +10,12 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { Switch } from '@/components/ui/switch';
 import {
   CogIcon,
   DocumentCheckIcon,
   ArrowPathIcon,
   CheckCircleIcon,
-  ExclamationTriangleIcon,
+  
   CurrencyDollarIcon,
   WrenchScrewdriverIcon,
   CubeIcon,
@@ -266,6 +267,7 @@ export default function AdminPricingPage() {
   if (!config) return null;
 
   return (
+    <RequireAnyRole roles={['admin','org_admin','finance']} fallback={<div className="p-6 text-sm text-red-600">Access denied</div>}>
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <header className="bg-white shadow-sm border-b">
@@ -287,6 +289,9 @@ export default function AdminPricingPage() {
               {hasChanges && (
                 <Badge variant="secondary">Unsaved Changes</Badge>
               )}
+              <Button variant="outline" asChild>
+                <Link href="/admin/pricing/sandbox">Simulation Sandbox</Link>
+              </Button>
               <Button
                 variant="outline"
                 onClick={handleSave}
@@ -601,5 +606,6 @@ export default function AdminPricingPage() {
         </Tabs>
       </div>
     </div>
+    </RequireAnyRole>
   );
 }

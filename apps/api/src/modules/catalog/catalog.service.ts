@@ -1,5 +1,27 @@
 import { Injectable } from '@nestjs/common';
 import { SupabaseService } from '../../lib/supabase/supabase.service';
+import { ContractsV1 } from '@cnc-quote/shared';
+
+export interface MaterialCatalogItem {
+  id: string;
+  name: string;
+  category: string;
+  cost_per_kg: number;
+  density: number;
+  availability: boolean;
+  lead_time_days: number;
+  processes: ContractsV1.ProcessType[];
+}
+
+export interface FinishCatalogItem {
+  id: string;
+  name: string;
+  category: string;
+  cost_per_part?: number;
+  cost_per_area?: number;
+  lead_time_days: number;
+  processes: ContractsV1.ProcessType[];
+}
 
 @Injectable()
 export class CatalogService {
@@ -123,5 +145,146 @@ export class CatalogService {
     // (Implementation would be similar for materials, finishes, etc.)
 
     return results;
+  }
+
+  /**
+   * Get materials for instant quote catalog
+   */
+  async getMaterials(filters?: { 
+    process_type?: ContractsV1.ProcessType;
+    available_only?: boolean;
+  }): Promise<MaterialCatalogItem[]> {
+    // Mock data for instant quote - in production, fetch from materials table
+    const materials: MaterialCatalogItem[] = [
+      {
+        id: 'al6061t6',
+        name: 'Aluminum 6061-T6',
+        category: 'aluminum',
+        cost_per_kg: 4.50,
+        density: 2700,
+        availability: true,
+        lead_time_days: 1,
+        processes: ['cnc_milling', 'cnc_turning', 'sheet_metal_laser'],
+      },
+      {
+        id: 'al7075t6',
+        name: 'Aluminum 7075-T6',
+        category: 'aluminum',
+        cost_per_kg: 6.80,
+        density: 2810,
+        availability: true,
+        lead_time_days: 2,
+        processes: ['cnc_milling', 'cnc_turning'],
+      },
+      {
+        id: 'steel1018',
+        name: 'Steel 1018',
+        category: 'steel',
+        cost_per_kg: 2.20,
+        density: 7870,
+        availability: true,
+        lead_time_days: 1,
+        processes: ['cnc_milling', 'cnc_turning', 'sheet_metal_laser'],
+      },
+      {
+        id: 'ss304',
+        name: 'Stainless Steel 304',
+        category: 'stainless',
+        cost_per_kg: 8.50,
+        density: 8000,
+        availability: true,
+        lead_time_days: 2,
+        processes: ['cnc_milling', 'cnc_turning', 'sheet_metal_laser'],
+      },
+    ];
+
+    let filtered = materials;
+
+    if (filters?.process_type) {
+      filtered = filtered.filter(m => m.processes.includes(filters.process_type));
+    }
+
+    if (filters?.available_only) {
+      filtered = filtered.filter(m => m.availability);
+    }
+
+    return filtered;
+  }
+
+  /**
+   * Get finishes for instant quote catalog
+   */
+  async getFinishes(filters?: {
+    process_type?: ContractsV1.ProcessType;
+    material_id?: string;
+  }): Promise<FinishCatalogItem[]> {
+    // Mock data for instant quote
+    const finishes: FinishCatalogItem[] = [
+      {
+        id: 'anodize_clear',
+        name: 'Clear Anodize Type II',
+        category: 'anodizing',
+        cost_per_area: 0.12,
+        lead_time_days: 3,
+        processes: ['cnc_milling', 'cnc_turning', 'sheet_metal_laser'],
+      },
+      {
+        id: 'anodize_black',
+        name: 'Black Anodize Type II',
+        category: 'anodizing',
+        cost_per_area: 0.15,
+        lead_time_days: 3,
+        processes: ['cnc_milling', 'cnc_turning', 'sheet_metal_laser'],
+      },
+      {
+        id: 'powder_coat_black',
+        name: 'Black Powder Coat',
+        category: 'coating',
+        cost_per_area: 0.08,
+        lead_time_days: 5,
+        processes: ['cnc_milling', 'sheet_metal_laser'],
+      },
+      {
+        id: 'as_machined',
+        name: 'As Machined',
+        category: 'machined',
+        cost_per_part: 0,
+        lead_time_days: 0,
+        processes: ['cnc_milling', 'cnc_turning', 'sheet_metal_laser'],
+      },
+    ];
+
+    let filtered = finishes;
+
+    if (filters?.process_type) {
+      filtered = filtered.filter(f => f.processes.includes(filters.process_type));
+    }
+
+    // Basic material compatibility
+    if (filters?.material_id?.startsWith('al')) {
+      filtered = filtered.filter(f => 
+        f.category === 'anodizing' || 
+        f.category === 'coating' || 
+        f.category === 'machined'
+      );
+    }
+
+    return filtered;
+  }
+
+  /**
+   * Get material by ID
+   */
+  async getMaterialById(id: string): Promise<MaterialCatalogItem | null> {
+    const materials = await this.getMaterials();
+    return materials.find(m => m.id === id) || null;
+  }
+
+  /**
+   * Get finish by ID
+   */
+  async getFinishById(id: string): Promise<FinishCatalogItem | null> {
+    const finishes = await this.getFinishes();
+    return finishes.find(f => f.id === id) || null;
   }
 }

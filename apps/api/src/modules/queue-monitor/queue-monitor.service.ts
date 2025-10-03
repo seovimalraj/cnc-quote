@@ -1,16 +1,23 @@
-import { Injectable } from "@nestjs/common";
+import { Injectable, Logger } from "@nestjs/common";
 import { InjectQueue } from "@nestjs/bullmq";
 import { Queue } from "bullmq";
 import { QueueJobData, QueueStats } from "./queue-monitor.types";
-import { JobCounts, QueueHealth, QueueMetrics as _QueueMetrics, QueueHealthMetrics } from "./queue-monitor.metrics";
+import { JobCounts, QueueHealth, QueueHealthMetrics } from "./queue-monitor.metrics";
+import { MetricsService } from '../metrics/metrics.service';
 
 @Injectable()
 export class QueueMonitorService {
+  private readonly logger = new Logger(QueueMonitorService.name);
+  private readonly perfSampleIntervalMs = parseInt(process.env.QUEUE_PERF_SAMPLE_MS || '60000');
+  private lastPerfSample = 0;
   constructor(
     @InjectQueue("cad") private readonly cadQueue: Queue,
     @InjectQueue("pricing") private readonly pricingQueue: Queue,
     @InjectQueue("email") private readonly emailQueue: Queue,
     @InjectQueue("pdf") private readonly pdfQueue: Queue,
+    @InjectQueue("qap") private readonly qapQueue: Queue,
+    @InjectQueue("files") private readonly filesQueue: Queue,
+    private readonly metricsService: MetricsService,
   ) {}
 
   async getQueueStatus(window: string = '1h') {
@@ -50,6 +57,11 @@ export class QueueMonitorService {
       })
     );
 
+    // Emit queue health gauges
+    for (const r of results) {
+      this.metricsService.queueOldestJobAge.set({ queue: r.name }, r.oldest_job_age_sec);
+      this.metricsService.queueFailed24h.set({ queue: r.name }, r.failed_24h);
+    }
     return { queues: results };
   }
 
@@ -270,7 +282,8 @@ export class QueueMonitorService {
   }
 
   private parseTimeWindow(window: string): number {
-    const match = window.match(/^(\d+)([smhd])$/);
+  const regex = /^(\d+)([smhd])$/;
+  const match = regex.exec(window);
     if (!match) return 60 * 60 * 1000; // Default 1h
 
     const [, num, unit] = match;
@@ -279,17 +292,15 @@ export class QueueMonitorService {
   }
 
   async getQueueCounts(): Promise<Record<string, JobCounts>> {
-    const [cad, pricing, pdf] = await Promise.all([
+    const [cad, pricing, pdf, qap, files] = await Promise.all([
       this.cadQueue.getJobCounts(),
       this.pricingQueue.getJobCounts(),
       this.pdfQueue.getJobCounts(),
+      this.qapQueue.getJobCounts(),
+      this.filesQueue.getJobCounts(),
     ]);
 
-    return {
-      cad,
-      pricing,
-      pdf,
-    };
+    return { cad, pricing, pdf, qap, files };
   }
 
   async getQueueStats(_queue: Queue, _active?: QueueJobData[]): Promise<QueueStats> {
@@ -322,11 +333,126 @@ export class QueueMonitorService {
   }
 
   async getQueueMetrics(): Promise<Record<string, unknown>> {
-    // Basic implementation for queue metrics
+    const counts = await this.getQueueCounts();
+    const metrics: Record<string, unknown> = {};
+    for (const [name, jobCounts] of Object.entries(counts)) {
+      // Update point-in-time gauges
+      this.metricsService.queueWaitingJobs.set({ queue: name }, jobCounts.waiting || 0);
+      this.metricsService.queueActiveJobs.set({ queue: name }, jobCounts.active || 0);
+
+      // Backlog age warnings (simple heuristic thresholds)
+      if ((jobCounts.waiting || 0) > 5000) {
+        this.logger.warn(`High backlog detected queue=${name} waiting=${jobCounts.waiting}`);
+      } else if ((jobCounts.waiting || 0) > 1000) {
+        this.logger.log(`Backlog elevated queue=${name} waiting=${jobCounts.waiting}`);
+      }
+
+      // Throttle performance sampling to configured interval
+      let perf: any = null;
+      const now = Date.now();
+      if (now - this.lastPerfSample >= this.perfSampleIntervalMs) {
+        perf = await this.sampleQueuePerformance(name);
+      }
+      metrics[name] = {
+        counts: jobCounts,
+        health: this.calculateQueueHealth(jobCounts),
+        performance: perf
+      };
+    }
+    if (Date.now() - this.lastPerfSample >= this.perfSampleIntervalMs) {
+      this.lastPerfSample = Date.now();
+    }
     return {
       timestamp: new Date().toISOString(),
-      queues: [],
+      overall_health: this.calculateOverallHealth(
+        Object.fromEntries(
+          Object.entries(metrics).map(([k, v]: [string, any]) => [k, { health: v.health }])
+        ) as Record<string, QueueHealthMetrics>
+      ),
+      queues: metrics,
     };
+  }
+
+  async getQueueHealthSummary() {
+    const data = await this.getQueueMetrics();
+    return {
+      timestamp: data.timestamp,
+      overall_health: data.overall_health,
+      queue_health: Object.fromEntries(
+        Object.entries((data as any).queues).map(([k, v]: [string, any]) => [k, v.health])
+      ),
+      performance: Object.fromEntries(
+        Object.entries((data as any).queues).map(([k, v]: [string, any]) => [k, v.performance])
+      )
+    };
+  }
+
+  /**
+   * Sample queue performance metrics.
+   * In a production system you'd persist job timing metadata (enqueue -> active, active -> completed) either
+   * via BullMQ events or job data augmentation. Here we approximate using last N completed jobs and simulated timestamps.
+   */
+  private async sampleQueuePerformance(queueName: string) {
+    const queue = this.getQueueByName(queueName);
+    if (!queue) return null;
+    // Fetch a slice of recent completed & active jobs
+  const completed = await queue.getCompleted(0, 50);
+    const now = Date.now();
+
+    const waitSamples: number[] = [];
+    const processSamples: number[] = [];
+
+    for (const job of completed) {
+      // BullMQ doesn't store explicit start time by default; we approximate with timestamp (added) & finishedOn
+      if (job.finishedOn) {
+        const enqueueTs = job.timestamp; // when added
+        const finishTs = job.finishedOn;
+        const totalMs = finishTs - enqueueTs;
+        // Heuristic: assume processing time is 60% of total, waiting 40% (placeholder until instrumentation added)
+        const processMs = Math.max(1, totalMs * 0.6);
+        const waitMs = Math.max(0, totalMs - processMs);
+        waitSamples.push(waitMs);
+        processSamples.push(processMs);
+        this.metricsService.queueWaitTimeMs.observe({ queue: queueName }, waitMs);
+        this.metricsService.queueProcessTimeMs.observe({ queue: queueName }, processMs);
+      }
+    }
+
+    // Compute throughput: completed jobs finished in last 5 minutes / 5
+    const windowMs = 5 * 60 * 1000;
+    const recentCompleted = completed.filter(j => j.finishedOn && (now - j.finishedOn) < windowMs);
+    const throughputPerMin = recentCompleted.length / 5;
+    this.metricsService.queueThroughputPerMin.set({ queue: queueName }, throughputPerMin);
+
+    return {
+      samples: completed.length,
+      throughput_per_min: throughputPerMin,
+      wait_ms: this.basicStats(waitSamples),
+      process_ms: this.basicStats(processSamples)
+    };
+  }
+
+  private basicStats(arr: number[]) {
+    if (arr.length === 0) return { p50: 0, p90: 0, p99: 0, avg: 0 };
+    const sorted = [...arr].sort((a,b)=>a-b);
+    const pct = (p: number) => sorted[Math.min(sorted.length-1, Math.floor(p/100 * sorted.length))];
+    const sum = sorted.reduce((s,v)=>s+v,0);
+    return {
+      p50: pct(50),
+      p90: pct(90),
+      p99: pct(99),
+      avg: sum / sorted.length
+    };
+  }
+
+  /** Public method for explicit performance view */
+  async getQueuePerformance() {
+    const queues = ['cad:analyze','pdf:render','pricing:calculate'];
+    const data: Record<string, any> = {};
+    for (const q of queues) {
+      data[q] = await this.sampleQueuePerformance(q);
+    }
+    return { timestamp: new Date().toISOString(), queues: data };
   }
 
   private calculateQueueHealth(counts: JobCounts): "healthy" | "degraded" | "unhealthy" {

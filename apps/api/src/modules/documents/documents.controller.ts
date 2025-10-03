@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Post, Put, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post, Put, Query, Req, UseGuards } from '@nestjs/common';
 import { DocumentsService } from './documents.service';
 import { AuthGuard } from '@nestjs/passport';
 import { OrgGuard } from '../../auth/org.guard';
@@ -152,10 +152,19 @@ export class DocumentsController {
   @Delete('files/:id')
   @UseGuards(AuthGuard('jwt'), OrgGuard)
   async deleteFile(
+    @Req() req: any,
     @Param('id') fileId: string,
     @ReqUser() user: { id: string },
   ) {
-    return this.documentsService.deleteFile(fileId, user.id);
+    req.audit = {
+      action: 'FILE_DELETED',
+      resourceType: 'file',
+      resourceId: fileId,
+      before: null,
+    };
+    const result = await this.documentsService.deleteFile(fileId, user.id);
+    req.audit.after = { status: 'deleted' };
+    return result;
   }
 
   // Bulk Operations
@@ -171,10 +180,19 @@ export class DocumentsController {
   @Post('files/bulk-delete')
   @UseGuards(AuthGuard('jwt'), OrgGuard)
   async bulkDelete(
+    @Req() req: any,
     @Body() body: { files: string[] },
     @ReqUser() user: { id: string },
   ) {
-    return this.documentsService.bulkDelete(body.files, user.id);
+    req.audit = {
+      action: 'FILE_DELETED',
+      resourceType: 'file',
+      resourceId: undefined,
+      before: { files: body.files },
+    };
+    const result = await this.documentsService.bulkDelete(body.files, user.id);
+    req.audit.after = { deleted: body.files.length };
+    return result;
   }
 
   @Post('files/bulk-tag')

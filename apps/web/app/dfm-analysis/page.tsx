@@ -28,13 +28,30 @@ import PublicLayout from '@/components/PublicLayout';
 interface DFMOptions {
   tolerances: Array<{ id: string; name: string; description: string }>;
   finishes: Array<{ id: string; name: string; description: string }>;
+  materials: MaterialOption[];
   industries: Array<{ id: string; name: string; description: string }>;
   certifications: Array<{ id: string; name: string; description: string }>;
   criticality: Array<{ id: string; name: string; description: string }>;
 }
 
+interface MaterialOption {
+  id: string;
+  code?: string;
+  name: string;
+  description?: string;
+  category?: string;
+  is_metal?: boolean;
+  density_g_cm3?: number | null;
+  elastic_modulus_gpa?: number | null;
+  hardness_hv?: number | null;
+  max_operating_temp_c?: number | null;
+  machinability_rating?: number | null;
+  notes?: string | null;
+}
+
 interface FormData {
   cadFile: File | null;
+  materialId: string;
   tolerancePack: string;
   surfaceFinish: string;
   industry: string;
@@ -79,6 +96,11 @@ export default function DFMAnalysisPage() {
       { id: 'bead_blast', name: 'Bead Blast', description: 'Smooth surface finish' },
       { id: 'anodized', name: 'Anodized', description: 'Corrosion resistant coating' }
     ],
+    materials: [
+      { id: '6061-T6', name: 'Aluminum 6061-T6', description: 'Balanced strength and machinability (default)', density_g_cm3: 2.7, machinability_rating: 75 },
+      { id: '304-SS', name: 'Stainless Steel 304', description: 'General corrosion resistance', density_g_cm3: 8.0, machinability_rating: 45 },
+      { id: 'PEEK-NT', name: 'PEEK (Natural)', description: 'High-performance thermoplastic', density_g_cm3: 1.3, machinability_rating: 60 }
+    ],
     industries: [
       { id: 'aerospace', name: 'Aerospace', description: 'Aerospace and defense' },
       { id: 'automotive', name: 'Automotive', description: 'Automotive industry' },
@@ -99,6 +121,7 @@ export default function DFMAnalysisPage() {
   });
   const [formData, setFormData] = useState<FormData>({
     cadFile: null,
+    materialId: '',
     tolerancePack: '',
     surfaceFinish: '',
     industry: '',
@@ -112,6 +135,10 @@ export default function DFMAnalysisPage() {
   const [error, setError] = useState<string | null>(null);
   const [dragActive, setDragActive] = useState(false);
 
+  const selectedMaterial = formData.materialId
+    ? options.materials.find((material) => material.id === formData.materialId)
+    : undefined;
+
   useEffect(() => {
     loadOptions();
   }, []);
@@ -119,12 +146,13 @@ export default function DFMAnalysisPage() {
   const loadOptions = async () => {
     try {
       setIsLoading(true);
-      const [tolerancesRes, finishesRes, industriesRes, certificationsRes, criticalityRes] = await Promise.all([
-        fetch('/api/dfm/options/tolerances').catch(() => ({ ok: false })),
-        fetch('/api/dfm/options/finishes').catch(() => ({ ok: false })),
-        fetch('/api/dfm/options/industries').catch(() => ({ ok: false })),
-        fetch('/api/dfm/options/certifications').catch(() => ({ ok: false })),
-        fetch('/api/dfm/options/criticality').catch(() => ({ ok: false }))
+      const [tolerancesRes, finishesRes, materialsRes, industriesRes, certificationsRes, criticalityRes] = await Promise.all([
+        fetch('/api/dfm/options/tolerances').catch(() => null),
+        fetch('/api/dfm/options/finishes').catch(() => null),
+        fetch('/api/dfm/options/materials').catch(() => null),
+        fetch('/api/dfm/options/industries').catch(() => null),
+        fetch('/api/dfm/options/certifications').catch(() => null),
+        fetch('/api/dfm/options/criticality').catch(() => null)
       ]);
 
       // Provide fallback mock data if API fails
@@ -138,6 +166,13 @@ export default function DFMAnalysisPage() {
         { id: 'as_machined', name: 'As Machined', description: 'No additional finishing' },
         { id: 'bead_blast', name: 'Bead Blast', description: 'Smooth surface finish' },
         { id: 'anodized', name: 'Anodized', description: 'Corrosion resistant coating' }
+      ];
+
+      const mockMaterials: MaterialOption[] = [
+        { id: '6061-T6', code: '6061-T6', name: 'Aluminum 6061-T6', description: 'Balanced strength and machinability.', density_g_cm3: 2.7, machinability_rating: 75, category: 'Aluminum', is_metal: true },
+        { id: '7075-T6', code: '7075-T6', name: 'Aluminum 7075-T6', description: 'High-strength aerospace alloy.', density_g_cm3: 2.81, machinability_rating: 55, category: 'Aluminum', is_metal: true },
+        { id: '304-SS', code: '304-SS', name: 'Stainless Steel 304', description: 'General corrosion resistance.', density_g_cm3: 8.0, machinability_rating: 45, category: 'Stainless Steel', is_metal: true },
+        { id: 'PEEK-NT', code: 'PEEK-NT', name: 'PEEK (Natural)', description: 'High-performance thermoplastic.', density_g_cm3: 1.3, machinability_rating: 60, category: 'Polymer', is_metal: false }
       ];
 
       const mockIndustries = [
@@ -160,17 +195,19 @@ export default function DFMAnalysisPage() {
         { id: 'extreme', name: 'Extreme', description: 'Mission-critical component' }
       ];
 
-      const [tolerances, finishes, industries, certifications, criticality] = await Promise.all([
-        tolerancesRes.ok ? tolerancesRes.json() : Promise.resolve(mockTolerances),
-        finishesRes.ok ? finishesRes.json() : Promise.resolve(mockFinishes),
-        industriesRes.ok ? industriesRes.json() : Promise.resolve(mockIndustries),
-        certificationsRes.ok ? certificationsRes.json() : Promise.resolve(mockCertifications),
-        criticalityRes.ok ? criticalityRes.json() : Promise.resolve(mockCriticality)
+      const [tolerances, finishes, materials, industries, certifications, criticality] = await Promise.all([
+        tolerancesRes?.ok ? tolerancesRes.json() : Promise.resolve(mockTolerances),
+        finishesRes?.ok ? finishesRes.json() : Promise.resolve(mockFinishes),
+        materialsRes?.ok ? materialsRes.json() : Promise.resolve(mockMaterials),
+        industriesRes?.ok ? industriesRes.json() : Promise.resolve(mockIndustries),
+        certificationsRes?.ok ? certificationsRes.json() : Promise.resolve(mockCertifications),
+        criticalityRes?.ok ? criticalityRes.json() : Promise.resolve(mockCriticality)
       ]);
 
       setOptions({
         tolerances,
         finishes,
+        materials,
         industries,
         certifications,
         criticality
@@ -281,7 +318,7 @@ export default function DFMAnalysisPage() {
       return;
     }
 
-    if (!formData.tolerancePack || !formData.surfaceFinish || !formData.industry || !formData.criticality) {
+    if (!formData.materialId || !formData.tolerancePack || !formData.surfaceFinish || !formData.industry || !formData.criticality) {
       setError('Please fill in all required fields');
       return;
     }
@@ -317,6 +354,7 @@ export default function DFMAnalysisPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           fileId,
+          materialId: formData.materialId,
           tolerancePack: formData.tolerancePack,
           surfaceFinish: formData.surfaceFinish,
           industry: formData.industry,
@@ -445,12 +483,56 @@ export default function DFMAnalysisPage() {
                     </div>
                   </div>
 
-                  {/* Tolerance Pack */}
+                  {/* Material Selection */}
                   <div className="space-y-2">
-                    <Label htmlFor="tolerancePack">Tolerance Pack</Label>
+                    <Label htmlFor="materialId">Material *</Label>
+                    <Select
+                      value={formData.materialId}
+                      onValueChange={(value) => setFormData(prev => ({ ...prev, materialId: value }))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select material" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {(options?.materials || []).map((material) => (
+                          <SelectItem key={material.id} value={material.id}>
+                            {material.name}{material.category ? ` — ${material.category}` : ''}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {selectedMaterial && (
+                      <div className="rounded-md border border-gray-200 bg-gray-50 p-3 text-xs text-gray-600 space-y-1">
+                        {selectedMaterial.description && (
+                          <p className="font-medium text-gray-700">{selectedMaterial.description}</p>
+                        )}
+                        <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+                          {selectedMaterial.density_g_cm3 ? (
+                            <p>Density: {selectedMaterial.density_g_cm3.toFixed(2)} g/cm³</p>
+                          ) : null}
+                          {typeof selectedMaterial.machinability_rating === 'number' ? (
+                            <p>Machinability: {selectedMaterial.machinability_rating}/100</p>
+                          ) : null}
+                          {selectedMaterial.max_operating_temp_c ? (
+                            <p>Max Temp: {selectedMaterial.max_operating_temp_c}°C</p>
+                          ) : null}
+                          {selectedMaterial.elastic_modulus_gpa ? (
+                            <p>Elastic Modulus: {selectedMaterial.elastic_modulus_gpa} GPa</p>
+                          ) : null}
+                        </div>
+                        {selectedMaterial.notes && (
+                          <p className="text-gray-500">Notes: {selectedMaterial.notes}</p>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Tolerance Specification */}
+                  <div className="space-y-2">
+                    <Label htmlFor="tolerancePack">Tolerance Specification *</Label>
                     <Select value={formData.tolerancePack} onValueChange={(value) => setFormData(prev => ({ ...prev, tolerancePack: value }))}>
                       <SelectTrigger>
-                        <SelectValue placeholder="Select tolerance pack" />
+                        <SelectValue placeholder="Select tolerance specification" />
                       </SelectTrigger>
                       <SelectContent>
                         {(options?.tolerances || []).map((tolerance) => (
@@ -464,50 +546,13 @@ export default function DFMAnalysisPage() {
 
                   {/* Surface Finish */}
                   <div className="space-y-2">
-                    <Label htmlFor="surfaceFinish">Surface Finish</Label>
+                    <Label htmlFor="surfaceFinish">Surface Finish *</Label>
                     <Select value={formData.surfaceFinish} onValueChange={(value) => setFormData(prev => ({ ...prev, surfaceFinish: value }))}>
                       <SelectTrigger>
                         <SelectValue placeholder="Select surface finish" />
                       </SelectTrigger>
                       <SelectContent>
                         {(options?.finishes || []).map((finish) => (
-                          <SelectItem key={finish.id} value={finish.id}>
-                            {finish.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  {/* Tolerance Selection */}
-                  <div>
-                    <Label htmlFor="tolerance-select">Tolerance Pack</Label>
-                    <Select value={selectedTolerance} onValueChange={setSelectedTolerance}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select tolerance pack" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {options?.tolerances.map((tolerance) => (
-                          <SelectItem key={tolerance.id} value={tolerance.id}>
-                            {tolerance.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  {/* Surface Finish */}
-                  <div>
-                    <Label htmlFor="surfaceFinish">Surface Finish *</Label>
-                    <Select
-                      value={formData.surfaceFinish}
-                      onValueChange={(value) => setFormData(prev => ({ ...prev, surfaceFinish: value }))}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select surface finish" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {options?.finishes.map((finish) => (
                           <SelectItem key={finish.id} value={finish.id}>
                             {finish.name}
                           </SelectItem>

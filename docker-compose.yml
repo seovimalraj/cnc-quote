@@ -19,9 +19,18 @@ services:
       - SUPABASE_URL=https://quote.frigate.ai/db
       - SUPABASE_SERVICE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU
       - APP_URL=https://quote.frigate.ai
+      # Step 19: OpenTelemetry configuration
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
+      - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
+      - OTEL_RESOURCE_SERVICE_NAME=api
+      - OTEL_RESOURCE_SERVICE_VERSION=1.0.0
+      - TRACE_SAMPLING_RATE=0.1
+      - LOG_LEVEL=info
+      - ENVIRONMENT=production
     depends_on:
       - db
       - redis
+      - otel-collector
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3001/v1/health"]
       interval: 30s
@@ -40,9 +49,18 @@ services:
       - DATABASE_URL=postgresql://postgres:Nb+a5meKduZsNG/HtSaSktBQYbdB8mcb@db:5432/cnc_quote
       - REDIS_URL=redis://redis:6379
       - PORT=10001
+      # Step 19: OpenTelemetry configuration
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
+      - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
+      - SERVICE_NAME=cad
+      - SERVICE_VERSION=1.0.0
+      - TRACE_SAMPLING_RATE=0.1
+      - LOG_LEVEL=INFO
+      - ENVIRONMENT=production
     depends_on:
       - db
       - redis
+      - otel-collector
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:10001/health"]
       interval: 30s
@@ -57,6 +75,7 @@ services:
     ports:
       - "3000:3000"
     environment:
+      - NODE_ENV=production
       - NEXT_PUBLIC_API_URL=https://quote.frigate.ai/api
       - NEXT_PUBLIC_CAD_SERVICE_URL=https://quote.frigate.ai/cad
     depends_on:
@@ -92,6 +111,42 @@ services:
       timeout: 5s
       retries: 5
 
+  # Step 18: BullMQ Worker Service
+  worker:
+    build:
+      context: .
+      dockerfile: apps/worker/Dockerfile
+    environment:
+      - NODE_ENV=production
+      - REDIS_URL=redis://redis:6379
+      - WORKER_CONCURRENCY_DEFAULT=4
+      - API_BASE_URL=http://api:3001
+      - CAD_SERVICE_URL=http://cad-service:10001
+      - HEALTH_PORT=3001
+      - WORKER_SECRET=${WORKER_SECRET:-dev-secret-change-in-prod}
+      - JOB_TTL_SECONDS=604800
+      - WORKER_MAX_ATTEMPTS=5
+      # Step 19: OpenTelemetry configuration
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
+      - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
+      - OTEL_RESOURCE_SERVICE_NAME_WORKER=worker
+      - SERVICE_VERSION=1.0.0
+      - TRACE_SAMPLING_RATE=0.1
+      - LOG_LEVEL=info
+      - ENVIRONMENT=production
+    depends_on:
+      - redis
+      - api
+      - cad-service
+      - otel-collector
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    restart: unless-stopped
+
   prometheus:
     image: prom/prometheus
     ports:
@@ -112,6 +167,64 @@ services:
     volumes:
       - ./monitoring/grafana:/etc/grafana/provisioning
       - grafana_data:/var/lib/grafana
+
+  # Step 19: OpenTelemetry Collector
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:latest
+    ports:
+      - "4317:4317"   # OTLP gRPC receiver
+      - "4318:4318"   # OTLP HTTP receiver
+      - "8889:8889"   # Prometheus exporter
+      - "13133:13133" # Health check
+      - "55679:55679" # zPages for debugging
+    volumes:
+      - ./config/otel-collector-config.yaml:/etc/otel-collector-config.yaml
+    command: ["--config=/etc/otel-collector-config.yaml"]
+    environment:
+      - ENVIRONMENT=${ENVIRONMENT:-development}
+      - TEMPO_ENDPOINT=tempo:4317
+      - LOKI_ENDPOINT=http://loki:3100/loki/api/v1/push
+    depends_on:
+      - tempo
+      - loki
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:13133"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Tempo: Distributed tracing backend
+  tempo:
+    image: grafana/tempo:latest
+    ports:
+      - "3200:3200"   # HTTP API
+      - "4317"        # OTLP gRPC (internal)
+    volumes:
+      - tempo_data:/var/tempo
+    command:
+      - "-config.file=/etc/tempo-config.yaml"
+    configs:
+      - source: tempo_config
+        target: /etc/tempo-config.yaml
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3200/ready"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Loki: Log aggregation system
+  loki:
+    image: grafana/loki:latest
+    ports:
+      - "3100:3100"   # HTTP API
+    volumes:
+      - loki_data:/loki
+    command: -config.file=/etc/loki/local-config.yaml
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3100/ready"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
   # Sentry Error Tracking
   sentry:
@@ -215,3 +328,31 @@ volumes:
   sonarqube_data:
   sonarqube_extensions:
   sonarqube_logs:
+  tempo_data:
+  loki_data:
+
+# Step 19: Configuration files for observability
+configs:
+  tempo_config:
+    content: |
+      server:
+        http_listen_port: 3200
+      
+      distributor:
+        receivers:
+          otlp:
+            protocols:
+              grpc:
+                endpoint: 0.0.0.0:4317
+      
+      storage:
+        trace:
+          backend: local
+          local:
+            path: /var/tempo/traces
+          wal:
+            path: /var/tempo/wal
+          pool:
+            max_workers: 100
+            queue_depth: 10000
+

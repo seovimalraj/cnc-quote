@@ -65,9 +65,10 @@ export class GenerateQapDocumentDto {
   @IsUUID()
   orderId: string;
 
-  @ApiProperty()
+  @ApiPropertyOptional()
+  @IsOptional()
   @IsUUID()
-  orderItemId: string;
+  orderItemId?: string | null;
 
   @ApiProperty()
   @IsObject()

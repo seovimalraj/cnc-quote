@@ -4,37 +4,63 @@ import os
 
 from .routers import analyze, gltf, health
 from .workers.celery import celery_app
+from . import otel
+from . import logging_config
 
-app = FastAPI(
-    title="CAD Service",
-    description="CAD analysis and conversion service for CNC Quote",
-    version="1.0.0",
-    docs_url="/docs",
-    redoc_url="/redoc"
-)
+# Initialize OpenTelemetry first
+otel_initialized = False
 
-# CORS middleware
-ALLOWED_ORIGINS = [
-    "https://cnc-quote-web.onrender.com",
-    "https://cnc-quote-api.onrender.com",
-]
-if os.getenv("NODE_ENV") == "development":
-    ALLOWED_ORIGINS.append("http://localhost:3000")
+def create_app():
+    global otel_initialized
+    
+    app = FastAPI(
+        title="CAD Service",
+        description="CAD analysis and conversion service for CNC Quote",
+        version="1.0.0",
+        docs_url="/docs",
+        redoc_url="/redoc"
+    )
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=ALLOWED_ORIGINS,
-    allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allow_headers=["Content-Type", "Authorization"],
-    max_age=3600,
-)
+    # Initialize observability (once)
+    if not otel_initialized:
+        # Initialize structured logging
+        logging_config  # Module initialization happens on import
+        
+        # Instrument app with OpenTelemetry
+        otel.instrument_app(app)
+        otel_initialized = True
 
-# Include routers
-app.include_router(analyze.router, prefix="/analyze", tags=["analyze"])
-app.include_router(gltf.router, prefix="/gltf", tags=["gltf"])
-app.include_router(health.router, tags=["health"])
+    # CORS middleware
+    ALLOWED_ORIGINS = [
+        "https://cnc-quote-web.onrender.com",
+        "https://cnc-quote-api.onrender.com",
+    ]
+    if os.getenv("NODE_ENV") == "development":
+        ALLOWED_ORIGINS.append("http://localhost:3000")
 
-@app.get("/")
-async def root():
-    return {"message": "CAD Service API", "version": "1.0.0"}
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=ALLOWED_ORIGINS,
+        allow_credentials=True,
+        allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+        allow_headers=["Content-Type", "Authorization"],
+        max_age=3600,
+    )
+
+    # Include routers
+    app.include_router(analyze.router, prefix="/analyze", tags=["analyze"])
+    app.include_router(gltf.router, prefix="/gltf", tags=["gltf"])
+    app.include_router(health.router, tags=["health"])
+
+    @app.get("/")
+    async def root():
+        return {"message": "CAD Service API", "version": "1.0.0"}
+    
+    return app
+
+# Create app instance
+app = create_app()
+
+# Graceful shutdown handler
+import atexit
+atexit.register(otel.shutdown)

@@ -1,12 +1,8 @@
-// These are unused so we prefix with _
-import type { Stripe as _Stripe } from "stripe";
-import type * as _paypal from "@paypal/checkout-server-sdk";
-
-export type PaymentProvider = "stripe" | "paypal";
+export type PaymentProvider = "paypal";
 
 export interface PaymentSessionResult {
   provider: PaymentProvider;
-  sessionId?: string;
+  sessionId?: string; // Reserved (not used for PayPal)
   orderId?: string;
   url: string;
   error?: string;
@@ -28,7 +24,7 @@ export interface OrderDetails {
   status: string;
   total_amount: number;
   currency: string;
-  created_by: string;
+  created_by?: string | null;
   items: OrderItem[];
   customer?: {
     email: string;

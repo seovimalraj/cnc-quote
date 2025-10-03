@@ -6,6 +6,7 @@ export async function POST(request: NextRequest) {
   try {
     const {
       fileId,
+      materialId,
       tolerancePack,
       surfaceFinish,
       industry,
@@ -14,7 +15,7 @@ export async function POST(request: NextRequest) {
       notes
     } = await request.json();
 
-    if (!fileId || !tolerancePack || !surfaceFinish || !industry || !criticality) {
+    if (!fileId || !materialId || !tolerancePack || !surfaceFinish || !industry || !criticality) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
@@ -35,6 +36,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'File not found or access denied' }, { status: 404 });
     }
 
+    const { data: materialData, error: materialError } = await supabase
+      .from('dfm_material_options')
+      .select('id, code, name, published')
+      .eq('id', materialId)
+      .single();
+
+    if (materialError || !materialData || !materialData.published) {
+      return NextResponse.json({ error: 'Selected material is unavailable' }, { status: 400 });
+    }
+
     // Create DFM request
     const requestId = uuidv4();
     const { error: requestError } = await supabase
@@ -45,6 +56,9 @@ export async function POST(request: NextRequest) {
         file_name: fileData.file_name,
         organization_id: user?.id,
         user_id: user?.id,
+        material_id: materialData.id,
+        material_code: materialData.code,
+        material_name: materialData.name,
         tolerance_pack: tolerancePack,
         surface_finish: surfaceFinish,
         industry,
@@ -69,6 +83,9 @@ export async function POST(request: NextRequest) {
         organization_id: user?.id,
         properties: {
           file_id: fileId,
+          material_id: materialData.id,
+          material_code: materialData.code,
+          material_name: materialData.name,
           tolerance_pack: tolerancePack,
           surface_finish: surfaceFinish,
           industry,

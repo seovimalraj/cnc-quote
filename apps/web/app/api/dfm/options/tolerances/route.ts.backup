@@ -1,0 +1,39 @@
+import { NextRequest, NextResponse } from 'next/server';
+
+export async function GET(request: NextRequest) {
+  try {
+    // For now, return mock data since Supabase client is having connection issues
+    const mockTolerances = [
+      {
+        id: '1',
+        name: 'Standard',
+        description: 'Standard tolerance ±0.1mm',
+        published: true,
+        created_at: new Date().toISOString()
+      },
+      {
+        id: '2', 
+        name: 'Tight',
+        description: 'Tight tolerance ±0.05mm',
+        published: true,
+        created_at: new Date().toISOString()
+      },
+      {
+        id: '3',
+        name: 'Precision', 
+        description: 'Precision tolerance ±0.025mm',
+        published: true,
+        created_at: new Date().toISOString()
+      }
+    ];
+
+    return NextResponse.json(mockTolerances);
+
+  } catch (error) {
+    console.error('DFM tolerances fetch error:', error);
+    return NextResponse.json(
+      { error: 'Failed to fetch tolerance options' },
+      { status: 500 }
+    );
+  }
+}

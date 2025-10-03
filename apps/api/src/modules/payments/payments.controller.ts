@@ -1,5 +1,4 @@
-import { Body, Controller, Headers, Post, RawBodyRequest, Req, Param, UsePipes, ValidationPipe } from "@nestjs/common";
-import { Request } from "express";
+import { Body, Controller, Post, Param, Req, UsePipes, ValidationPipe } from "@nestjs/common";
 import { PaymentsService } from "./payments.service";
 import { CreateCheckoutSessionDto, CapturePayPalOrderDto } from "./payments.dto";
 import { ApiTags, ApiOperation, ApiBody } from "@nestjs/swagger";
@@ -11,24 +10,34 @@ export class PaymentsController {
   constructor(private readonly paymentsService: PaymentsService) {}
 
   @Post("create-checkout-session")
-  @ApiOperation({ summary: "Create a new payment checkout session" })
+  @ApiOperation({ summary: "Create a new PayPal checkout session" })
   @ApiBody({ type: CreateCheckoutSessionDto })
-  async createCheckoutSession(@Body() createCheckoutSessionDto: CreateCheckoutSessionDto) {
-    return this.paymentsService.createCheckoutSession(
-      createCheckoutSessionDto.quoteId,
-      createCheckoutSessionDto.provider,
-    );
+  async createCheckoutSession(
+    @Req() req: any,
+    @Body() createCheckoutSessionDto: CreateCheckoutSessionDto,
+  ) {
+    req.audit = {
+      action: 'PAYMENT_METHOD_ADDED',
+      resourceType: 'payment',
+      resourceId: createCheckoutSessionDto.quoteId,
+      before: null,
+    };
+    const result = await this.paymentsService.createCheckoutSession(createCheckoutSessionDto.quoteId);
+    req.audit.after = { quoteId: createCheckoutSessionDto.quoteId };
+    return result;
   }
 
   @Post("paypal/capture/:orderId")
   @ApiOperation({ summary: "Capture a PayPal payment" })
-  async capturePayPalOrder(@Param() { orderId }: CapturePayPalOrderDto) {
-    return this.paymentsService.capturePayPalOrder(orderId);
-  }
-
-  @Post("webhook")
-  @ApiOperation({ summary: "Handle Stripe webhook events" })
-  async handleWebhook(@Headers("stripe-signature") signature: string, @Req() request: RawBodyRequest<Request>) {
-    return this.paymentsService.handleWebhook(signature, request.rawBody);
+  async capturePayPalOrder(@Req() req: any, @Param() { orderId }: CapturePayPalOrderDto) {
+    req.audit = {
+      action: 'INVOICE_ISSUED',
+      resourceType: 'payment',
+      resourceId: orderId,
+      before: null,
+    };
+    const result = await this.paymentsService.capturePayPalOrder(orderId);
+    req.audit.after = { orderId };
+    return result;
   }
 }

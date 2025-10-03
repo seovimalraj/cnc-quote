@@ -1,13 +1,8 @@
-import { IsString, IsOptional, IsEnum } from "class-validator";
-import { PaymentProvider } from "./payments.types";
+import { IsString } from "class-validator";
 
 export class CreateCheckoutSessionDto {
   @IsString()
   quoteId: string;
-
-  @IsOptional()
-  @IsEnum(["stripe", "paypal"] as const)
-  provider?: PaymentProvider;
 }
 
 export class CapturePayPalOrderDto {

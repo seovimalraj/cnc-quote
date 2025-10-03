@@ -1,14 +1,6 @@
 import React from 'react';
-import AdminLayout from '@/components/AdminLayout';
+import CustomerLayout from '@/components/CustomerLayout';
 
-export default function PortalLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
-  return (
-    <AdminLayout>
-      {children}
-    </AdminLayout>
-  );
+export default function PortalLayout({ children }: { readonly children: React.ReactNode }) {
+  return <CustomerLayout>{children}</CustomerLayout>;
 }

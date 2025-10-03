@@ -1,23 +1,26 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Put, Query, UploadedFile, UseGuards, UseInterceptors } from "@nestjs/common";
 import { FileInterceptor } from "@nestjs/platform-express";
 import { OrdersService } from "./orders.service";
-import { AuthGuard } from "@nestjs/passport";
+import { JwtAuthGuard } from "../../auth/jwt.guard";
 import { OrgGuard } from "../../auth/org.guard";
+import { PoliciesGuard } from "../../auth/policies.guard";
+import { Policies } from "../../auth/policies.decorator";
 import { ReqUser } from "../../auth/req-user.decorator";
 
 @Controller("orders")
+@UseGuards(JwtAuthGuard, OrgGuard, PoliciesGuard)
 export class OrdersController {
   constructor(private readonly ordersService: OrdersService) {}
 
   // Kanban Board Endpoints
   @Get("kanban/:orgId")
-  @UseGuards(AuthGuard("jwt"), OrgGuard)
+  @Policies({ action: 'view', resource: 'orders' })
   async getKanbanBoard(@Param("orgId") orgId: string) {
     return this.ordersService.getKanbanBoard(orgId);
   }
 
   @Post(":orderId/move")
-  @UseGuards(AuthGuard("jwt"), OrgGuard)
+  @Policies({ action: 'update', resource: 'orders' })
   async moveOrderInKanban(
     @Param("orderId") orderId: string,
     @Body("status") status: string,
@@ -28,13 +31,13 @@ export class OrdersController {
 
   // Order Details Endpoints
   @Get("details/:orderId")
-  @UseGuards(AuthGuard("jwt"), OrgGuard)
+  @Policies({ action: 'view', resource: 'orders' })
   async getOrderDetails(@Param("orderId") orderId: string) {
     return this.ordersService.getOrderDetails(orderId);
   }
 
   @Patch(":orderId/priority")
-  @UseGuards(AuthGuard("jwt"), OrgGuard)
+  @Policies({ action: 'update', resource: 'orders' })
   async updateOrderPriority(
     @Param("orderId") orderId: string,
     @Body("priority") priority: string,
@@ -45,7 +48,7 @@ export class OrdersController {
 
   // Work Order Endpoints
   @Post(":orderId/work-orders")
-  @UseGuards(AuthGuard("jwt"), OrgGuard)
+  @Policies({ action: 'create', resource: 'work_orders' })
   async createWorkOrder(
     @Param("orderId") orderId: string,
     @Body() workOrderData: any,
@@ -55,7 +58,7 @@ export class OrdersController {
   }
 
   @Put("work-orders/:workOrderId")
-  @UseGuards(AuthGuard("jwt"), OrgGuard)
+  @Policies({ action: 'update', resource: 'work_orders' })
   async updateWorkOrder(
     @Param("workOrderId") workOrderId: string,
     @Body() updates: any,
@@ -65,7 +68,7 @@ export class OrdersController {
   }
 
   @Post("work-orders/:workOrderId/assign")
-  @UseGuards(AuthGuard("jwt"), OrgGuard)
+  @Policies({ action: 'update', resource: 'work_orders' })
   async assignWorkOrder(
     @Param("workOrderId") workOrderId: string,
     @Body("assignedTo") assignedTo: string,
@@ -76,13 +79,13 @@ export class OrdersController {
 
   // QAP Document Endpoints
   @Get(":orderId/qap")
-  @UseGuards(AuthGuard("jwt"), OrgGuard)
+  @Policies({ action: 'view', resource: 'qap' })
   async getOrderQapDocuments(@Param("orderId") orderId: string) {
     return this.ordersService.getOrderQapDocuments(orderId);
   }
 
   @Put("qap/:qapId")
-  @UseGuards(AuthGuard("jwt"), OrgGuard)
+  @Policies({ action: 'update', resource: 'qap' })
   async updateQapDocument(
     @Param("qapId") qapId: string,
     @Body() updates: any,
@@ -93,7 +96,7 @@ export class OrdersController {
 
   // Document Management Endpoints
   @Post(":orderId/documents")
-  @UseGuards(AuthGuard("jwt"), OrgGuard)
+  @Policies({ action: 'upload', resource: 'documents' })
   @UseInterceptors(FileInterceptor("file"))
   async uploadOrderDocument(
     @Param("orderId") orderId: string,
@@ -108,21 +111,23 @@ export class OrdersController {
   }
 
   @Get(":orderId/documents")
-  @UseGuards(AuthGuard("jwt"), OrgGuard)
+  @Policies({ action: 'view', resource: 'documents' })
   async getOrderDocuments(@Param("orderId") orderId: string) {
     return this.ordersService.getOrderDocuments(orderId);
   }
 
   @Delete("documents/:documentId")
-  @UseGuards(AuthGuard("jwt"), OrgGuard)
-  async deleteOrderDocument(@Param("documentId") documentId: string) {
-    // TODO: Implement document deletion
-    return { success: true };
+  @Policies({ action: 'delete', resource: 'documents' })
+  async deleteOrderDocument(
+    @Param("documentId") documentId: string,
+    @ReqUser() user: { id: string },
+  ) {
+    return this.ordersService.deleteOrderDocument(documentId, user.id);
   }
 
   // Shipment Endpoints
   @Post(":orderId/shipments")
-  @UseGuards(AuthGuard("jwt"), OrgGuard)
+  @Policies({ action: 'create', resource: 'shipments' })
   async createShipment(
     @Param("orderId") orderId: string,
     @Body() shipmentData: any,
@@ -132,7 +137,7 @@ export class OrdersController {
   }
 
   @Put("shipments/:shipmentId")
-  @UseGuards(AuthGuard("jwt"), OrgGuard)
+  @Policies({ action: 'update', resource: 'shipments' })
   async updateShipment(
     @Param("shipmentId") shipmentId: string,
     @Body() updates: any,
@@ -142,14 +147,14 @@ export class OrdersController {
   }
 
   @Get(":orderId/shipments")
-  @UseGuards(AuthGuard("jwt"), OrgGuard)
+  @Policies({ action: 'view', resource: 'shipments' })
   async getOrderShipments(@Param("orderId") orderId: string) {
     return this.ordersService.getOrderShipments(orderId);
   }
 
   // Search and Filtering Endpoints
   @Get("search/:orgId")
-  @UseGuards(AuthGuard("jwt"), OrgGuard)
+  @Policies({ action: 'view', resource: 'orders' })
   async searchOrders(
     @Param("orgId") orgId: string,
     @Query() filters: any,
@@ -159,19 +164,26 @@ export class OrdersController {
 
   // Legacy Endpoints (keeping for compatibility)
   @Get(":orderId")
-  @UseGuards(AuthGuard("jwt"), OrgGuard)
+  @Policies({ action: 'view', resource: 'orders' })
   async getOrder(@Param("orderId") orderId: string) {
     return this.ordersService.getOrder(orderId);
   }
 
+  // Order Timeline (lean status/payment history) endpoint
+  @Get(":orderId/timeline")
+  @Policies({ action: 'view', resource: 'orders' })
+  async getOrderTimeline(@Param("orderId") orderId: string) {
+    return this.ordersService.getOrderTimeline(orderId);
+  }
+
   @Get("org/:orgId")
-  @UseGuards(AuthGuard("jwt"), OrgGuard)
+  @Policies({ action: 'view', resource: 'orders' })
   async getOrders(@Param("orgId") orgId: string) {
     return this.ordersService.getOrders(orgId);
   }
 
   @Post(":orderId/status")
-  @UseGuards(AuthGuard("jwt"), OrgGuard)
+  @Policies({ action: 'update', resource: 'orders' })
   async updateOrderStatus(
     @Param("orderId") orderId: string,
     @Body("status") status: string,
@@ -179,5 +191,16 @@ export class OrdersController {
     @ReqUser() user: { id: string },
   ) {
     return this.ordersService.updateOrderStatus(orderId, status, user.id, notes);
+  }
+
+  // Customer list endpoint: minimal filtered list (org + optional status + customerId)
+  @Get("customer/:orgId")
+  @Policies({ action: 'view', resource: 'orders' })
+  async getCustomerOrders(
+    @Param("orgId") orgId: string,
+    @Query("customerId") customerId?: string,
+    @Query("status") status?: string,
+  ) {
+    return this.ordersService.searchOrders(orgId, { customerId, status });
   }
 }

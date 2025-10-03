@@ -387,7 +387,7 @@ export default function QuoteDetailsPage() {
                         <div className="flex items-center space-x-2">
                           <Button variant="outline" size="sm">
                             <PencilIcon className="h-4 w-4 mr-2" />
-                            Edit
+                            Configure Part
                           </Button>
                           <Button variant="outline" size="sm">
                             <ArrowPathIcon className="h-4 w-4 mr-2" />
