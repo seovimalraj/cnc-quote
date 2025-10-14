@@ -1,0 +1,22 @@
+#!/bin/sh
+. "$(dirname "$0")/_/husky.sh"
+
+CHANGED=$(git diff --cached --name-only)
+if [ -z "$CHANGED" ]; then
+  exit 0
+fi
+
+echo "Checking admin surfaces for mock tokens..."
+STATUS=0
+for file in $CHANGED; do
+  case "$file" in
+    apps/web/app/\(admin\)/*|apps/web/app/admin/*|apps/web/src/features/admin/*)
+      if grep -Eiq '\b(mock|fixture|stub)\b' "$file"; then
+        echo "Blocked: $file contains mock tokens"
+        STATUS=1
+      fi
+      ;;
+  esac
+done
+
+exit $STATUS
