@@ -1,16 +1,11 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 
-export async function GET() {
-  try {
-    const mockCounts = {
-      needs_review: 1,
-      priced: 0,
-      sent: 0,
-      total: 1
-    };
+import { resolveApiUrl } from '@/app/api/_lib/backend';
+import { proxyFetch } from '@/app/api/_lib/proxyFetch';
 
-    return NextResponse.json(mockCounts);
-  } catch (error) {
-    return NextResponse.json({ error: 'Failed to fetch counts' }, { status: 500 });
-  }
+export async function GET(request: NextRequest) {
+  const upstream = await proxyFetch(request, resolveApiUrl('/admin/review/counts'), {
+    method: 'GET',
+  });
+  return upstream;
 }

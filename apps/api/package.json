@@ -11,6 +11,7 @@
     "prod": "node dist/main",
     "lint": "eslint \"{src,apps,libs,test}/**/*.ts\"",
     "test": "jest",
+    "test:node": "tsx --test __tests__/quotes.controller.vnext.spec.ts",
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
@@ -120,6 +121,7 @@
     "prettier": "^3.6.2",
     "react": "19.1.1",
     "ts-jest": "^29.4.3",
+    "tsx": "^4.20.6",
     "typescript": "^5.9.2"
   }
 }

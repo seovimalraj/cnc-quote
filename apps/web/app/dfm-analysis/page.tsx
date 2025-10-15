@@ -1,22 +1,21 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { ContractsVNext } from '@cnc-quote/shared';
+import { UploadPresignSchema, type UploadPresign } from '@cnc-quote/shared/contracts/vnext';
 import {
   ArrowUpTrayIcon as UploadIcon,
   DocumentIcon as FileIcon,
   CheckCircleIcon,
-  XCircleIcon,
   ExclamationTriangleIcon,
   InformationCircleIcon,
   ShieldCheckIcon,
@@ -25,28 +24,17 @@ import {
 } from '@heroicons/react/24/outline';
 import PublicLayout from '@/components/PublicLayout';
 
-interface DFMOptions {
-  tolerances: Array<{ id: string; name: string; description: string }>;
-  finishes: Array<{ id: string; name: string; description: string }>;
-  materials: MaterialOption[];
-  industries: Array<{ id: string; name: string; description: string }>;
-  certifications: Array<{ id: string; name: string; description: string }>;
-  criticality: Array<{ id: string; name: string; description: string }>;
-}
+type MaterialOption = ContractsVNext.DfmMaterialOptionVNext;
 
-interface MaterialOption {
-  id: string;
-  code?: string;
-  name: string;
-  description?: string;
-  category?: string;
-  is_metal?: boolean;
-  density_g_cm3?: number | null;
-  elastic_modulus_gpa?: number | null;
-  hardness_hv?: number | null;
-  max_operating_temp_c?: number | null;
-  machinability_rating?: number | null;
-  notes?: string | null;
+type OptionList = ContractsVNext.DfmOptionListVNext;
+
+interface DFMOptions {
+  tolerances: OptionList;
+  finishes: OptionList;
+  materials: ContractsVNext.DfmMaterialListVNext;
+  industries: OptionList;
+  certifications: OptionList;
+  criticality: OptionList;
 }
 
 interface FormData {
@@ -83,42 +71,36 @@ const FILE_EXTENSIONS = [
 
 const MAX_FILE_SIZE = 200 * 1024 * 1024; // 200MB
 
+const EMPTY_OPTIONS: DFMOptions = {
+  tolerances: [],
+  finishes: [],
+  materials: [],
+  industries: [],
+  certifications: [],
+  criticality: [],
+};
+
+type Schema<T> = { parse: (input: unknown) => T };
+
+async function fetchWithSchema<T>(url: string, schema: Schema<T>): Promise<T> {
+  const response = await fetch(url, { cache: 'no-store' });
+  if (!response.ok) {
+    throw new Error(`Request to ${url} failed with status ${response.status}`);
+  }
+  const payload = await response.json();
+  return schema.parse(payload);
+}
+
+function ensureSelection<T extends { id: string }>(current: string, list: T[]): string {
+  if (current && list.some((item) => item.id === current)) {
+    return current;
+  }
+  return list[0]?.id ?? '';
+}
+
 export default function DFMAnalysisPage() {
   const router = useRouter();
-  const [options, setOptions] = useState<DFMOptions>({
-    tolerances: [
-      { id: 'tight', name: 'Tight (±0.002")', description: 'High precision machining' },
-      { id: 'standard', name: 'Standard (±0.005")', description: 'Standard manufacturing tolerances' },
-      { id: 'loose', name: 'Loose (±0.010")', description: 'Basic manufacturing tolerances' }
-    ],
-    finishes: [
-      { id: 'as_machined', name: 'As Machined', description: 'No additional finishing' },
-      { id: 'bead_blast', name: 'Bead Blast', description: 'Smooth surface finish' },
-      { id: 'anodized', name: 'Anodized', description: 'Corrosion resistant coating' }
-    ],
-    materials: [
-      { id: '6061-T6', name: 'Aluminum 6061-T6', description: 'Balanced strength and machinability (default)', density_g_cm3: 2.7, machinability_rating: 75 },
-      { id: '304-SS', name: 'Stainless Steel 304', description: 'General corrosion resistance', density_g_cm3: 8.0, machinability_rating: 45 },
-      { id: 'PEEK-NT', name: 'PEEK (Natural)', description: 'High-performance thermoplastic', density_g_cm3: 1.3, machinability_rating: 60 }
-    ],
-    industries: [
-      { id: 'aerospace', name: 'Aerospace', description: 'Aerospace and defense' },
-      { id: 'automotive', name: 'Automotive', description: 'Automotive industry' },
-      { id: 'medical', name: 'Medical', description: 'Medical devices' },
-      { id: 'general', name: 'General', description: 'General manufacturing' }
-    ],
-    certifications: [
-      { id: 'iso_9001', name: 'ISO 9001', description: 'Quality management systems' },
-      { id: 'as9100', name: 'AS9100', description: 'Aerospace quality management' },
-      { id: 'none', name: 'None', description: 'No specific certification required' }
-    ],
-    criticality: [
-      { id: 'low', name: 'Low', description: 'Non-critical component' },
-      { id: 'medium', name: 'Medium', description: 'Standard criticality' },
-      { id: 'high', name: 'High', description: 'Critical component' },
-      { id: 'extreme', name: 'Extreme', description: 'Mission-critical component' }
-    ]
-  });
+  const [options, setOptions] = useState<DFMOptions>(EMPTY_OPTIONS);
   const [formData, setFormData] = useState<FormData>({
     cadFile: null,
     materialId: '',
@@ -134,6 +116,7 @@ export default function DFMAnalysisPage() {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [dragActive, setDragActive] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const selectedMaterial = formData.materialId
     ? options.materials.find((material) => material.id === formData.materialId)
@@ -141,67 +124,18 @@ export default function DFMAnalysisPage() {
 
   useEffect(() => {
     loadOptions();
-  }, []);
+  }, [loadOptions]);
 
-  const loadOptions = async () => {
+  const loadOptions = useCallback(async () => {
     try {
       setIsLoading(true);
-      const [tolerancesRes, finishesRes, materialsRes, industriesRes, certificationsRes, criticalityRes] = await Promise.all([
-        fetch('/api/dfm/options/tolerances').catch(() => null),
-        fetch('/api/dfm/options/finishes').catch(() => null),
-        fetch('/api/dfm/options/materials').catch(() => null),
-        fetch('/api/dfm/options/industries').catch(() => null),
-        fetch('/api/dfm/options/certifications').catch(() => null),
-        fetch('/api/dfm/options/criticality').catch(() => null)
-      ]);
-
-      // Provide fallback mock data if API fails
-      const mockTolerances = [
-        { id: 'tight', name: 'Tight (±0.002")', description: 'High precision machining' },
-        { id: 'standard', name: 'Standard (±0.005")', description: 'Standard manufacturing tolerances' },
-        { id: 'loose', name: 'Loose (±0.010")', description: 'Basic manufacturing tolerances' }
-      ];
-
-      const mockFinishes = [
-        { id: 'as_machined', name: 'As Machined', description: 'No additional finishing' },
-        { id: 'bead_blast', name: 'Bead Blast', description: 'Smooth surface finish' },
-        { id: 'anodized', name: 'Anodized', description: 'Corrosion resistant coating' }
-      ];
-
-      const mockMaterials: MaterialOption[] = [
-        { id: '6061-T6', code: '6061-T6', name: 'Aluminum 6061-T6', description: 'Balanced strength and machinability.', density_g_cm3: 2.7, machinability_rating: 75, category: 'Aluminum', is_metal: true },
-        { id: '7075-T6', code: '7075-T6', name: 'Aluminum 7075-T6', description: 'High-strength aerospace alloy.', density_g_cm3: 2.81, machinability_rating: 55, category: 'Aluminum', is_metal: true },
-        { id: '304-SS', code: '304-SS', name: 'Stainless Steel 304', description: 'General corrosion resistance.', density_g_cm3: 8.0, machinability_rating: 45, category: 'Stainless Steel', is_metal: true },
-        { id: 'PEEK-NT', code: 'PEEK-NT', name: 'PEEK (Natural)', description: 'High-performance thermoplastic.', density_g_cm3: 1.3, machinability_rating: 60, category: 'Polymer', is_metal: false }
-      ];
-
-      const mockIndustries = [
-        { id: 'aerospace', name: 'Aerospace', description: 'Aerospace and defense' },
-        { id: 'automotive', name: 'Automotive', description: 'Automotive industry' },
-        { id: 'medical', name: 'Medical', description: 'Medical devices' },
-        { id: 'general', name: 'General', description: 'General manufacturing' }
-      ];
-
-      const mockCertifications = [
-        { id: 'iso_9001', name: 'ISO 9001', description: 'Quality management systems' },
-        { id: 'as9100', name: 'AS9100', description: 'Aerospace quality management' },
-        { id: 'none', name: 'None', description: 'No specific certification required' }
-      ];
-
-      const mockCriticality = [
-        { id: 'low', name: 'Low', description: 'Non-critical component' },
-        { id: 'medium', name: 'Medium', description: 'Standard criticality' },
-        { id: 'high', name: 'High', description: 'Critical component' },
-        { id: 'extreme', name: 'Extreme', description: 'Mission-critical component' }
-      ];
-
       const [tolerances, finishes, materials, industries, certifications, criticality] = await Promise.all([
-        tolerancesRes?.ok ? tolerancesRes.json() : Promise.resolve(mockTolerances),
-        finishesRes?.ok ? finishesRes.json() : Promise.resolve(mockFinishes),
-        materialsRes?.ok ? materialsRes.json() : Promise.resolve(mockMaterials),
-        industriesRes?.ok ? industriesRes.json() : Promise.resolve(mockIndustries),
-        certificationsRes?.ok ? certificationsRes.json() : Promise.resolve(mockCertifications),
-        criticalityRes?.ok ? criticalityRes.json() : Promise.resolve(mockCriticality)
+        fetchWithSchema('/api/dfm/options/tolerances', ContractsVNext.ToleranceListSchema),
+        fetchWithSchema('/api/dfm/options/finishes', ContractsVNext.FinishListSchema),
+        fetchWithSchema('/api/dfm/options/materials', ContractsVNext.MaterialListSchema),
+        fetchWithSchema('/api/dfm/options/industries', ContractsVNext.IndustryListSchema),
+        fetchWithSchema('/api/dfm/options/certifications', ContractsVNext.CertificationListSchema),
+        fetchWithSchema('/api/dfm/options/criticality', ContractsVNext.CriticalityListSchema),
       ]);
 
       setOptions({
@@ -210,14 +144,39 @@ export default function DFMAnalysisPage() {
         materials,
         industries,
         certifications,
-        criticality
+        criticality,
       });
+
+      const validCertificationIds = new Set(certifications.map((cert) => cert.id));
+
+      setFormData((prev) => {
+        const nextCertifications: string[] = [];
+        prev.certifications.forEach((certId) => {
+          if (validCertificationIds.has(certId)) {
+            nextCertifications.push(certId);
+          }
+        });
+
+        return {
+          ...prev,
+          materialId: ensureSelection(prev.materialId, materials),
+          tolerancePack: ensureSelection(prev.tolerancePack, tolerances),
+          surfaceFinish: ensureSelection(prev.surfaceFinish, finishes),
+          industry: ensureSelection(prev.industry, industries),
+          criticality: ensureSelection(prev.criticality, criticality),
+          certifications: nextCertifications,
+        };
+      });
+
+      setError(null);
     } catch (err) {
+      console.error('Failed to load DFM options', err);
       setError('Failed to load form options');
+      setOptions(EMPTY_OPTIONS);
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
   const validateFile = (file: File): string | null => {
     // Check file size (200MB limit)
@@ -267,10 +226,15 @@ export default function DFMAnalysisPage() {
     e.stopPropagation();
     setDragActive(false);
 
-    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      handleFileSelect(e.dataTransfer.files[0]);
+    const droppedFile = e.dataTransfer?.files?.[0];
+    if (droppedFile) {
+      handleFileSelect(droppedFile);
     }
   }, [handleFileSelect]);
+
+  const openFilePicker = useCallback(() => {
+    fileInputRef.current?.click();
+  }, []);
 
   const handleCertificationToggle = (certId: string, checked: boolean) => {
     setFormData(prev => ({
@@ -281,19 +245,21 @@ export default function DFMAnalysisPage() {
     }));
   };
 
-  const uploadFileWithProgress = (file: File, uploadUrl: string): Promise<void> => {
+  const uploadFileWithProgress = (file: File, presign: UploadPresign): Promise<void> => {
     return new Promise((resolve, reject) => {
       const xhr = new XMLHttpRequest();
+      xhr.withCredentials = false;
 
-      xhr.upload.addEventListener('progress', (e) => {
-        if (e.lengthComputable) {
-          const percentComplete = (e.loaded / e.total) * 100;
+      xhr.upload.addEventListener('progress', (event) => {
+        if (event.lengthComputable && event.total > 0) {
+          const percentComplete = Math.min(100, (event.loaded / event.total) * 100);
           setUploadProgress(percentComplete);
         }
       });
 
       xhr.addEventListener('load', () => {
         if (xhr.status >= 200 && xhr.status < 300) {
+          setUploadProgress(100);
           resolve();
         } else {
           reject(new Error(`Upload failed with status ${xhr.status}`));
@@ -304,9 +270,36 @@ export default function DFMAnalysisPage() {
         reject(new Error('Upload failed'));
       });
 
-      xhr.open('PUT', uploadUrl);
-      xhr.setRequestHeader('Content-Type', file.type);
-      xhr.send(file);
+      const methodRaw = (presign.method ?? 'PUT').toUpperCase();
+      const method = methodRaw === 'POST' ? 'POST' : 'PUT';
+      xhr.open(method, presign.url);
+
+      const headers = presign.headers ?? {};
+      const headerEntries = Object.entries(headers);
+      const hasContentTypeHeader = headerEntries.some(([key]) => key.toLowerCase() === 'content-type');
+
+      headerEntries.forEach(([key, value]) => {
+        if (method === 'POST' && key.toLowerCase() === 'content-type') {
+          return;
+        }
+        xhr.setRequestHeader(key, value);
+      });
+
+      if (method === 'POST') {
+        const formData = new FormData();
+        if (presign.fields) {
+          Object.entries(presign.fields).forEach(([key, value]) => {
+            formData.append(key, value);
+          });
+        }
+        formData.append('file', file);
+        xhr.send(formData);
+      } else {
+        if (!hasContentTypeHeader && file.type) {
+          xhr.setRequestHeader('Content-Type', file.type);
+        }
+        xhr.send(file);
+      }
     });
   };
 
@@ -328,25 +321,31 @@ export default function DFMAnalysisPage() {
       setError(null);
       setUploadProgress(0);
 
-      // First, get signed upload URL
-      const uploadResponse = await fetch('/api/dfm/upload-url', {
+      // Request an upload presign payload
+      const uploadResponse = await fetch('/api/dfm/presign', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           fileName: formData.cadFile.name,
-          fileSize: formData.cadFile.size,
-          contentType: formData.cadFile.type
+          contentType: formData.cadFile.type,
+          size: formData.cadFile.size,
+          byteLength: formData.cadFile.size
         })
       });
 
       if (!uploadResponse.ok) {
-        throw new Error('Failed to get upload URL');
+        throw new Error('Failed to prepare file upload');
       }
 
-      const { uploadUrl, fileId } = await uploadResponse.json();
+      const uploadPayload = await uploadResponse.json();
+      const presign = UploadPresignSchema.parse(uploadPayload);
+      const fileId = presign.fileId ?? presign.uploadId;
+      if (!fileId) {
+        throw new Error('Upload presign response did not include file identifier');
+      }
 
       // Upload file with progress tracking
-      await uploadFileWithProgress(formData.cadFile, uploadUrl);
+      await uploadFileWithProgress(formData.cadFile, presign);
 
       // Create DFM request
       const dfmResponse = await fetch('/api/dfm/requests', {
@@ -427,7 +426,8 @@ export default function DFMAnalysisPage() {
                     <Label htmlFor="cadFile" className="text-base font-medium">
                       Upload Part *
                     </Label>
-                    <div
+                    <button
+                      type="button"
                       className={`mt-2 border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
                         dragActive
                           ? 'border-blue-400 bg-blue-50'
@@ -437,6 +437,8 @@ export default function DFMAnalysisPage() {
                       onDragLeave={handleDrag}
                       onDragOver={handleDrag}
                       onDrop={handleDrop}
+                      onClick={openFilePicker}
+                      aria-label="Upload CAD file"
                     >
                       {formData.cadFile ? (
                         <div className="flex items-center justify-center space-x-3">
@@ -460,12 +462,10 @@ export default function DFMAnalysisPage() {
                         <div>
                           <UploadIcon className="mx-auto h-12 w-12 text-gray-400" />
                           <div className="mt-4">
-                            <label htmlFor="cadFile" className="cursor-pointer">
-                              <span className="mt-2 block text-sm font-medium text-gray-900">
-                                Drop your CAD file here, or{' '}
-                                <span className="text-blue-600 hover:text-blue-500">browse</span>
-                              </span>
-                            </label>
+                            <span className="mt-2 block text-sm font-medium text-gray-900">
+                              Drop your CAD file here, or{' '}
+                              <span className="text-blue-600 hover:text-blue-500">browse</span>
+                            </span>
                             <input
                               id="cadFile"
                               name="cadFile"
@@ -473,6 +473,7 @@ export default function DFMAnalysisPage() {
                               className="sr-only"
                               accept={ACCEPTED_FILE_TYPES.join(',')}
                               onChange={handleFileInput}
+                              ref={fileInputRef}
                             />
                             <p className="mt-1 text-xs text-gray-500">
                               Supported: STEP, IGES, Parasolid, SLDPRT, JT, 3MF, DXF, STL, ZIP (max 200MB)
@@ -480,7 +481,7 @@ export default function DFMAnalysisPage() {
                           </div>
                         </div>
                       )}
-                    </div>
+                    </button>
                   </div>
 
                   {/* Material Selection */}

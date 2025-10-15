@@ -2,7 +2,7 @@ import { Injectable, Logger, Optional } from "@nestjs/common";
 import { SupabaseService } from "../../lib/supabase/supabase.service";
 import { Resend } from "resend";
 import { UpdateQuoteDto } from "./quotes.dto";
-import { ContractsV1, computeQuoteDiffSummaryV1 } from '@cnc-quote/shared';
+import { ContractsV1, ContractsVNext, computeQuoteDiffSummaryV1, toQuoteSummaryVNext } from '@cnc-quote/shared';
 
 type DiffableQuoteSummary = Partial<Omit<ContractsV1.QuoteSummaryV1, 'status'>> & {
   status?: Exclude<ContractsV1.QuoteSummaryV1['status'], 'converted'>;
@@ -49,7 +49,7 @@ export class QuotesService {
       lead_time_option?: ContractsV1.LeadTimeOption;
       inspection_level?: ContractsV1.InspectionLevel;
     }>;
-  }) {
+  }, _orgId?: string | null, _actorId?: string | null) {
     const now = new Date().toISOString();
     const currency = payload.currency || 'USD';
 
@@ -146,7 +146,7 @@ export class QuotesService {
   /**
    * Batch add parts to an existing quote (e.g., subsequent uploads)
    */
-  async addPartsToQuote(quoteId: string, parts: Array<{
+  async addPartsToQuote(quoteId: string, _orgId: string | undefined, parts: Array<{
     file_id: string;
     process_type?: ContractsV1.ProcessType;
     material_id?: string;
@@ -424,7 +424,7 @@ export class QuotesService {
     }
   }
 
-  async getQuote(id: string) {
+  async getQuote(id: string, _orgId?: string) {
     const { data: quote, error } = await this.supabase.client
       .from("quotes")
       .select(
@@ -445,8 +445,7 @@ export class QuotesService {
    * This is an initial shim: enriches existing quote/items into PartConfigV1-like structures.
    * Future: pull config/pricing/dfm from dedicated tables once migrations land.
    */
-  async getQuoteSummaryV1(id: string): Promise<ContractsV1.QuoteSummaryV1> {
-    const quote = await this.getQuote(id);
+  private buildQuoteSummaryV1(quote: any): ContractsV1.QuoteSummaryV1 {
 
     // Derive status mapping (draft|processing|ready etc.) – for now map existing statuses.
     const statusMap: Record<string, ContractsV1.QuoteSummaryV1['status']> = {
@@ -522,11 +521,34 @@ export class QuotesService {
     return summary;
   }
 
-  async updateQuote(id: string, data: UpdateQuoteDto) {
+  async getQuoteSummaryV1(id: string, _orgId?: string): Promise<ContractsV1.QuoteSummaryV1> {
+    const bundle = await this.loadBundle(id, _orgId);
+    return bundle.summary;
+  }
+
+  async getQuoteSummaryVNext(id: string, _orgId?: string): Promise<ContractsVNext.QuoteSummaryVNext> {
+    const bundle = await this.loadBundle(id, _orgId);
+    const { quote, summary } = bundle;
+
+    return toQuoteSummaryVNext(summary, {
+      orgId: quote.org_id ?? null,
+      customerId: quote.customer_id ?? null,
+      notes: quote.notes ?? null,
+      terms: quote.terms ?? null,
+    });
+  }
+
+  async loadBundle(id: string, _orgId?: string): Promise<{ quote: any; summary: ContractsV1.QuoteSummaryV1 }> {
+    const quote = await this.getQuote(id, _orgId);
+    const summary = this.buildQuoteSummaryV1(quote);
+    return { quote, summary };
+  }
+
+  async updateQuote(id: string, data: UpdateQuoteDto, _orgId?: string) {
     // Fetch current summary for diff baseline
-  let before: Partial<ContractsV1.QuoteSummaryV1> | undefined;
+    let before: Partial<ContractsV1.QuoteSummaryV1> | undefined;
     try {
-      before = await this.getQuoteSummaryV1(id);
+      before = await this.getQuoteSummaryV1(id, _orgId);
     } catch {/* ignore */}
 
     const { data: quote, error } = await this.supabase.client
@@ -538,9 +560,9 @@ export class QuotesService {
     if (error) throw error;
 
     // After update summary
-  let after: Partial<ContractsV1.QuoteSummaryV1> | undefined;
+    let after: Partial<ContractsV1.QuoteSummaryV1> | undefined;
     try {
-      after = await this.getQuoteSummaryV1(id);
+      after = await this.getQuoteSummaryV1(id, _orgId);
     } catch {/* ignore */}
 
     if (before && after) {
@@ -581,7 +603,7 @@ export class QuotesService {
    * sent -> accepted | rejected | expired
    * (accepted/rejected/expired are terminal)
    */
-  async transitionQuoteStatus(id: string, next: ContractsV1.QuoteSummaryV1['status']) {
+  async transitionQuoteStatus(id: string, next: ContractsV1.QuoteSummaryV1['status'], _orgId?: string) {
     const { data: current, error: fetchErr } = await this.supabase.client
       .from('quotes')
       .select('id,status')
@@ -606,15 +628,15 @@ export class QuotesService {
     }
     const now = new Date().toISOString();
     const patch: any = { status: next, updated_at: now };
-  if (next === 'processing') patch.processing_started_at = now;
-  if (next === 'ready') patch.ready_at = now;
-  if (next === 'sent') patch.sent_at = now;
-  if (next === 'accepted') patch.accepted_at = now;
-  if (next === 'rejected') patch.rejected_at = now;
-  if (next === 'expired') patch.expired_at = now;
-  if (next === 'cancelled') patch.cancelled_at = now;
-  if (next === 'converted') patch.converted_at = now;
-    const updated = await this.updateQuote(id, patch);
+    if (next === 'processing') patch.processing_started_at = now;
+    if (next === 'ready') patch.ready_at = now;
+    if (next === 'sent') patch.sent_at = now;
+    if (next === 'accepted') patch.accepted_at = now;
+    if (next === 'rejected') patch.rejected_at = now;
+    if (next === 'expired') patch.expired_at = now;
+    if (next === 'cancelled') patch.cancelled_at = now;
+    if (next === 'converted') patch.converted_at = now;
+    const updated = await this.updateQuote(id, patch, _orgId);
     // Record metrics if available (lazy require to avoid circular DI)
     // Emit metric (best-effort)
     try {
@@ -649,13 +671,13 @@ export class QuotesService {
     return updated;
   }
 
-  async generatePdf(_id: string): Promise<Buffer> {
+  async generatePdf(_id: string, _orgId?: string): Promise<Buffer> {
     // PDF generation temporarily disabled
     throw new Error("PDF generation is temporarily disabled");
   }
 
-  async sendQuote(id: string, email: string) {
-    const quote = await this.getQuote(id);
+  async sendQuote(id: string, email: string, _orgId?: string) {
+    const quote = await this.getQuote(id, _orgId);
 
     // Generate secure accept link
     const acceptToken = await this.generateAcceptToken(id);

@@ -17,8 +17,6 @@ apps/api/src/modules/queue-monitor/queue-monitor.service.ts:179,193,211,220,230,
 apps/api/src/modules/quotes/quote-preview.e2e.spec.ts:3
 apps/api/src/modules/quotes/quote-revisions.service.ts:80
 apps/api/src/modules/quotes/quotes.service.spec.ts:3
-apps/api/src/modules/review/review.controller.ts:121
-apps/api/src/modules/review/review.service.ts:6,83,93,103,190,241,254,266,278,292
 apps/api/src/pricing/__tests__/orchestrator.spec.ts:415,416
 apps/api/src/pricing/bomService.ts:267,271,273,274,562
 apps/api/src/pricing/factors/setup/setup-time.ts:28,29
@@ -43,9 +41,6 @@ apps/web/app/api/admin/abandoned/route.ts:18
 apps/web/app/api/admin/pricing/config/route.ts:3
 apps/web/app/api/admin/quotes/[id]/reprice/route.ts:13
 apps/web/app/api/admin/quotes/[id]/route.ts:64,150,182
-apps/web/app/api/admin/review/[quoteId]/route.ts:8,71
-apps/web/app/api/admin/review/[quoteId]/simulate/route.ts:10
-apps/web/app/api/admin/review/route.ts:6
 apps/web/app/api/cad/analyze/route.ts:38,68
 apps/web/app/api/dfm/mock-upload/[fileId]/route.ts:27,37
 apps/web/app/api/dfm/options/materials/route.ts:108
@@ -82,11 +77,13 @@ apps/web/src/components/admin/AbandonedQuotesTable.tsx:55
 apps/web/src/components/admin/AbandonedTimelineDrawer.tsx:33
 apps/web/src/components/checkout/BillingStep.tsx:58,83
 apps/web/src/components/checkout/PaymentStep.tsx:35
-apps/web/src/components/checkout/ShippingStep.tsx:65
+apps/web/src/components/checkout/ShippingStep.tsx:64
 apps/web/src/components/dfm/AdvancedDFMAnalysis.tsx:601
 apps/web/src/components/instant-quote/EnhancedInstantQuote.tsx:53,57,64,65,73
 apps/web/src/components/instant-quote/QuoteHistory.tsx:47,48,131
 apps/web/src/components/providers/PayPalProvider.tsx:3
 apps/web/src/components/viewer/CadViewerSection.tsx:58
 apps/web/src/lib/auth.ts:34,85
+apps/web/tsconfig.typecheck.tsbuildinfo:1
+packages/shared/src/__tests__/quote.vnext.spec.ts:9,10
 packages/shared/src/pricing.compute.ts:9

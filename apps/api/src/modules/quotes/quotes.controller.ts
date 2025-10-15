@@ -3,7 +3,7 @@ import { Response } from "express";
 import { JwtAuthGuard } from "../../auth/jwt.guard";
 import { OrgGuard } from "../../auth/org.guard";
 import { QuotesService } from "./quotes.service";
-import { CreateQuoteDto, UpdateQuoteDto } from "./quotes.dto";
+import { UpdateQuoteDto } from "./quotes.dto";
 import { QuotePreviewService } from './quote-preview.service';
 import { QuoteRevisionsService } from './quote-revisions.service';
 import { MultiPartQuotePreviewRequest, ContractsV1 } from '@cnc-quote/shared';
@@ -27,13 +27,14 @@ export class QuotesController {
     @Body() body: { parts: any[]; currency?: string; customer_id?: string },
   ) {
     const orgId = req.rbac?.orgId;
+    const payload = { ...body, org_id: orgId } as Parameters<QuotesService['createMultiPartQuote']>[0];
     req.audit = {
       action: 'QUOTE_CREATED',
       resourceType: 'quote',
       resourceId: null,
       before: null,
     };
-    const result = await this.quotesService.createMultiPartQuote({ ...body, org_id: orgId }, orgId, req.user?.sub);
+    const result = await this.quotesService.createMultiPartQuote(payload, orgId, req.user?.sub);
     req.audit.resourceId = result.id;
     req.audit.after = result;
     return result;
@@ -43,7 +44,7 @@ export class QuotesController {
   @Post('preview-multipart')
   @Policies({ action: 'view', resource: 'quotes' })
   async previewMultiPart(@Req() req: any, @Body() body: MultiPartQuotePreviewRequest) {
-    return this.previewService.preview({ ...body, org_id: req.rbac?.orgId });
+    return this.previewService.preview({ ...body, org_id: req.rbac?.orgId } as MultiPartQuotePreviewRequest & { org_id?: string | null });
   }
 
   // Batch add parts to existing quote (subsequent uploads)
@@ -68,7 +69,11 @@ export class QuotesController {
 
   @Get(":id")
   @Policies({ action: 'view', resource: 'quotes' })
-  async getQuote(@Req() req: any, @Param("id") id: string) {
+  async getQuote(@Req() req: any, @Param("id") id: string, @Query('view') view?: string) {
+    if (view === 'vnext') {
+      return this.quotesService.getQuoteSummaryVNext(id, req.rbac?.orgId);
+    }
+
     return this.quotesService.getQuote(id, req.rbac?.orgId);
   }
 

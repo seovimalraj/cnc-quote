@@ -1,43 +1,21 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
+
+import { resolveApiUrl } from '@/app/api/_lib/backend';
+import { proxyFetch } from '@/app/api/_lib/proxyFetch';
 
 export async function POST(request: NextRequest) {
-  try {
-    const { config } = await request.json();
-
-    // Basic validation
-    if (!config || !config.version) {
-      return NextResponse.json(
-        { error: 'Invalid configuration provided' },
-        { status: 400 }
-      );
-    }
-
-    // Generate new version number
-    const currentVersion = config.version;
-    const versionParts = currentVersion.replace('v', '').split('.');
-    const newPatch = parseInt(versionParts[2]) + 1;
-    const newVersion = `v${versionParts[0]}.${versionParts[1]}.${newPatch}`;
-
-    // In production, this would:
-    // 1. Validate the configuration thoroughly
-    // 2. Save to database with new version
-    // 3. Update active configuration pointer
-    // 4. Log the change for audit trail
-    // 5. Notify relevant systems of the update
-
-    console.log('Publishing new pricing config version:', newVersion);
-    console.log('Configuration:', config);
-
-    return NextResponse.json({
-      success: true,
-      newVersion,
-      message: `Configuration published as version ${newVersion}`
-    });
-  } catch (error) {
-    console.error('Failed to publish pricing config:', error);
-    return NextResponse.json(
-      { error: 'Failed to publish pricing configuration' },
-      { status: 500 }
-    );
+  const body = await request.text();
+  const headers: Record<string, string> = {};
+  const contentType = request.headers.get('content-type');
+  if (contentType && contentType.length > 0) {
+    headers['content-type'] = contentType;
   }
+
+  const upstream = await proxyFetch(request, resolveApiUrl('/admin/pricing/publish'), {
+    method: 'POST',
+    body: body.length > 0 ? body : undefined,
+    headers,
+  });
+
+  return upstream;
 }

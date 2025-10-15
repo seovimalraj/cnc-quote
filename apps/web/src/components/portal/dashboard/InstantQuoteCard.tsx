@@ -16,6 +16,7 @@ import {
 import { posthog } from 'posthog-js'
 import { useAbandonedQuoteTracking } from '@/hooks/useAbandonedQuoteTracking'
 import { AbandonedQuoteRecovery } from '@/components/AbandonedQuoteRecovery'
+import { UploadPresignSchema } from '@cnc-quote/shared/contracts/vnext'
 
 interface FileUpload {
   id: string
@@ -98,50 +99,95 @@ export function InstantQuoteCard() {
     }
 
     try {
-      // Prepare file for upload using the file upload API
-      const uploadResponse = await fetch('/api/files/upload', {
+      const presignResponse = await fetch('/api/files/presign', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           fileName: file.name,
-          fileSize: file.size,
-          contentType: file.type
+          contentType: file.type,
+          size: file.size,
+          byteLength: file.size
         })
       })
 
-      if (!uploadResponse.ok) {
-        throw new Error(`Upload preparation failed: ${uploadResponse.status}`)
+      if (!presignResponse.ok) {
+        throw new Error(`Presign request failed: ${presignResponse.status}`)
       }
 
-      const uploadData = await uploadResponse.json()
-      
-      // Simulate progress for user experience
+      const presignPayload = await presignResponse.json()
+      const presign = UploadPresignSchema.parse(presignPayload)
+
+  const uploadMethodRaw = (presign.method ?? 'PUT').toUpperCase()
+  const uploadMethod = uploadMethodRaw === 'POST' ? 'POST' : 'PUT'
+
       const progressInterval = setInterval(() => {
         setUploads(prev => prev.map(u =>
-          u.id === uploadId && u.progress < 90
-            ? { ...u, progress: u.progress + 10 }
+          u.id === uploadId && u.progress < 95
+            ? { ...u, progress: u.progress + 5 }
             : u
         ))
       }, 200)
 
-      // Simulate actual file upload (in production this would upload to cloud storage)
-      await new Promise(resolve => setTimeout(resolve, 1500))
+      try {
+        if (uploadMethod === 'POST') {
+          const formData = new FormData()
+          if (presign.fields) {
+            Object.entries(presign.fields).forEach(([key, value]) => {
+              formData.append(key, value)
+            })
+          }
+          formData.append('file', file)
 
-      clearInterval(progressInterval)
+          const uploadResult = await fetch(presign.url, {
+            method: 'POST',
+            body: formData,
+            credentials: 'omit'
+          })
+
+          if (!uploadResult.ok) {
+            throw new Error(`Upload failed with status ${uploadResult.status}`)
+          }
+        } else {
+          const headers = presign.headers ? new Headers(presign.headers) : new Headers()
+          if (!headers.has('Content-Type') && file.type) {
+            headers.set('Content-Type', file.type)
+          }
+
+          const uploadResult = await fetch(presign.url, {
+            method: uploadMethod,
+            body: file,
+            headers,
+            credentials: 'omit'
+          })
+
+          if (!uploadResult.ok) {
+            throw new Error(`Upload failed with status ${uploadResult.status}`)
+          }
+        }
+      } finally {
+        clearInterval(progressInterval)
+      }
+
+      const fileId = presign.fileId ?? presign.uploadId
+      if (!fileId) {
+        throw new Error('Upload completed without file identifier')
+      }
 
       setUploads(prev => prev.map(u =>
         u.id === uploadId
-          ? { ...u, progress: 100, status: 'completed', fileId: uploadData.fileId }
+          ? { ...u, progress: 100, status: 'completed', fileId }
           : u
       ))
 
       posthog.capture('file_uploaded', {
         file_type: file.name.split('.').pop(),
         file_size: file.size,
-        upload_id: uploadId
+        upload_id: uploadId,
+        file_id: fileId
       })
 
     } catch (error) {
+      console.error('File upload failed', error)
       setUploads(prev => prev.map(u =>
         u.id === uploadId
           ? { ...u, status: 'error', error: getErrorMessage('UPLOAD_FAILED') }
@@ -151,7 +197,7 @@ export function InstantQuoteCard() {
   }
 
   const createQuote = async () => {
-    const completedUploads = uploads.filter(u => u.status === 'completed')
+    const completedUploads = uploads.filter(u => u.status === 'completed' && u.fileId)
     if (completedUploads.length === 0) return
 
     setIsCreatingQuote(true)
@@ -163,7 +209,7 @@ export function InstantQuoteCard() {
         body: JSON.stringify({
           source: 'web',
           files: completedUploads.map(u => ({
-            fileId: u.fileId || `mock_${u.id}`,
+            fileId: u.fileId as string,
             fileName: u.file.name,
             fileSize: u.file.size,
             contentType: u.file.type

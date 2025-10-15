@@ -10,7 +10,8 @@
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:debug": "playwright test --debug",
-    "type-check": "tsc --noEmit",
+  "test:node": "tsx --test __tests__/useQuote.vnext.spec.ts",
+    "type-check": "tsc --project tsconfig.typecheck.json",
     "clean": "rm -rf .next out node_modules/.cache"
   },
   "dependencies": {
@@ -93,6 +94,8 @@
     "@typescript-eslint/parser": "^8.44.0",
     "eslint": "9.35.0",
     "eslint-config-next": "^15.5.3",
+    "msw": "^2.6.0",
+    "tsx": "^4.20.6",
     "typescript": "5.9.2"
   }
 }

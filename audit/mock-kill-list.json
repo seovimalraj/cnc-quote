@@ -1,10 +1,10 @@
 {
   "summary": {
-    "generatedAt": "2025-10-14T06:56:54.433Z",
+    "generatedAt": "2025-10-14T12:26:54.256Z",
     "totals": {
-      "filesScanned": 998,
-      "filesWithRefs": 92,
-      "refs": 234,
+      "filesScanned": 1032,
+      "filesWithRefs": 89,
+      "refs": 222,
       "adminSurfaceRefs": 3
     },
     "exportHandlers": [
@@ -313,64 +313,6 @@
         {
           "line": 3,
           "match": "jest.mock('resend', () => ({"
-        }
-      ],
-      "isAdminSurface": false
-    },
-    {
-      "file": "apps/api/src/modules/review/review.controller.ts",
-      "byName": false,
-      "hits": [
-        {
-          "line": 121,
-          "match": "// Mock CSV export"
-        }
-      ],
-      "isAdminSurface": false
-    },
-    {
-      "file": "apps/api/src/modules/review/review.service.ts",
-      "byName": false,
-      "hits": [
-        {
-          "line": 6,
-          "match": "// Mock review queue data"
-        },
-        {
-          "line": 83,
-          "match": "// Mock assignment"
-        },
-        {
-          "line": 93,
-          "match": "// Mock move"
-        },
-        {
-          "line": 103,
-          "match": "// Mock workspace data"
-        },
-        {
-          "line": 190,
-          "match": "// Mock price simulation"
-        },
-        {
-          "line": 241,
-          "match": "// Mock override application"
-        },
-        {
-          "line": 254,
-          "match": "// Mock DFM acknowledgement"
-        },
-        {
-          "line": 266,
-          "match": "// Mock annotation"
-        },
-        {
-          "line": 278,
-          "match": "// Mock change request"
-        },
-        {
-          "line": 292,
-          "match": "// Mock note addition"
         }
       ],
       "isAdminSurface": false
@@ -928,43 +870,6 @@
       "isAdminSurface": false
     },
     {
-      "file": "apps/web/app/api/admin/review/[quoteId]/route.ts",
-      "byName": false,
-      "hits": [
-        {
-          "line": 8,
-          "match": "// Mock workspace data"
-        },
-        {
-          "line": 71,
-          "match": "// Mock price simulation"
-        }
-      ],
-      "isAdminSurface": false
-    },
-    {
-      "file": "apps/web/app/api/admin/review/[quoteId]/simulate/route.ts",
-      "byName": false,
-      "hits": [
-        {
-          "line": 10,
-          "match": "// Mock price simulation"
-        }
-      ],
-      "isAdminSurface": false
-    },
-    {
-      "file": "apps/web/app/api/admin/review/route.ts",
-      "byName": false,
-      "hits": [
-        {
-          "line": 6,
-          "match": "// For now, return mock data"
-        }
-      ],
-      "isAdminSurface": false
-    },
-    {
       "file": "apps/web/app/api/cad/analyze/route.ts",
       "byName": false,
       "hits": [
@@ -1481,7 +1386,7 @@
       "byName": false,
       "hits": [
         {
-          "line": 65,
+          "line": 64,
           "match": "// Mock shipping rates"
         }
       ],
@@ -1577,6 +1482,32 @@
         {
           "line": 85,
           "match": "// Mock registration - in production, this would create a new user in the database"
+        }
+      ],
+      "isAdminSurface": false
+    },
+    {
+      "file": "apps/web/tsconfig.typecheck.tsbuildinfo",
+      "byName": false,
+      "hits": [
+        {
+          "line": 1,
+          "match": "{\"fileNames\":[\"../../node_modules/.pnpm/typescript@5.9.2/node_modules/typescript/lib/lib.es5.d.ts\",\"../../node_modules/.pnpm/typescript@5.9.2/node_modules/typescript/lib/lib.es2015.d.ts\",\"../../node_modules/.pnpm/typescript@5.9.2/node_modules/typescript/lib/lib.es2016.d.ts\",\"../../node_modules/.pnpm/typescript@5.9.2/node_modules/typescript/lib/lib.es2017.d.ts\",\"../../node_modules/.pnpm/typescript@"
+        }
+      ],
+      "isAdminSurface": false
+    },
+    {
+      "file": "packages/shared/src/__tests__/quote.vnext.spec.ts",
+      "byName": false,
+      "hits": [
+        {
+          "line": 9,
+          "match": "const rawFixturePath = join(__dirname, 'fixtures/quote.bundle.raw.json');"
+        },
+        {
+          "line": 10,
+          "match": "const expectedFixturePath = join(__dirname, 'fixtures/quote.bundle.vnext.json');"
         }
       ],
       "isAdminSurface": false

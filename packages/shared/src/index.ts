@@ -31,4 +31,10 @@ export * from './orders/order-status';
 export * from './marketplace';
 
 // Versioned contract exports
-export { ContractsV1, computeQuoteDiffSummaryV1 } from './contracts';
+export { ContractsV1, ContractsVNext, computeQuoteDiffSummaryV1 } from './contracts';
+export {
+	toQuoteSummaryV1,
+	toQuoteSummaryVNext,
+	toAdminReviewItemVNext,
+	toPricingComputationVNext,
+} from './contracts/mappers';

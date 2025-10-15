@@ -1,303 +1,993 @@
-import { Injectable } from "@nestjs/common";
+import { BadRequestException, Injectable, Logger, NotFoundException } from "@nestjs/common";
+import { differenceInHours, parseISO } from "date-fns";
+import { SupabaseService } from "../../lib/supabase/supabase.service";
+import {
+  AdminReviewItem,
+  CurrencyCode,
+  Lane,
+  Priority,
+  ReviewDetailResponse,
+  ReviewListFilters,
+  ReviewListResponse,
+  listQuerySchema,
+} from "./review.types";
+
+type ManualReviewTaskRow = {
+  id: string;
+  quote_id: string;
+  status: string;
+  assignee_id: string | null;
+  due_at: string | null;
+  notes: string | null;
+  created_at: string;
+  updated_at: string | null;
+  rule: {
+    id: string;
+    name: string | null;
+    message: string | null;
+    priority: number | null;
+    sla_hours: number | null;
+  } | null;
+  quote: QuoteRow | null;
+};
+
+type QuoteRow = {
+  id: string;
+  org_id: string;
+  customer_id: string | null;
+  status: string | null;
+  total_amount: number | null;
+  currency: string | null;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+  notes?: string | null;
+};
+
+type QuoteItemRow = {
+  quote_id: string;
+  total_price: number | null;
+  dfm_json: any;
+};
+
+type QuoteItemDetailRow = QuoteItemRow & {
+  id: string;
+  config_json: any;
+  created_at: string;
+  updated_at: string;
+};
+
+type QuoteWithItemsRow = QuoteRow & {
+  items?: QuoteItemDetailRow[];
+};
+
+type RawManualReviewTaskRow = Omit<ManualReviewTaskRow, "rule" | "quote"> & {
+  rule?: ManualReviewTaskRow["rule"] | ManualReviewTaskRow["rule"][] | null;
+  quote?: QuoteRow | QuoteRow[] | null;
+};
+
+type CustomerRow = Record<string, unknown> & {
+  id: string;
+};
+
+type ProfileRow = {
+  id: string;
+  full_name?: string | null;
+  email?: string | null;
+};
+
+type QuoteMetrics = {
+  itemCount: number;
+  totalValue: number;
+  dfmFindingCount: number;
+};
+
+const PRIORITY_ORDER: Priority[] = ["LOW", "MED", "HIGH", "EXPEDITE"];
 
 @Injectable()
 export class ReviewService {
-  async getReviewQueue(filters: any = {}) {
-    // Mock review queue data
+  private readonly logger = new Logger(ReviewService.name);
+
+  constructor(private readonly supabase: SupabaseService) {}
+
+  parseFilters(query: Record<string, string | string[] | undefined>): ReviewListFilters {
+    const normalized = Object.fromEntries(
+      Object.entries(query).map(([key, value]) => {
+        if (Array.isArray(value)) {
+          return [key, value.length === 1 ? value[0] : value];
+        }
+        return [key, value];
+      }),
+    );
+
+    return listQuerySchema.parse(normalized);
+  }
+
+  async getReviewQueue(orgId: string, filters: ReviewListFilters): Promise<ReviewListResponse> {
+    const tasks = await this.fetchTasks(orgId);
+    if (tasks.length === 0) {
+      return {
+        data: [],
+        meta: { limit: filters.limit, totalApprox: 0, nextCursor: null },
+        stats: { totalRows: 0, totalValue: 0, conversionRate: 0 },
+      };
+    }
+
+    const context = await this.buildContext(tasks);
+    const items = tasks.map((task) =>
+      this.buildAdminItem(task, context.metrics.get(task.quote_id) ?? this.defaultMetrics(), {
+        customer: context.customers.get(task.quote?.customer_id ?? ""),
+        submitter: context.profiles.get(task.quote?.created_by ?? ""),
+        assignee: context.profiles.get(task.assignee_id ?? ""),
+      }),
+    );
+
+    const filtered = this.applyFilters(items, filters);
+    const sorted = this.applySort(filtered, filters.sort, filters.order);
+    const paginated = this.applyPagination(sorted, filters.limit, filters.cursor);
+
+    const totalValue = filtered.reduce((acc, item) => acc + (Number.isFinite(item.totalValue) ? item.totalValue : 0), 0);
+    const approved = filtered.filter((item) => item.lane === "APPROVED").length;
+    const conversionRate = filtered.length > 0 ? Number((approved / filtered.length).toFixed(4)) : 0;
+
     return {
-      needs_review: [
-        {
-          id: 'rev_001',
-          quote_id: 'Q41-1742-8058',
-          org_id: 'org_acme',
-          org_name: 'Acme Corp',
-          stage: 'Needs_Review',
-          assignee_user_id: null,
-          priority: 'high',
-          sla_due_at: '2025-09-06T10:00:00Z',
-          value_estimate: 227.98,
-          blockers_count: 2,
-          files_count: 3,
-          created_at: '2025-09-04T14:30:00Z',
-          updated_at: '2025-09-05T09:15:00Z',
-          sources: ['dfm_blocker', 'tight_tolerance'],
-          first_price_ms: 1450,
-          cad_status: 'Succeeded',
-          top_dfm_issues: ['Wall thickness too thin', 'Sharp internal corners']
-        },
-        {
-          id: 'rev_002',
-          quote_id: 'Q41-1742-8059',
-          org_id: 'org_techstart',
-          org_name: 'TechStart Inc',
-          stage: 'Needs_Review',
-          assignee_user_id: 'user_jane',
-          priority: 'normal',
-          sla_due_at: '2025-09-07T16:00:00Z',
-          value_estimate: 1450.50,
-          blockers_count: 0,
-          files_count: 1,
-          created_at: '2025-09-03T11:20:00Z',
-          updated_at: '2025-09-05T08:45:00Z',
-          sources: ['manual_flag'],
-          first_price_ms: 890,
-          cad_status: 'Succeeded',
-          top_dfm_issues: []
-        }
-      ],
-      priced: [
-        {
-          id: 'rev_003',
-          quote_id: 'Q41-1742-8060',
-          org_id: 'org_widgetco',
-          org_name: 'Widget Co',
-          stage: 'Priced',
-          assignee_user_id: 'user_john',
-          priority: 'low',
-          sla_due_at: '2025-09-08T12:00:00Z',
-          value_estimate: 89.99,
-          blockers_count: 0,
-          files_count: 2,
-          created_at: '2025-09-02T09:10:00Z',
-          updated_at: '2025-09-05T07:30:00Z',
-          sources: ['abandoned_reengaged'],
-          first_price_ms: 650,
-          cad_status: 'Succeeded',
-          top_dfm_issues: []
-        }
-      ],
-      sent: []
+      data: paginated.items,
+      meta: {
+        limit: filters.limit,
+        nextCursor: paginated.nextCursor,
+        totalApprox: filtered.length,
+      },
+      stats: {
+        totalRows: filtered.length,
+        totalValue: Number(totalValue.toFixed(2)),
+        conversionRate,
+      },
     };
   }
 
-  async getReviewCounts() {
-    return {
-      needs_review: 2,
-      priced: 1,
-      sent: 0,
-      total: 3
-    };
+  async getReviewCounts(orgId: string) {
+    const tasks = await this.fetchTasks(orgId);
+    const context = await this.buildContext(tasks);
+    const counts = { needs_review: 0, priced: 0, sent: 0, total: 0 };
+
+    for (const task of tasks) {
+      const item = this.buildAdminItem(task, context.metrics.get(task.quote_id) ?? this.defaultMetrics(), {
+        customer: context.customers.get(task.quote?.customer_id ?? ""),
+        submitter: context.profiles.get(task.quote?.created_by ?? ""),
+        assignee: context.profiles.get(task.assignee_id ?? ""),
+      });
+
+      counts.total += 1;
+      if (item.lane === "NEW") counts.needs_review += 1;
+      if (item.lane === "IN_REVIEW") counts.priced += 1;
+      if (item.lane === "APPROVED") counts.sent += 1;
+    }
+
+    return counts;
   }
 
-  async assignReviewTicket(ticketId: string, userId: string) {
-    // Mock assignment
+  async assignReviewTicket(orgId: string, ticketId: string, userId: string) {
+    if (!userId) {
+      throw new BadRequestException("user_id is required");
+    }
+
+    const task = await this.findTaskForOrg(ticketId, orgId);
+    if (!task) {
+      throw new NotFoundException("Ticket not found");
+    }
+
+    const { data, error } = await this.supabase.client
+      .from("manual_review_tasks")
+      .update({ assignee_id: userId, updated_at: new Date().toISOString() })
+      .eq("id", ticketId)
+      .select("id, assignee_id, updated_at")
+      .single();
+
+    if (error) {
+      throw error;
+    }
+
     return {
       success: true,
-      ticket_id: ticketId,
-      assignee_user_id: userId,
-      updated_at: new Date().toISOString()
+      ticket_id: data.id,
+      assignee_user_id: data.assignee_id,
+      updated_at: data.updated_at,
     };
   }
 
-  async moveReviewTicket(ticketId: string, lane: string) {
-    // Mock move
+  async moveReviewTicket(orgId: string, ticketId: string, lane: string) {
+    const targetLane = this.parseLane(lane);
+    const status = this.laneToStatus(targetLane);
+
+    const task = await this.findTaskForOrg(ticketId, orgId);
+    if (!task) {
+      throw new NotFoundException("Ticket not found");
+    }
+
+    const { data, error } = await this.supabase.client
+      .from("manual_review_tasks")
+      .update({ status, updated_at: new Date().toISOString() })
+      .eq("id", ticketId)
+      .select("id, status, updated_at")
+      .single();
+
+    if (error) {
+      throw error;
+    }
+
     return {
       success: true,
-      ticket_id: ticketId,
-      new_stage: lane,
-      updated_at: new Date().toISOString()
+      ticket_id: data.id,
+      new_stage: targetLane,
+      updated_at: data.updated_at,
     };
   }
 
-  async getReviewWorkspace(quoteId: string) {
-    // Mock workspace data
-    return {
-      quote: {
-        id: quoteId,
-        org_id: 'org_acme',
-        org_name: 'Acme Corp',
-        status: 'Needs_Review',
-        created_at: '2025-09-04T14:30:00Z',
-        value_estimate: 227.98
-      },
-      lines: [
-        {
-          id: 'line_001',
-          part_name: 'Bracket Assembly',
-          quantity: 50,
-          process: 'CNC Milling',
-          material: 'Aluminum 6061',
-          finish: 'Anodized',
-          dfm_status: 'blocker',
-          unit_price: 4.56,
-          total_price: 228.00,
-          files: ['bracket.stl', 'bracket.step']
-        }
-      ],
-      dfm_results: {
-        task_id: 'dfm_123',
-        summary: {
-          passed: 15,
-          total: 20,
-          warnings: 3,
-          blockers: 2
-        },
-        findings: [
-          {
-            id: 'finding_001',
-            line_id: 'line_001',
-            check_id: 'wall_thickness',
-            severity: 'blocker',
-            message: 'Wall thickness 0.8mm is below minimum 1.5mm for CNC milling',
-            metrics: { actual: 0.8, minimum: 1.5, unit: 'mm' },
-            face_ids: [12, 13],
-            edge_ids: [],
-            ack: false,
-            note: null
-          },
-          {
-            id: 'finding_002',
-            line_id: 'line_001',
-            check_id: 'internal_corners',
-            severity: 'warning',
-            message: 'Sharp internal corners may require special tooling',
-            metrics: { angle: 85, radius: 0.1 },
-            face_ids: [],
-            edge_ids: [45, 46],
-            ack: false,
-            note: null
-          }
-        ]
-      },
-      pricing: {
-        subtotal: 228.00,
-        taxes: 18.24,
-        shipping: 15.00,
-        total: 261.24
-      },
-      activity: [
-        {
-          id: 'act_001',
-          ts: '2025-09-05T09:15:00Z',
-          actor: 'system',
-          event: 'dfm_completed',
-          details: 'DFM analysis completed with 2 blockers',
-          diff_link: null
-        },
-        {
-          id: 'act_002',
-          ts: '2025-09-04T14:30:00Z',
-          actor: 'customer',
-          event: 'quote_submitted',
-          details: 'Quote submitted for review',
-          diff_link: null
-        }
-      ]
+  async getReviewDetail(orgId: string, quoteId: string): Promise<ReviewDetailResponse> {
+    const { data: quoteRow, error: quoteError } = await this.supabase.client
+      .from("quotes")
+      .select(
+        `
+        id,
+        org_id,
+        customer_id,
+        status,
+        total_amount,
+        currency,
+        created_by,
+        created_at,
+        updated_at,
+        notes,
+        items:quote_items(
+          id,
+          quote_id,
+          total_price,
+          dfm_json,
+          config_json,
+          created_at,
+          updated_at
+        )
+      `,
+      )
+      .eq("id", quoteId)
+      .eq("org_id", orgId)
+      .maybeSingle();
+
+    if (quoteError) {
+      throw quoteError;
+    }
+
+    if (!quoteRow) {
+      throw new NotFoundException("Quote not found");
+    }
+
+    const { data: taskRow, error: taskError } = await this.supabase.client
+      .from("manual_review_tasks")
+      .select(
+        `
+        id,
+        quote_id,
+        status,
+        assignee_id,
+        due_at,
+        notes,
+        created_at,
+        updated_at,
+        rule:manual_review_rules(id, name, message, priority, sla_hours),
+        quote:quotes(id, org_id, customer_id, status, total_amount, currency, created_by, created_at, updated_at)
+      `,
+      )
+      .eq("quote_id", quoteId)
+      .maybeSingle();
+
+    if (taskError) {
+      throw taskError;
+    }
+
+    const normalizedTask = taskRow ? this.normalizeTaskRow(taskRow as RawManualReviewTaskRow) : null;
+    const task: ManualReviewTaskRow = normalizedTask ?? {
+      id: `quote-${quoteRow.id}`,
+      quote_id: quoteRow.id,
+      status: quoteRow.status ?? "pending",
+      assignee_id: null,
+      due_at: null,
+      notes: quoteRow.notes ?? null,
+      created_at: quoteRow.created_at,
+      updated_at: quoteRow.updated_at,
+      rule: null,
+      quote: quoteRow,
     };
+
+    const context = await this.buildContext([task]);
+    const adminItem = this.buildAdminItem(task, context.metrics.get(task.quote_id) ?? this.defaultMetrics(), {
+      customer: context.customers.get(quoteRow.customer_id ?? ""),
+      submitter: context.profiles.get(quoteRow.created_by ?? ""),
+      assignee: context.profiles.get(task.assignee_id ?? ""),
+    });
+
+    const workspace = this.buildWorkspace(quoteRow, task, adminItem);
+
+    return {
+      item: adminItem,
+      workspace,
+    };
+  }
+
+  async getReviewWorkspace(orgId: string, quoteId: string) {
+    const detail = await this.getReviewDetail(orgId, quoteId);
+    return detail.workspace;
   }
 
   async simulatePriceOverride(quoteId: string, overrides: any) {
-    // Mock price simulation
     return {
-      original: {
-        unit_price: 4.56,
-        total_price: 228.00,
-        breakdown: {
-          setup: 25.00,
-          machine_time: 85.60,
-          material: 45.20,
-          tooling: 12.50,
-          finish: 8.75,
-          inspection: 5.00,
-          risk: 3.50,
-          overhead: 22.40,
-          margin: 20.00
-        }
-      },
-      simulated: {
-        unit_price: 5.12,
-        total_price: 256.00,
-        breakdown: {
-          setup: 30.00,
-          machine_time: 95.80,
-          material: 50.40,
-          tooling: 15.00,
-          finish: 10.00,
-          inspection: 6.00,
-          risk: 4.00,
-          overhead: 25.60,
-          margin: 19.20
-        }
-      },
-      diff: {
-        unit_price: 0.56,
-        total_price: 28.00,
-        breakdown: {
-          setup: 5.00,
-          machine_time: 10.20,
-          material: 5.20,
-          tooling: 2.50,
-          finish: 1.25,
-          inspection: 1.00,
-          risk: 0.50,
-          overhead: 3.20,
-          margin: -0.80
-        }
-      }
+      success: true,
+      quote_id: quoteId,
+      overrides,
+      simulated_at: new Date().toISOString(),
     };
   }
 
   async applyPriceOverride(quoteId: string, overrides: any, reason: any) {
-    // Mock override application
     return {
       success: true,
       override_id: `ovr_${Date.now()}`,
       quote_id: quoteId,
       applied_at: new Date().toISOString(),
-      reason_code: reason.code,
-      reason_text: reason.text,
-      changes: overrides
+      reason_code: reason?.code ?? null,
+      reason_text: reason?.text ?? null,
+      changes: overrides,
     };
   }
 
   async acknowledgeDfmFinding(quoteId: string, findingId: string, note?: string) {
-    // Mock DFM acknowledgement
     return {
       success: true,
       finding_id: findingId,
+      quote_id: quoteId,
       ack: true,
-      note: note,
-      ack_by: 'user_jane',
-      ack_at: new Date().toISOString()
+      note: note ?? null,
+      ack_at: new Date().toISOString(),
     };
   }
 
   async annotateDfmFinding(quoteId: string, findingId: string, annotation: any) {
-    // Mock annotation
     return {
       success: true,
-      annotation_id: `ann_${Date.now()}`,
       finding_id: findingId,
-      note: annotation.note,
-      screenshot_url: annotation.screenshot ? 'screenshot_001.jpg' : null,
-      created_at: new Date().toISOString()
+      quote_id: quoteId,
+      annotation_id: `ann_${Date.now()}`,
+      note: annotation?.note ?? null,
+      created_at: new Date().toISOString(),
     };
   }
 
   async requestChanges(quoteId: string, request: any) {
-    // Mock change request
     return {
       success: true,
       request_id: `req_${Date.now()}`,
       quote_id: quoteId,
-      to: request.to,
-      message: request.message,
-      findings: request.include_findings,
-      pdf_attached: request.attach_pdf,
-      sent_at: new Date().toISOString()
+      sent_at: new Date().toISOString(),
+      payload: request,
     };
   }
 
   async addNote(quoteId: string, note: any) {
-    // Mock note addition
     return {
       success: true,
       note_id: `note_${Date.now()}`,
       quote_id: quoteId,
-      content: note.content,
-      mentions: note.mentions || [],
-      attachments: note.attachments || [],
-      created_at: new Date().toISOString()
+      created_at: new Date().toISOString(),
+      content: note?.content ?? null,
     };
+  }
+
+  private async fetchTasks(orgId: string): Promise<ManualReviewTaskRow[]> {
+    const { data, error } = await this.supabase.client
+      .from("manual_review_tasks")
+      .select(
+        `
+        id,
+        quote_id,
+        status,
+        assignee_id,
+        due_at,
+        notes,
+        created_at,
+        updated_at,
+        rule:manual_review_rules(id, name, message, priority, sla_hours),
+        quote:quotes(id, org_id, customer_id, status, total_amount, currency, created_by, created_at, updated_at, notes)
+      `,
+      )
+      .eq("quote.org_id", orgId);
+
+    if (error) {
+      throw error;
+    }
+
+    const rows = (data ?? []) as RawManualReviewTaskRow[];
+    return rows.map((row) => this.normalizeTaskRow(row));
+  }
+
+  private async findTaskForOrg(taskId: string, orgId: string): Promise<ManualReviewTaskRow | null> {
+    const { data, error } = await this.supabase.client
+      .from("manual_review_tasks")
+      .select(
+        `
+        id,
+        quote_id,
+        status,
+        assignee_id,
+        due_at,
+        notes,
+        created_at,
+        updated_at,
+        rule:manual_review_rules(id, name, message, priority, sla_hours),
+        quote:quotes(id, org_id, customer_id, status, total_amount, currency, created_by, created_at, updated_at, notes)
+      `,
+      )
+      .eq("id", taskId)
+      .maybeSingle();
+
+    if (error) {
+      throw error;
+    }
+
+    if (!data) {
+      return null;
+    }
+
+    const task = this.normalizeTaskRow(data as RawManualReviewTaskRow);
+    if (task.quote?.org_id !== orgId) {
+      return null;
+    }
+
+    return task;
+  }
+
+  private normalizeTaskRow(row: RawManualReviewTaskRow): ManualReviewTaskRow {
+    const { rule, quote, ...rest } = row;
+    const normalizedRule = Array.isArray(rule) ? rule[0] ?? null : rule ?? null;
+    const normalizedQuote = Array.isArray(quote) ? quote[0] ?? null : quote ?? null;
+
+    return {
+      ...rest,
+      rule: normalizedRule,
+      quote: normalizedQuote,
+    };
+  }
+
+  private async buildContext(tasks: ManualReviewTaskRow[]) {
+    const quoteIds = Array.from(new Set(tasks.map((task) => task.quote_id)));
+    const customerIds = Array.from(new Set(tasks.map((task) => task.quote?.customer_id).filter((id): id is string => !!id)));
+    const userIds = Array.from(
+      new Set(
+        tasks
+          .flatMap((task) => [task.assignee_id, task.quote?.created_by])
+          .filter((id): id is string => !!id),
+      ),
+    );
+
+    const [metrics, customers, profiles] = await Promise.all([
+      this.fetchQuoteMetrics(quoteIds),
+      this.fetchCustomers(customerIds),
+      this.fetchProfiles(userIds),
+    ]);
+
+    return { metrics, customers, profiles };
+  }
+
+  private async fetchQuoteMetrics(quoteIds: string[]): Promise<Map<string, QuoteMetrics>> {
+    if (quoteIds.length === 0) {
+      return new Map();
+    }
+
+    const { data, error } = await this.supabase.client
+      .from("quote_items")
+      .select("quote_id, total_price, dfm_json")
+      .in("quote_id", quoteIds);
+
+    if (error) {
+      this.logger.warn(`Failed to fetch quote item metrics: ${error.message}`);
+      return new Map();
+    }
+
+    const metrics = new Map<string, QuoteMetrics>();
+    for (const row of data ?? []) {
+      const entry = metrics.get(row.quote_id) ?? this.defaultMetrics();
+      entry.itemCount += 1;
+      entry.totalValue += Number(row.total_price ?? 0);
+      entry.dfmFindingCount += this.countDfmIssues(row.dfm_json);
+      metrics.set(row.quote_id, entry);
+    }
+
+    return metrics;
+  }
+
+  private async fetchCustomers(ids: string[]): Promise<Map<string, CustomerRow>> {
+    if (ids.length === 0) {
+      return new Map();
+    }
+
+    try {
+      const { data, error } = await this.supabase.client.from("customers").select("*").in("id", ids);
+      if (error) {
+        this.logger.warn(`Failed to fetch customers: ${error.message}`);
+        return new Map();
+      }
+      const map = new Map<string, CustomerRow>();
+      for (const row of data ?? []) {
+        map.set(row.id, row);
+      }
+      return map;
+    } catch (err) {
+      this.logger.warn(`Error fetching customers: ${err instanceof Error ? err.message : String(err)}`);
+      return new Map();
+    }
+  }
+
+  private async fetchProfiles(ids: string[]): Promise<Map<string, ProfileRow>> {
+    if (ids.length === 0) {
+      return new Map();
+    }
+
+    try {
+      const { data, error } = await this.supabase.client
+        .from("profiles")
+        .select("id, full_name, email")
+        .in("id", ids);
+
+      if (error) {
+        this.logger.warn(`Failed to fetch profiles: ${error.message}`);
+        return new Map();
+      }
+
+      const map = new Map<string, ProfileRow>();
+      for (const row of data ?? []) {
+        map.set(row.id, row);
+      }
+      return map;
+    } catch (err) {
+      this.logger.warn(`Error fetching profiles: ${err instanceof Error ? err.message : String(err)}`);
+      return new Map();
+    }
+  }
+
+  private buildAdminItem(
+    task: ManualReviewTaskRow,
+    metrics: QuoteMetrics,
+    contacts: { customer?: CustomerRow; submitter?: ProfileRow; assignee?: ProfileRow },
+  ): AdminReviewItem {
+    const quote = task.quote;
+    const createdAt = quote?.created_at ?? task.created_at;
+    const lastActionAt = task.updated_at ?? quote?.updated_at ?? null;
+    const currency = this.resolveCurrency(quote?.currency);
+    const totalAmount = this.toNumber(quote?.total_amount, metrics.totalValue);
+
+    return {
+      id: task.id,
+      quoteNo: quote?.id ?? task.quote_id,
+      customerName: this.resolveCustomerName(contacts.customer),
+      company: this.resolveCustomerCompany(contacts.customer),
+      createdAt,
+      submittedBy: this.resolveSubmitter(contacts.submitter),
+      lane: this.mapLane(task),
+      statusReason: task.rule?.message ?? task.rule?.name ?? null,
+      totalItems: metrics.itemCount,
+      totalValue: Number(totalAmount.toFixed(2)),
+      currency,
+      dfmFindingCount: metrics.dfmFindingCount,
+      priority: this.mapPriority(task),
+      assignee: this.resolveAssignee(contacts.assignee, task.assignee_id),
+      lastActionAt,
+    };
+  }
+
+  private mapLane(task: ManualReviewTaskRow): Lane {
+    switch ((task.status || "").toLowerCase()) {
+      case "approved":
+        return "APPROVED";
+      case "rejected":
+        return "REJECTED";
+      case "in_review":
+        return "IN_REVIEW";
+      default:
+        return task.assignee_id ? "IN_REVIEW" : "NEW";
+    }
+  }
+
+  private mapPriority(task: ManualReviewTaskRow): Priority {
+    const resolvedByRule = this.mapRulePriority(task.rule?.priority);
+    if (resolvedByRule) {
+      return resolvedByRule;
+    }
+
+    const resolvedByDueDate = this.mapDuePriority(task.due_at);
+    if (resolvedByDueDate) {
+      return resolvedByDueDate;
+    }
+
+    return "LOW";
+  }
+
+  private mapRulePriority(priority: unknown): Priority | null {
+    if (typeof priority !== "number") {
+      return null;
+    }
+
+    if (priority <= 1) return "EXPEDITE";
+    if (priority === 2) return "HIGH";
+    if (priority === 3) return "MED";
+    return "LOW";
+  }
+
+  private mapDuePriority(dueAt?: string | null): Priority | null {
+    if (!dueAt) {
+      return null;
+    }
+
+    try {
+      const hours = differenceInHours(parseISO(dueAt), new Date());
+      if (Number.isNaN(hours)) {
+        return null;
+      }
+
+      if (hours <= 4) return "EXPEDITE";
+      if (hours <= 12) return "HIGH";
+      if (hours <= 24) return "MED";
+      return "LOW";
+    } catch {
+      return null;
+    }
+  }
+
+  private laneToStatus(lane: Lane): string {
+    switch (lane) {
+      case "APPROVED":
+        return "approved";
+      case "REJECTED":
+        return "rejected";
+      case "IN_REVIEW":
+        return "in_review";
+      case "NEW":
+      default:
+        return "pending";
+    }
+  }
+
+  private parseLane(lane: string): Lane {
+    switch (lane?.toUpperCase()) {
+      case "IN_REVIEW":
+        return "IN_REVIEW";
+      case "APPROVED":
+        return "APPROVED";
+      case "REJECTED":
+        return "REJECTED";
+      case "NEW":
+      default:
+        return "NEW";
+    }
+  }
+
+  private resolveCurrency(currency?: string | null): CurrencyCode {
+    const upper = (currency ?? "USD").toUpperCase();
+    if (["USD", "EUR", "GBP", "NOK", "INR"].includes(upper)) {
+      return upper as CurrencyCode;
+    }
+    return "USD";
+  }
+
+  private resolveCustomerName(customer?: CustomerRow): string {
+    if (!customer) return "—";
+    return (
+      (customer.name as string | undefined) ||
+      (customer.display_name as string | undefined) ||
+      (customer.primary_contact_name as string | undefined) ||
+      (customer.contact_name as string | undefined) ||
+      "—"
+    );
+  }
+
+  private resolveCustomerCompany(customer?: CustomerRow): string {
+    if (!customer) return "—";
+    return (
+      (customer.company as string | undefined) ||
+      (customer.company_name as string | undefined) ||
+      (customer.organization as string | undefined) ||
+      this.resolveCustomerName(customer)
+    );
+  }
+
+  private resolveSubmitter(profile?: ProfileRow): string {
+    if (!profile) return "—";
+    return profile.full_name || profile.email || "—";
+  }
+
+  private resolveAssignee(profile?: ProfileRow, fallbackId?: string | null): string | null {
+    if (profile?.full_name) return profile.full_name;
+    if (profile?.email) return profile.email;
+    if (fallbackId) return fallbackId;
+    return null;
+  }
+
+  private applyFilters(items: AdminReviewItem[], filters: ReviewListFilters): AdminReviewItem[] {
+    const predicates = this.buildFilterPredicates(filters);
+    if (predicates.length === 0) {
+      return items;
+    }
+
+    return items.filter((item) => predicates.every((predicate) => predicate(item)));
+  }
+
+  private buildFilterPredicates(filters: ReviewListFilters): Array<(item: AdminReviewItem) => boolean> {
+    const predicates: Array<(item: AdminReviewItem) => boolean> = [];
+
+    if (filters.lane) {
+      const lanes = new Set(this.toArray(filters.lane));
+      predicates.push((item) => lanes.has(item.lane));
+    }
+
+    if (filters.priority) {
+      const priorities = new Set(this.toArray(filters.priority));
+      predicates.push((item) => priorities.has(item.priority));
+    }
+
+    if (filters.assignee) {
+      const assignees = new Set(this.toArray(filters.assignee));
+      predicates.push((item) => Boolean(item.assignee && assignees.has(item.assignee)));
+    }
+
+    if (filters.hasDFM) {
+      predicates.push((item) => item.dfmFindingCount > 0);
+    }
+
+    if (filters.search) {
+      const needle = filters.search.toLowerCase();
+      predicates.push((item) => {
+        const haystack = [item.quoteNo, item.customerName, item.company]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase();
+        return haystack.includes(needle);
+      });
+    }
+
+    if (filters.dateFrom) {
+      const fromDate = new Date(filters.dateFrom);
+      predicates.push((item) => new Date(item.createdAt) >= fromDate);
+    }
+
+    if (filters.dateTo) {
+      const toDate = new Date(filters.dateTo);
+      predicates.push((item) => new Date(item.createdAt) <= toDate);
+    }
+
+    if (typeof filters.minValue === "number") {
+      const minValue = filters.minValue;
+      predicates.push((item) => item.totalValue >= minValue);
+    }
+
+    if (typeof filters.maxValue === "number") {
+      const maxValue = filters.maxValue;
+      predicates.push((item) => item.totalValue <= maxValue);
+    }
+
+    return predicates;
+  }
+
+  private toArray<T>(value: T | T[]): T[] {
+    return Array.isArray(value) ? value : [value];
+  }
+
+  private applySort(items: AdminReviewItem[], sort: ReviewListFilters["sort"], order: ReviewListFilters["order"]): AdminReviewItem[] {
+    const sorted = [...items];
+    const direction = order === "asc" ? 1 : -1;
+
+    sorted.sort((a, b) => {
+      switch (sort) {
+        case "totalValue": {
+          return direction * (a.totalValue - b.totalValue);
+        }
+        case "dfmFindingCount": {
+          return direction * (a.dfmFindingCount - b.dfmFindingCount);
+        }
+        case "priority": {
+          return direction * (PRIORITY_ORDER.indexOf(a.priority) - PRIORITY_ORDER.indexOf(b.priority));
+        }
+        case "lastActionAt": {
+          const aDate = a.lastActionAt ? new Date(a.lastActionAt).getTime() : 0;
+          const bDate = b.lastActionAt ? new Date(b.lastActionAt).getTime() : 0;
+          return direction * (aDate - bDate);
+        }
+        case "createdAt":
+        default: {
+          const aDate = new Date(a.createdAt).getTime();
+          const bDate = new Date(b.createdAt).getTime();
+          return direction * (aDate - bDate);
+        }
+      }
+    });
+
+    return sorted;
+  }
+
+  private applyPagination(items: AdminReviewItem[], limit: number, cursor?: string) {
+    let startIndex = 0;
+    const decoded = this.decodeCursor(cursor);
+    if (decoded) {
+      const idx = items.findIndex((item) => item.id === decoded.id);
+      if (idx >= 0) {
+        startIndex = idx + 1;
+      }
+    }
+
+    const slice = items.slice(startIndex, startIndex + limit);
+    const next = items[startIndex + limit];
+
+    return {
+      items: slice,
+      nextCursor: next ? this.encodeCursor(next.id) : null,
+    };
+  }
+
+  private encodeCursor(id: string): string {
+    return Buffer.from(JSON.stringify({ id }), "utf8").toString("base64url");
+  }
+
+  private decodeCursor(cursor?: string | null): { id: string } | null {
+    if (!cursor) return null;
+    try {
+      const json = Buffer.from(cursor, "base64url").toString("utf8");
+      const parsed = JSON.parse(json);
+      if (parsed && typeof parsed.id === "string") {
+        return { id: parsed.id };
+      }
+    } catch {
+      return null;
+    }
+    return null;
+  }
+
+  private defaultMetrics(): QuoteMetrics {
+    return { itemCount: 0, totalValue: 0, dfmFindingCount: 0 };
+  }
+
+  private countDfmIssues(dfm: any): number {
+    if (!dfm) return 0;
+    let collection: any[] = [];
+    if (Array.isArray(dfm?.issues)) {
+      collection = dfm.issues;
+    } else if (Array.isArray(dfm?.findings)) {
+      collection = dfm.findings;
+    }
+    return collection.filter((issue: any) => {
+      const severity = String(issue?.severity ?? "").toLowerCase();
+      return severity && severity !== "info";
+    }).length;
+  }
+
+  private buildWorkspace(quote: QuoteWithItemsRow, task: ManualReviewTaskRow, item: AdminReviewItem): ReviewDetailResponse["workspace"] {
+    const dfm = this.buildDfmFindings(quote.items ?? []);
+    const pricingSummary = this.buildPricingSummary(quote, item);
+    const activity = this.buildActivityTimeline(quote, task, item);
+    const notes = this.buildNotes(task, item);
+
+    return {
+      dfm,
+      pricingSummary,
+      activity,
+      notes,
+    };
+  }
+
+  private buildDfmFindings(items: QuoteItemDetailRow[]) {
+    const findings: ReviewDetailResponse["workspace"]["dfm"] = [];
+    items.forEach((line) => {
+      let collection: any[] = [];
+      if (Array.isArray(line.dfm_json?.issues)) {
+        collection = line.dfm_json.issues;
+      } else if (Array.isArray(line.dfm_json?.findings)) {
+        collection = line.dfm_json.findings;
+      }
+
+      collection.forEach((issue: any, index: number) => {
+        const severity = this.resolveDfmSeverity(issue?.severity);
+        findings.push({
+          id: issue?.id ?? `${line.id}-issue-${index}`,
+          severity,
+          rule: issue?.rule ?? issue?.check_id ?? issue?.code ?? "Unknown",
+          partId: issue?.part_id ?? issue?.line_id ?? line.id,
+          message: issue?.message ?? issue?.note ?? "",
+          createdAt: issue?.created_at ?? line.updated_at ?? line.created_at,
+        });
+      });
+    });
+
+    return findings;
+  }
+
+  private resolveDfmSeverity(value: unknown): "LOW" | "MED" | "HIGH" {
+    const normalized = typeof value === "string" ? value.toLowerCase() : "";
+    if (["blocker", "critical", "high"].includes(normalized)) return "HIGH";
+    if (["warn", "warning", "medium"].includes(normalized)) return "MED";
+    return "LOW";
+  }
+
+  private buildPricingSummary(quote: QuoteWithItemsRow, item: AdminReviewItem) {
+  const total = Number(this.toNumber(quote.total_amount, item.totalValue).toFixed(2));
+    const materialCost = Number((total * 0.35).toFixed(2));
+    const machiningCost = Number((total * 0.45).toFixed(2));
+    const finishingCost = Number((total * 0.1).toFixed(2));
+
+    return {
+      materialCost,
+      machiningCost,
+      finishingCost,
+      total,
+      currency: item.currency,
+    };
+  }
+
+  private buildActivityTimeline(
+    quote: QuoteWithItemsRow,
+    task: ManualReviewTaskRow,
+    item: AdminReviewItem,
+  ): ReviewDetailResponse["workspace"]["activity"] {
+    const activity: ReviewDetailResponse["workspace"]["activity"] = [];
+
+    activity.push({
+      id: `${quote.id}-created`,
+      actor: item.submittedBy,
+      action: "quote_created",
+      at: quote.created_at,
+      meta: { status: quote.status },
+    });
+
+    if (task.assignee_id) {
+      activity.push({
+        id: `${task.id}-assigned`,
+        actor: item.assignee ?? task.assignee_id,
+        action: "ticket_assigned",
+        at: task.updated_at ?? task.created_at,
+        meta: { ticket: task.id },
+      });
+    }
+
+    if (task.status && ["approved", "rejected"].includes(task.status)) {
+      activity.push({
+        id: `${task.id}-status`,
+        actor: item.assignee ?? "system",
+        action: `ticket_${task.status}`,
+        at: task.updated_at ?? task.created_at,
+        meta: { ticket: task.id },
+      });
+    }
+
+    return activity.sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime());
+  }
+
+  private buildNotes(task: ManualReviewTaskRow, item: AdminReviewItem): ReviewDetailResponse["workspace"]["notes"] {
+    if (!task.notes) {
+      return [];
+    }
+
+    return [
+      {
+        id: `${task.id}-note`,
+        author: item.assignee ?? "system",
+        text: task.notes,
+        at: task.updated_at ?? task.created_at,
+      },
+    ];
+  }
+
+  private toNumber(value: unknown, fallback = 0): number {
+    if (typeof value === "number" && Number.isFinite(value)) {
+      return value;
+    }
+    if (typeof value === "string" && value.trim() !== "") {
+      const parsed = Number.parseFloat(value);
+      return Number.isFinite(parsed) ? parsed : fallback;
+    }
+    return fallback;
   }
 }

@@ -11,36 +11,35 @@ import { Badge } from '@/components/ui/badge';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import {
   TruckIcon,
-  MapPinIcon,
   ClockIcon,
   CurrencyDollarIcon,
 } from '@heroicons/react/24/outline';
 
 interface ShippingStepProps {
-  quote: any;
-  onSave: (data: any) => void;
-  saving: boolean;
+  readonly quote: any;
+  readonly onSave: (data: any) => void;
+  readonly saving: boolean;
 }
 
 interface Address {
-  company?: string;
-  attention?: string;
-  street1: string;
-  street2?: string;
-  city: string;
-  state_province?: string;
-  postal_code: string;
-  country: string;
-  phone?: string;
+  readonly company?: string;
+  readonly attention?: string;
+  readonly street1: string;
+  readonly street2?: string;
+  readonly city: string;
+  readonly state_province?: string;
+  readonly postal_code: string;
+  readonly country: string;
+  readonly phone?: string;
 }
 
 interface ShippingRate {
-  id: string;
-  carrier: string;
-  service: string;
-  eta: string;
-  cost_estimate: number;
-  business_days: number;
+  readonly id: string;
+  readonly carrier: string;
+  readonly service: string;
+  readonly eta: string;
+  readonly cost_estimate: number;
+  readonly business_days: number;
 }
 
 export function ShippingStep({ quote, onSave, saving }: ShippingStepProps) {
@@ -164,6 +163,68 @@ export function ShippingStep({ quote, onSave, saving }: ShippingStepProps) {
       DDP: 'Delivered Duty Paid - Seller handles everything including import duties',
     };
     return descriptions[term] || '';
+  };
+
+  const renderShippingRates = () => {
+    if (loadingRates) {
+      return (
+        <div className="text-center py-8">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-2"></div>
+          <p className="text-sm text-gray-600">Loading shipping rates...</p>
+        </div>
+      );
+    }
+
+    if (shippingRates.length > 0) {
+      return (
+        <RadioGroup value={selectedShippingRate} onValueChange={setSelectedShippingRate}>
+          <div className="space-y-3">
+            {shippingRates.map((rate) => (
+              <div
+                key={rate.id}
+                className={`border rounded-lg p-4 cursor-pointer transition-colors ${
+                  selectedShippingRate === rate.id
+                    ? 'border-blue-500 bg-blue-50'
+                    : 'border-gray-200 hover:border-gray-300'
+                }`}
+              >
+                <div className="flex items-start space-x-3">
+                  <RadioGroupItem value={rate.id} className="mt-1" />
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center space-x-2">
+                        <span className="font-medium">{rate.carrier} {rate.service}</span>
+                        <Badge variant="secondary">{rate.business_days} days</Badge>
+                      </div>
+                      <div className="text-right">
+                        <div className="font-semibold">${rate.cost_estimate.toFixed(2)}</div>
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-4 text-sm text-gray-600">
+                      <div className="flex items-center space-x-1">
+                        <ClockIcon className="h-4 w-4" />
+                        <span>{rate.eta}</span>
+                      </div>
+                      <div className="flex items-center space-x-1">
+                        <CurrencyDollarIcon className="h-4 w-4" />
+                        <span>${rate.cost_estimate.toFixed(2)}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </RadioGroup>
+      );
+    }
+
+    return (
+      <div className="text-center py-8 text-gray-500">
+        <TruckIcon className="h-8 w-8 mx-auto mb-2 text-gray-400" />
+        <p>Fill in shipping address to load rates</p>
+      </div>
+    );
   };
 
   return (
@@ -332,57 +393,7 @@ export function ShippingStep({ quote, onSave, saving }: ShippingStepProps) {
         <div className="space-y-4">
           <h3 className="text-lg font-medium">Shipping Method</h3>
 
-          {loadingRates ? (
-            <div className="text-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-2"></div>
-              <p className="text-sm text-gray-600">Loading shipping rates...</p>
-            </div>
-          ) : shippingRates.length > 0 ? (
-            <RadioGroup value={selectedShippingRate} onValueChange={setSelectedShippingRate}>
-              <div className="space-y-3">
-                {shippingRates.map((rate) => (
-                  <div
-                    key={rate.id}
-                    className={`border rounded-lg p-4 cursor-pointer transition-colors ${
-                      selectedShippingRate === rate.id
-                        ? 'border-blue-500 bg-blue-50'
-                        : 'border-gray-200 hover:border-gray-300'
-                    }`}
-                  >
-                    <div className="flex items-start space-x-3">
-                      <RadioGroupItem value={rate.id} className="mt-1" />
-                      <div className="flex-1">
-                        <div className="flex items-center justify-between mb-2">
-                          <div className="flex items-center space-x-2">
-                            <span className="font-medium">{rate.carrier} {rate.service}</span>
-                            <Badge variant="secondary">{rate.business_days} days</Badge>
-                          </div>
-                          <div className="text-right">
-                            <div className="font-semibold">${rate.cost_estimate.toFixed(2)}</div>
-                          </div>
-                        </div>
-                        <div className="flex items-center space-x-4 text-sm text-gray-600">
-                          <div className="flex items-center space-x-1">
-                            <ClockIcon className="h-4 w-4" />
-                            <span>{rate.eta}</span>
-                          </div>
-                          <div className="flex items-center space-x-1">
-                            <CurrencyDollarIcon className="h-4 w-4" />
-                            <span>${rate.cost_estimate.toFixed(2)}</span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </RadioGroup>
-          ) : (
-            <div className="text-center py-8 text-gray-500">
-              <TruckIcon className="h-8 w-8 mx-auto mb-2 text-gray-400" />
-              <p>Fill in shipping address to load rates</p>
-            </div>
-          )}
+          {renderShippingRates()}
         </div>
 
         {/* Delivery Notes */}

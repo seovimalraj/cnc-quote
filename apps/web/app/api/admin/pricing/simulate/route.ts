@@ -1,36 +1,25 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
+
+import { resolveApiUrl } from '@/app/api/_lib/backend';
+import { proxyFetch } from '@/app/api/_lib/proxyFetch';
 
 /**
  * Admin pricing simulation proxy route
  * Forwards simulation parameters to backend /price/admin/simulate
  */
 export async function POST(request: NextRequest) {
-  try {
-    const body = await request.json();
-
-    const backendUrl = process.env.API_BASE_URL || process.env.NEXT_PUBLIC_API_BASE_URL;
-    if (!backendUrl) {
-      return NextResponse.json({ error: 'API_BASE_URL not configured' }, { status: 500 });
-    }
-
-    const resp = await fetch(`${backendUrl.replace(/\/$/, '')}/price/admin/simulate`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        // Forward auth if present (Supabase, bearer, etc.)
-        Authorization: request.headers.get('authorization') || ''
-      },
-      body: JSON.stringify(body)
-    });
-
-    const data = await resp.json();
-    if (!resp.ok) {
-      return NextResponse.json({ error: data?.error || 'Simulation failed' }, { status: resp.status });
-    }
-
-    return NextResponse.json(data);
-  } catch (err: any) {
-    console.error('Admin simulate proxy error', err);
-    return NextResponse.json({ error: 'Internal simulation proxy error' }, { status: 500 });
+  const body = await request.text();
+  const headers: Record<string, string> = {};
+  const contentType = request.headers.get('content-type');
+  if (contentType && contentType.length > 0) {
+    headers['content-type'] = contentType;
   }
+
+  const upstream = await proxyFetch(request, resolveApiUrl('/price/admin/simulate'), {
+    method: 'POST',
+    body: body.length > 0 ? body : undefined,
+    headers,
+  });
+
+  return upstream;
 }

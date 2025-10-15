@@ -30,6 +30,7 @@ import { QuoteRevisionsModule } from './quotes/revisions/revisions.module';
 import { SchedulerModule } from './scheduler/scheduler.module';
 import { RevisionsModule } from './revisions/revisions.module';
 import { AIModule } from './modules/ai/ai.module';
+import { ReviewModule } from './modules/review/review.module';
 
 @Module({
   imports: [
@@ -74,6 +75,7 @@ import { AIModule } from './modules/ai/ai.module';
   SchedulerModule,
   RevisionsModule,
   AIModule,
+  ReviewModule,
   ],
 })
 export class AppModule {}

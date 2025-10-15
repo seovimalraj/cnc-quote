@@ -32,6 +32,9 @@
       ],
       "@cnc-quote/shared": [
         "../../packages/shared/src/index.ts"
+      ],
+      "@cnc-quote/shared/contracts/*": [
+        "../../packages/shared/src/contracts/*"
       ]
     },
     "plugins": [

@@ -4,21 +4,20 @@ import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import {
   DocumentTextIcon,
   CloudArrowUpIcon,
-  EyeIcon,
   PencilIcon,
 } from '@heroicons/react/24/outline';
+import { formatCurrency } from '@/lib/checkout/currency';
 
 interface ReviewComplianceStepProps {
-  quote: any;
-  onSave: (data: any) => void;
-  saving: boolean;
+  readonly quote: any;
+  readonly onSave: (data: any) => void;
+  readonly saving: boolean;
 }
 
 export function ReviewComplianceStep({ quote, onSave, saving }: ReviewComplianceStepProps) {
@@ -28,6 +27,7 @@ export function ReviewComplianceStep({ quote, onSave, saving }: ReviewCompliance
     export_ack: false,
   });
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
+  const currency = quote.currency ?? 'USD';
 
   const handleFileUpload = (files: FileList | null) => {
     if (!files) return;
@@ -86,7 +86,7 @@ export function ReviewComplianceStep({ quote, onSave, saving }: ReviewCompliance
               </div>
               <div>
                 <span className="text-gray-600">Total:</span>
-                <div className="font-medium">${quote.total_due.toFixed(2)}</div>
+                <div className="font-medium">{formatCurrency(quote.total_due, currency)}</div>
               </div>
             </div>
           </div>
@@ -114,8 +114,8 @@ export function ReviewComplianceStep({ quote, onSave, saving }: ReviewCompliance
                   <TableCell>
                     <Badge variant="secondary">{line.lead_option}</Badge>
                   </TableCell>
-                  <TableCell>${line.price_per_unit.toFixed(2)}</TableCell>
-                  <TableCell>${line.line_total.toFixed(2)}</TableCell>
+                  <TableCell>{formatCurrency(line.price_per_unit, currency)}</TableCell>
+                  <TableCell>{formatCurrency(line.line_total, currency)}</TableCell>
                 </TableRow>
               ))}
             </TableBody>
@@ -221,14 +221,17 @@ export function ReviewComplianceStep({ quote, onSave, saving }: ReviewCompliance
           {uploadedFiles.length > 0 && (
             <div className="space-y-2">
               <h4 className="text-sm font-medium">Uploaded Files:</h4>
-              {uploadedFiles.map((file, index) => (
-                <div key={index} className="flex items-center justify-between bg-gray-50 p-2 rounded">
+              {uploadedFiles.map((file) => {
+                const fileKey = `${file.name}-${file.size}-${file.lastModified}`;
+                return (
+                  <div key={fileKey} className="flex items-center justify-between bg-gray-50 p-2 rounded">
                   <span className="text-sm">{file.name}</span>
                   <span className="text-xs text-gray-500">
                     {(file.size / 1024 / 1024).toFixed(2)} MB
                   </span>
-                </div>
-              ))}
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>
