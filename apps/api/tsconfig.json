@@ -29,6 +29,6 @@
       "@cnc-quote/shared": ["../../packages/shared/src"]
     }
   },
-  "include": ["src/**/*", "test/**/*"],
+  "include": ["src/**/*", "test/**/*", "__tests__/**/*"],
   "exclude": ["node_modules", "dist"]
 }

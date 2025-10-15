@@ -1,0 +1,44 @@
+{
+  "list_success": {
+    "data": [
+      {
+        "id": "qu_01J7W8K8VY7N3S",
+        "quoteNo": "Q-2025-1012",
+        "customerName": "Acme Robotics",
+        "company": "Acme Inc.",
+        "createdAt": "2025-10-11T09:35:12.000Z",
+        "submittedBy": "nina@acme.com",
+        "lane": "IN_REVIEW",
+        "statusReason": null,
+        "totalItems": 3,
+        "totalValue": 12850.4,
+        "currency": "USD",
+        "dfmFindingCount": 2,
+        "priority": "HIGH",
+        "assignee": "ops.raj",
+        "lastActionAt": "2025-10-12T04:12:09.000Z"
+      }
+    ],
+    "meta": {
+      "nextCursor": "eyJsYXN0S2V5Ijoi...",
+      "limit": 25,
+      "totalApprox": 1240
+    },
+    "stats": {
+      "totalRows": 1240,
+      "totalValue": 913245.92,
+      "conversionRate": 0.41
+    }
+  },
+  "error_validation": {
+    "error": "Invalid 'order' parameter",
+    "code": "VALIDATION_ERROR",
+    "requestId": "req_01JF9...",
+    "details": [
+      {
+        "field": "order",
+        "message": "Expected asc|desc"
+      }
+    ]
+  }
+}

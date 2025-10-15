@@ -1,142 +1,51 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
+import { z } from 'zod';
 
-// Simple in-memory rate limiting (in production, use Redis or similar)
-const rateLimitMap = new Map<string, { count: number; resetTime: number }>();
-const RATE_LIMIT_WINDOW = 60 * 60 * 1000; // 1 hour
-const RATE_LIMIT_MAX = 5; // 5 attempts per hour
+import { buildProxyResponse, resolveApiUrl } from '@/app/api/_lib/backend';
+import { proxyFetch } from '@/app/api/_lib/proxyFetch';
 
-function checkRateLimit(ip: string): boolean {
-  const now = Date.now();
-  const userLimit = rateLimitMap.get(ip);
+const emailRegex = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
+const e164Regex = /^\+[1-9]\d{6,14}$/;
 
-  if (!userLimit || now > userLimit.resetTime) {
-    rateLimitMap.set(ip, { count: 1, resetTime: now + RATE_LIMIT_WINDOW });
-    return true;
-  }
+const LeadRequestSchema = z
+  .object({
+    email: z.string().regex(emailRegex, { message: 'email must be a valid address' }),
+    phone: z.string().regex(e164Regex, { message: 'phone must be formatted as E.164' }),
+    dfm_request_id: z.string().min(1).optional(),
+  })
+  .catchall(z.unknown());
 
-  if (userLimit.count >= RATE_LIMIT_MAX) {
-    return false;
-  }
-
-  userLimit.count++;
-  return true;
-}
+const buildErrorResponse = (message: string, status = 400) =>
+  new Response(JSON.stringify({ error: message }), {
+    status,
+    headers: { 'content-type': 'application/json' },
+  });
 
 export async function POST(request: NextRequest) {
+  let parsed: z.infer<typeof LeadRequestSchema>;
+
   try {
-    // Get client IP for rate limiting
-    const ip = request.headers.get('x-forwarded-for') ||
-               request.headers.get('x-real-ip') ||
-               'unknown';
-
-    // Check rate limit
-    if (!checkRateLimit(ip)) {
-      return NextResponse.json(
-        { error: 'Too many requests. Please try again later.' },
-        { status: 429 }
-      );
-    }
-
     const body = await request.json();
-    const { email, phone, quoteId, fingerprint, files = [], quoteSummary } = body;
-
-    // Validate required fields
-    if (!email || !phone || !quoteId) {
-      return NextResponse.json(
-        { error: 'Missing required fields' },
-        { status: 400 }
-      );
-    }
-
-    // Additional validation
-    const emailRegex = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
-    if (!emailRegex.test(email)) {
-      return NextResponse.json(
-        { error: 'Invalid email format' },
-        { status: 400 }
-      );
-    }
-
-    // Business email validation
-    const blocklistDomains = ['gmail.com', 'yahoo.com', 'outlook.com', 'hotmail.com', 'aol.com', 'icloud.com', 'proton.me', 'yopmail.com', 'gmx.com', 'mailinator.com'];
-    const allowedTlds = ['com', 'net', 'org', 'io', 'co', 'ai', 'edu', 'gov'];
-    const domain = email.split('@')[1].toLowerCase();
-    const tld = domain.split('.').pop();
-
-    if (blocklistDomains.includes(domain) || !allowedTlds.includes(tld || '')) {
-      return NextResponse.json(
-        { error: 'Please use a business email address' },
-        { status: 400 }
-      );
-    }
-
-    // Phone validation (E.164 format)
-    const e164Regex = /^\+[1-9]\d{6,14}$/;
-    if (!e164Regex.test(phone)) {
-      return NextResponse.json(
-        { error: 'Invalid phone number format. Use E.164 format (+1234567890)' },
-        { status: 400 }
-      );
-    }
-
-    // Store in admin leads storage for recovery
-    try {
-      const { addLead } = await import('../admin/leads/route');
-      addLead({
-        email,
-        phone,
-        quoteId,
-        fingerprint,
-        files,
-        quoteSummary,
-        submittedAt: new Date().toISOString()
-      });
-      console.log(`Stored lead for admin recovery: ${quoteId}`, {
-        email,
-        phone,
-        files: files?.length || 0
-      });
-    } catch (error) {
-      console.error('Error storing lead for admin:', error);
-      // Continue with lead creation
-    }
-
-    // Generate lead ID
-    const leadId = `lead-${Date.now()}`;
-    
-    // TODO: Send welcome email (currently disabled due to URL issues)
-    console.log(`Lead created for ${email} with quote ${quoteId}`);
-
-    // Return lead response
-    const leadResponse = {
-      id: leadId,
-      email,
-      phone,
-      quoteId,
-      fingerprint,
-      userId: `user-${Date.now()}`,
-      organizationId: 'prospects',
-      status: 'active',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      abandonedQuoteStored: true
-    };
-
-    // Set a simple session cookie
-    const response = NextResponse.json(leadResponse);
-    response.cookies.set('quote-session', `session-${quoteId}-${Date.now()}`, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 60 * 60 * 24 * 7 // 7 days
-    });
-
-    return response;
+    parsed = LeadRequestSchema.parse(body);
   } catch (error) {
-    console.error('Error creating lead:', error);
-    return NextResponse.json(
-      { error: 'Failed to create lead' },
-      { status: 500 }
-    );
+    if (error instanceof z.ZodError) {
+      const issues = error.issues.map((issue) => issue.message).join('; ');
+      return buildErrorResponse(issues);
+    }
+    return buildErrorResponse('Invalid JSON payload');
   }
+
+  const payload = {
+    email: parsed.email,
+    phone: parsed.phone,
+    ...(parsed.dfm_request_id ? { dfm_request_id: parsed.dfm_request_id } : {}),
+  };
+
+  const upstream = await proxyFetch(request, resolveApiUrl('/leads'), {
+    method: 'POST',
+    body: JSON.stringify(payload),
+    headers: { 'content-type': 'application/json' },
+  });
+
+  return buildProxyResponse(upstream);
 }

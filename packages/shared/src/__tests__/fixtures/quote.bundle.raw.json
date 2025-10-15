@@ -1,0 +1,118 @@
+{
+  "id": "q_bundle_001",
+  "status": "ready",
+  "currency": "USD",
+  "parts": [
+    {
+      "id": "part_001",
+      "quote_id": "q_bundle_001",
+      "file_id": "file_001",
+      "process_type": "cnc_milling",
+      "material_id": "6061_aluminum",
+      "material_spec": "AMS-QQ-A-250/11",
+      "finish_ids": ["clear_anodize"],
+      "tolerance_class": "standard",
+      "tolerances": ["ISO2768-m"],
+      "quantities": [1, 5, 10],
+      "selected_quantity": 5,
+      "lead_time_option": "standard",
+      "secondary_operations": ["deburr"],
+      "inspection_level": "basic",
+      "surface_finish": "standard",
+      "machining_complexity": "medium",
+      "sheet_thickness_mm": null,
+      "bend_count": null,
+      "material_gauge": null,
+      "geometry": {
+        "metrics": {
+          "volume_cc": 125.4,
+          "surface_area_cm2": 210.8
+        }
+      },
+      "dfm": {
+        "status": "complete",
+        "issues": [
+          {
+            "id": "dfm_001",
+            "severity": "warn",
+            "category": "thin_wall",
+            "message": "Wall thickness below recommended minimum",
+            "recommendation": "Increase wall thickness to 0.8mm",
+            "refs": {
+              "feature_ids": ["feat_01"],
+              "face_ids": ["face_11"]
+            }
+          }
+        ]
+      },
+      "pricing": {
+        "status": "ready",
+        "matrix": [
+          {
+            "quantity": 1,
+            "unit_price": 250.75,
+            "total_price": 250.75,
+            "lead_time_days": 10,
+            "breakdown": {
+              "material": 45.5,
+              "machining": 120.25,
+              "setup": 40.0,
+              "finish": 10.0,
+              "inspection": 8.0,
+              "overhead": 12.0,
+              "margin": 15.0
+            },
+            "status": "ready"
+          },
+          {
+            "quantity": 5,
+            "unit_price": 120.1,
+            "total_price": 600.5,
+            "lead_time_days": 12,
+            "breakdown": {
+              "material": 180.0,
+              "machining": 250.5,
+              "setup": 55.0,
+              "finish": 25.0,
+              "inspection": 20.0,
+              "overhead": 35.0,
+              "margin": 35.0
+            },
+            "status": "ready"
+          },
+          {
+            "quantity": 10,
+            "unit_price": 95.0,
+            "total_price": 950.0,
+            "lead_time_days": 14,
+            "breakdown": {
+              "material": 320.0,
+              "machining": 400.0,
+              "setup": 60.0,
+              "finish": 40.0,
+              "inspection": 30.0,
+              "overhead": 50.0,
+              "margin": 50.0
+            },
+            "status": "ready"
+          }
+        ],
+        "currency": "USD"
+      },
+      "overrides": {
+        "unit_price": null,
+        "lead_time_days": null,
+        "margin_percent": null
+      },
+      "audit": {
+        "created_at": "2024-10-01T12:00:00.000Z",
+        "updated_at": "2024-10-05T12:00:00.000Z"
+      }
+    }
+  ],
+  "subtotal": 600.5,
+  "total": 600.5,
+  "expires_at": "2024-11-01T00:00:00.000Z",
+  "created_at": "2024-10-01T12:00:00.000Z",
+  "updated_at": "2024-10-05T12:00:00.000Z"
+}

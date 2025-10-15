@@ -5,17 +5,12 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import {
-  EyeIcon,
-  DocumentTextIcon,
-  ArrowDownTrayIcon,
-  ShieldCheckIcon,
-} from '@heroicons/react/24/outline';
+import { EyeIcon, ArrowDownTrayIcon, ShieldCheckIcon } from '@heroicons/react/24/outline';
 
 interface OrderReviewStepProps {
-  quote: any;
-  onSave: (data: any) => void;
-  saving: boolean;
+  readonly quote: any;
+  readonly onSave: (data: any) => void;
+  readonly saving: boolean;
 }
 
 export function OrderReviewStep({ quote, onSave, saving }: OrderReviewStepProps) {
@@ -24,18 +19,26 @@ export function OrderReviewStep({ quote, onSave, saving }: OrderReviewStepProps)
   const handleDownloadQuotePDF = async () => {
     setPdfGenerating(true);
     try {
-      // Simulate PDF generation
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      const response = await fetch(`/api/quotes/${encodeURIComponent(quote.id)}/pdf`, {
+        method: 'GET',
+      });
 
-      // In real implementation: trigger download with signed URL
+      if (!response.ok) {
+        throw new Error(`PDF download failed with status ${response.status}`);
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
-      link.href = `/api/quotes/${quote.id}/pdf`;
+      link.href = url;
       link.download = `quote-${quote.id}.pdf`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
     } catch (error) {
       console.error('PDF generation failed:', error);
+      alert('Unable to generate quote PDF right now. Please try again shortly.');
     } finally {
       setPdfGenerating(false);
     }

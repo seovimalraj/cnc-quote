@@ -1,99 +1,157 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { ContractsVNext } from '@cnc-quote/shared';
 
-// Simulate processing time
-async function delay(ms: number) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
+import { proxyFetch } from '@/app/api/_lib/proxyFetch';
 
-// Mock pricing calculation
-export async function POST(request: NextRequest) {
-  try {
-    const body = await request.json();
-    
-    // Validate request
-    if (!body.quantity || !body.material_code || !body.process) {
-      return NextResponse.json(
-        { error: 'Missing required fields: quantity, material_code, process' },
-        { status: 400 }
-      );
+const ensureBase = (): string => {
+  const base = process.env.NEST_BASE;
+  if (!base) {
+    throw new Error('NEST_BASE is not configured for pricing proxy');
+  }
+  return base.replace(/\/$/, '');
+};
+
+const buildUrl = (path: string): string => new URL(path, ensureBase()).toString();
+
+const allowEstimateFallback = () => {
+  const flag = process.env.ALLOW_ESTIMATE_FALLBACK;
+  if (!flag) {
+    return false;
+  }
+  return ['1', 'true', 'yes', 'on'].includes(flag.toLowerCase());
+};
+
+const schemaFailure = (error: unknown): Response => {
+  let message = 'Invalid pricing payload';
+  if (error && typeof error === 'object' && 'issues' in (error as Record<string, unknown>)) {
+    try {
+      message = JSON.stringify((error as Record<string, unknown>).issues).slice(0, 2000);
+    } catch {
+      message = 'Schema validation failed';
+    }
+  } else if (error instanceof Error) {
+    message = error.message;
+  } else if (typeof error === 'string') {
+    message = error;
+  }
+
+  return new Response(`Schema validation failed: ${message}`.trim(), {
+    status: 502,
+    headers: { 'content-type': 'text/plain' },
+  });
+};
+
+type PricingAttemptOutcome = {
+  success?: Response;
+  upstream?: Response | null;
+  error?: unknown;
+};
+
+const executePricingAttempts = async (
+  request: Request,
+  light: ContractsVNext.PricingInputLight,
+  currency: string,
+): Promise<PricingAttemptOutcome> => {
+  let lastResponse: Response | null = null;
+  let lastError: unknown = null;
+
+  const attempts = [
+    {
+      enabled: light.lines.some((line) => Boolean(line.cadKey ?? line.partConfig)),
+      url: buildUrl('/admin/price/v2/calculate'),
+      payload: () => ContractsVNext.toV2PricingRequest(light),
+      transform: (body: unknown) => ContractsVNext.fromV2PricingResponse(body, currency),
+    },
+    {
+      enabled: true,
+      url: buildUrl('/admin/price/legacy/calculate'),
+      payload: () => ContractsVNext.toLegacyPricingRequest(light),
+      transform: (body: unknown) => ContractsVNext.fromLegacyPricingResponse(body, currency),
+    },
+  ] as const;
+
+  for (const attempt of attempts) {
+    if (!attempt.enabled) {
+      continue;
     }
 
-    // Simulate network delay (200-500ms)
-    await delay(Math.random() * 300 + 200);
+    let requestBody: Record<string, unknown>;
+    try {
+      requestBody = attempt.payload();
+    } catch (error) {
+      lastError = lastError ?? error;
+      continue;
+    }
 
-    // Calculate mock price
-    const basePrice = 100;
-    
-    // Quantity scaling with economies of scale
-    const qtyFactor = Math.pow(body.quantity, 0.75);
-    
-    // Material multipliers
-    const materialMultipliers: Record<string, number> = {
-      AL6061: 1.0,
-      SS304: 1.15,
-      SS316: 1.20,
-      BRASS: 1.10,
-      COPPER: 1.25,
-      TITANIUM: 2.50,
-      ABS: 0.85,
-      PLA: 0.80,
-      NYLON: 0.95,
-    };
-    const materialFactor = materialMultipliers[body.material_code] || 1.08;
-    
-    // Process multipliers
-    const processMultipliers: Record<string, number> = {
-      cnc_milling: 1.0,
-      turning: 0.90,
-      sheet: 0.85,
-      im: 0.70,
-    };
-    const processFactor = processMultipliers[body.process] || 1.0;
-    
-    // Lead class multipliers
-    const leadMultipliers: Record<string, number> = {
-      econ: 0.96,
-      std: 1.0,
-      express: 1.12,
-    };
-    const leadFactor = leadMultipliers[body.lead_class] || 1.0;
-    
-    // Calculate subtotal
-    const subtotal = basePrice * qtyFactor * materialFactor * processFactor * leadFactor;
-    const tax = subtotal * 0.18; // 18% GST
-    const total = subtotal + tax;
-    
-    // Lead days by class
-    const leadDays: Record<string, number> = {
-      econ: 10,
-      std: 7,
-      express: 3,
-    };
+    try {
+      const upstream = await proxyFetch(request, attempt.url, {
+        method: 'POST',
+        body: JSON.stringify(requestBody),
+        headers: { 'content-type': 'application/json' },
+      });
 
-    // Mock response
-    const response = {
-      subtotal: Math.round(subtotal * 100) / 100,
-      tax: Math.round(tax * 100) / 100,
-      total: Math.round(total * 100) / 100,
-      lead_days: leadDays[body.lead_class] || 7,
-      breakdown: [
-        { factor: 'Base Price', amount: basePrice },
-        { factor: 'Quantity Factor', amount: Math.round(qtyFactor * 100) / 100 },
-        { factor: 'Material', amount: materialFactor },
-        { factor: 'Process', amount: processFactor },
-        { factor: 'Lead Time', amount: leadFactor },
-      ],
-      pricing_hash: Math.random().toString(36).substring(7),
-      version: body.catalog_version || 'v1',
-      from_cache: false,
-    };
+      if (upstream.ok) {
+        try {
+          const body = await upstream.json();
+          const computation = attempt.transform(body);
+          return { success: Response.json(computation) };
+        } catch (error) {
+          return { success: schemaFailure(error) };
+        }
+      }
 
-    return NextResponse.json(response);
-  } catch (error: any) {
-    console.error('Pricing error:', error);
-    return NextResponse.json(
-      { error: error.message || 'Internal server error' },
-      { status: 500 }
-    );
+      lastResponse = upstream;
+    } catch (error) {
+      lastError = lastError ?? error;
+    }
   }
+
+  return { upstream: lastResponse, error: lastError };
+};
+
+export async function POST(request: Request) {
+  let payload: unknown;
+  try {
+    payload = await request.json();
+  } catch (error) {
+    return schemaFailure(error);
+  }
+
+  let light;
+  try {
+    light = ContractsVNext.PricingInputLightSchema.parse(payload);
+  } catch (error) {
+    return schemaFailure(error);
+  }
+
+  const currency = light.currency ?? 'USD';
+  const outcome = await executePricingAttempts(request, light, currency);
+
+  if (outcome.success) {
+    return outcome.success;
+  }
+
+  if (outcome.upstream) {
+    return outcome.upstream;
+  }
+
+  if (allowEstimateFallback()) {
+    try {
+      const estimate = ContractsVNext.computeDeterministicEstimate(light);
+      return Response.json({
+        ...estimate,
+        metadata: {
+          ...(estimate.metadata ?? {}),
+          badge: 'estimate',
+        },
+      });
+    } catch (error) {
+      return schemaFailure(outcome.error ?? error);
+    }
+  }
+
+  const detail = outcome.error instanceof Error ? outcome.error.message : 'Pricing request failed';
+  return new Response(JSON.stringify({ error: detail }), {
+    status: 502,
+    headers: { 'content-type': 'application/json' },
+  });
 }

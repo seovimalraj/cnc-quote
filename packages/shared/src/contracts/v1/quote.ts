@@ -1,5 +1,6 @@
 import { PartConfigV1 } from './part-config';
 
+/** @deprecated Use QuoteLifecycleStatusVNext */
 export type QuoteLifecycleStatusV1 =
   | 'draft'
   | 'processing'
@@ -10,8 +11,10 @@ export type QuoteLifecycleStatusV1 =
   | 'expired'
   | 'cancelled';
 
+/** @deprecated Use QuoteLineVNext */
 export interface QuoteItemV1 extends PartConfigV1 {}
 
+/** @deprecated Use QuoteTotalsVNext */
 export interface QuotePricingTotalsV1 {
   subtotal: number;
   shipping?: number;
@@ -20,6 +23,7 @@ export interface QuotePricingTotalsV1 {
   currency: string;
 }
 
+/** @deprecated Use QuoteSummaryVNext.meta */
 export interface QuoteMetaV1 {
   expires_at?: string;
   email_sent_at?: string;
@@ -29,6 +33,7 @@ export interface QuoteMetaV1 {
   updated_at: string;
 }
 
+/** @deprecated Use QuoteSummaryVNext */
 export interface QuoteV1 {
   id: string;
   org_id: string;
@@ -42,6 +47,7 @@ export interface QuoteV1 {
 }
 
 // API Response variant with additional computed fields
+/** @deprecated Use QuoteSummaryVNext */
 export interface QuoteSummaryV1 extends QuoteV1 {
   customer?: {
     email: string;

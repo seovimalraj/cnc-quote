@@ -941,6 +941,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - **Documentation**: Check this README and `/docs` folder
 - **Issues**: Report bugs via GitHub Issues
 - **Discussions**: Use GitHub Discussions for questions
-- **Email**: support@your-domain.com
+- **Email**: vimalraj@frigate.ai
 
-**Built with ❤️ by the CNC Quote Platform Team**
+**Built with ❤️ by the Vimal & Team**

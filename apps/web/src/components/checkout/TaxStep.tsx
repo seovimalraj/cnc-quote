@@ -11,17 +11,19 @@ import {
   CloudArrowUpIcon,
   DocumentTextIcon,
 } from '@heroicons/react/24/outline';
+import { formatCurrency } from '@/lib/checkout/currency';
 
 interface TaxStepProps {
-  quote: any;
-  onSave: (data: any) => void;
-  saving: boolean;
+  readonly quote: any;
+  readonly onSave: (data: any) => void;
+  readonly saving: boolean;
 }
 
 export function TaxStep({ quote, onSave, saving }: TaxStepProps) {
   const [taxId, setTaxId] = useState('');
   const [exemptToggle, setExemptToggle] = useState(false);
   const [uploadedCertificate, setUploadedCertificate] = useState<File | null>(null);
+  const currency = quote.currency ?? 'USD';
 
   const handleFileUpload = (files: FileList | null) => {
     if (!files || files.length === 0) return;
@@ -188,23 +190,28 @@ export function TaxStep({ quote, onSave, saving }: TaxStepProps) {
           <div className="space-y-1 text-sm">
             <div className="flex justify-between">
               <span>Subtotal:</span>
-              <span>${quote.item_subtotal.toFixed(2)}</span>
+              <span>{formatCurrency(quote.item_subtotal, currency)}</span>
             </div>
             <div className="flex justify-between">
               <span>Shipping:</span>
-              <span>${quote.estimated_shipping.toFixed(2)}</span>
+              <span>{formatCurrency(quote.estimated_shipping, currency)}</span>
             </div>
             <div className="flex justify-between">
               <span>Estimated Tax:</span>
               <span className={exemptToggle ? 'text-green-600' : ''}>
-                {exemptToggle ? '$0.00 (exempt)' : `$${quote.estimated_tax.toFixed(2)}`}
+                {exemptToggle
+                  ? `${formatCurrency(0, currency)} (exempt)`
+                  : formatCurrency(quote.estimated_tax, currency)}
               </span>
             </div>
             <div className="border-t pt-1 mt-2">
               <div className="flex justify-between font-medium">
                 <span>Total:</span>
                 <span>
-                  ${(quote.item_subtotal + quote.estimated_shipping + (exemptToggle ? 0 : quote.estimated_tax)).toFixed(2)}
+                  {formatCurrency(
+                    quote.item_subtotal + quote.estimated_shipping + (exemptToggle ? 0 : quote.estimated_tax),
+                    currency,
+                  )}
                 </span>
               </div>
             </div>

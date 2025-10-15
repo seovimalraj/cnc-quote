@@ -98,6 +98,7 @@ export interface DfmIssueV1 {
   auto_fixable?: boolean;
 }
 
+/** @deprecated Use QuoteLineVNext */
 export interface PartConfigV1 {
   id: string;
   quote_id: string;

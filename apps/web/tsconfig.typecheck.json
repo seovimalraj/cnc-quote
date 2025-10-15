@@ -1,0 +1,14 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true
+  },
+  "include": [
+    "next-env.d.ts",
+    "lib/admin/**/*",
+    "lib/api/__tests__/admin.contract.test.ts",
+    "lib/api/__snapshots__/admin.contract.test.snap",
+    "src/hooks/useAdminReviewQueue.ts",
+    "src/lib/router/**/*"
+  ]
+}

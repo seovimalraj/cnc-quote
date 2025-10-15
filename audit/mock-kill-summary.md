@@ -1,10 +1,10 @@
 # Mock Kill-List
 
-Generated: 2025-10-14T06:56:54.433Z
+Generated: 2025-10-14T12:26:54.256Z
 
-* Files scanned: 998
-* Files with refs: 92
-* Total refs: 234
+* Files scanned: 1032
+* Files with refs: 89
+* Total refs: 222
 * Admin-surface refs: 3
 
 ## Export Handlers
@@ -13,7 +13,6 @@ Generated: 2025-10-14T06:56:54.433Z
 ## Top Files by Hits
 - apps/api/test/unit/policies.spec.ts — 24 
 - apps/api/src/tax/adapters/avalara.stub.ts — 12 
-- apps/api/src/modules/review/review.service.ts — 10 
 - apps/api/src/tax/adapters/taxjar.stub.ts — 9 
 - apps/api/src/modules/admin/admin.service.ts — 7 
 - apps/api/test/tax.service.spec.ts — 7 
@@ -41,3 +40,4 @@ Generated: 2025-10-14T06:56:54.433Z
 - apps/api/src/modules/catalog/catalog.service.ts — 2 
 - apps/api/src/modules/files/files.service.ts — 2 
 - apps/api/src/modules/pricing/pricing-engine-v2.service.spec.ts — 2 
+- apps/api/src/modules/pricing/pricing-engine-v2.service.ts — 2 
