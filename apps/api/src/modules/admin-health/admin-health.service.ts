@@ -1,4 +1,9 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { HttpService } from '@nestjs/axios';
+import { ConfigService } from '@nestjs/config';
+import { InjectQueue } from '@nestjs/bullmq';
+import { Queue } from 'bullmq';
+import { firstValueFrom } from 'rxjs';
 import { SupabaseService } from '../../lib/supabase/supabase.service';
 import { CacheService } from '../../lib/cache/cache.service';
 
@@ -23,6 +28,16 @@ export interface HeatmapCell {
   count: number;
 }
 
+type QueueSnapshot = {
+  name: string;
+  waiting: number;
+  delayed: number;
+  active: number;
+  failed: number;
+  oldest_age_sec: number | null;
+  error?: string;
+};
+
 @Injectable()
 export class AdminHealthService {
   private readonly logger = new Logger(AdminHealthService.name);
@@ -30,6 +45,14 @@ export class AdminHealthService {
   constructor(
     private readonly supabase: SupabaseService,
     private readonly cache: CacheService,
+    private readonly configService: ConfigService,
+    private readonly httpService: HttpService,
+    @InjectQueue('cad') private readonly cadQueue: Queue,
+    @InjectQueue('pricing') private readonly pricingQueue: Queue,
+    @InjectQueue('email') private readonly emailQueue: Queue,
+    @InjectQueue('pdf') private readonly pdfQueue: Queue,
+    @InjectQueue('qap') private readonly qapQueue: Queue,
+    @InjectQueue('files') private readonly filesQueue: Queue,
   ) {}
 
   async getApiHealth(): Promise<HealthStatus> {
@@ -68,28 +91,49 @@ export class AdminHealthService {
 
   async getCadHealth(): Promise<HealthStatus> {
     const startTime = Date.now();
+    const baseUrl = this.configService.get<string>('CAD_SERVICE_URL', 'http://cad-service:8000');
+    const endpoint = this.buildServiceUrl(baseUrl, '/health');
 
     try {
-      // For now, return a mock health status since we don't have HTTP client set up
+      const response = await firstValueFrom(
+        this.httpService.get<{ status?: string; timestamp?: string; version?: string }>(endpoint, {
+          timeout: 4000,
+        }),
+      );
+
       const latency = Date.now() - startTime;
+      const payload = response.data ?? {};
+      const reportedStatus = (payload.status ?? '').toLowerCase();
+
+      const status: HealthStatus['status'] = reportedStatus === 'healthy' || reportedStatus === 'ok'
+        ? 'ok'
+        : reportedStatus === 'degraded'
+          ? 'warn'
+          : 'warn';
+
+      const notes = status === 'ok' ? null : `CAD reports status: ${reportedStatus || 'unknown'}`;
 
       return {
         service: 'cad',
-        status: 'ok', // Would check actual CAD service health
+        status,
         latency_ms: latency,
-        last_heartbeat: new Date().toISOString(),
-        notes: null,
+        last_heartbeat: payload.timestamp ?? new Date().toISOString(),
+        notes,
         meta: {
-          version: '1.0.0',
+          endpoint,
+          version: payload.version ?? response.headers?.['x-service-version'] ?? null,
         },
       };
     } catch (error) {
+      const latency = Date.now() - startTime;
+      const message = error instanceof Error ? error.message : 'Unknown CAD service error';
+      this.logger.error(`CAD health check failed`, error);
       return {
         service: 'cad',
         status: 'down',
-        latency_ms: Date.now() - startTime,
+        latency_ms: latency,
         last_heartbeat: new Date().toISOString(),
-        notes: `CAD service check failed: ${error.message}`,
+        notes: `CAD health check failed: ${message}`,
       };
     }
   }
@@ -98,30 +142,52 @@ export class AdminHealthService {
     const startTime = Date.now();
 
     try {
-      // Get queue stats (mock for now)
       const queueStats = await this.getQueueStats();
-
       const latency = Date.now() - startTime;
-      const totalDepth = queueStats.reduce((sum, q) => sum + q.depth, 0);
+
+      const totalDepth = queueStats.reduce((sum, q) => sum + q.waiting + q.delayed, 0);
+      const failedQueues = queueStats.filter((q) => q.failed > 0);
+      const erroredQueues = queueStats.filter((q) => q.error);
+
+      let status: HealthStatus['status'] = 'ok';
+      const notes: string[] = [];
+
+      if (erroredQueues.length) {
+        status = 'warn';
+        notes.push(`Unable to query queues: ${erroredQueues.map((q) => q.name).join(', ')}`);
+      }
+
+      if (failedQueues.length) {
+        status = 'warn';
+        notes.push(`Failed jobs present on ${failedQueues.length} queue(s)`);
+      }
+
+      if (totalDepth > 300) {
+        status = 'warn';
+        notes.push(`Total waiting backlog ${totalDepth}`);
+      }
 
       return {
         service: 'queues',
-        status: totalDepth > 300 ? 'warn' : 'ok',
+        status,
         latency_ms: latency,
         last_heartbeat: new Date().toISOString(),
-        notes: totalDepth > 300 ? `High queue depth: ${totalDepth}` : null,
+        notes: notes.length ? notes.join('; ') : null,
         meta: {
-          total_depth: totalDepth,
+          total_waiting: totalDepth,
           queues: queueStats,
         },
       };
     } catch (error) {
+      const latency = Date.now() - startTime;
+      const message = error instanceof Error ? error.message : 'Unknown queue health error';
+      this.logger.error('Queue health check failed', error);
       return {
         service: 'queues',
         status: 'down',
-        latency_ms: Date.now() - startTime,
+        latency_ms: latency,
         last_heartbeat: new Date().toISOString(),
-        notes: `Queue health check failed: ${error.message}`,
+        notes: `Queue health check failed: ${message}`,
       };
     }
   }
@@ -159,60 +225,12 @@ export class AdminHealthService {
     }
   }
 
-  async getStripeHealth(): Promise<HealthStatus> {
-    const startTime = Date.now();
-
-    try {
-      // Check Stripe connectivity (mock for now)
-      const latency = Date.now() - startTime;
-
-      return {
-        service: 'stripe',
-        status: 'ok', // Would check Stripe API health
-        latency_ms: latency,
-        last_heartbeat: new Date().toISOString(),
-        notes: null,
-        meta: {
-          webhooks_enabled: true,
-        },
-      };
-    } catch (error) {
-      return {
-        service: 'stripe',
-        status: 'down',
-        latency_ms: Date.now() - startTime,
-        last_heartbeat: new Date().toISOString(),
-        notes: `Stripe health check failed: ${error.message}`,
-      };
-    }
+  async getStripeHealth(window: string = '1h'): Promise<HealthStatus> {
+    return this.getWebhookProviderHealth('stripe', window);
   }
 
-  async getPaypalHealth(): Promise<HealthStatus> {
-    const startTime = Date.now();
-
-    try {
-      // Check PayPal connectivity (mock for now)
-      const latency = Date.now() - startTime;
-
-      return {
-        service: 'paypal',
-        status: 'ok', // Would check PayPal API health
-        latency_ms: latency,
-        last_heartbeat: new Date().toISOString(),
-        notes: null,
-        meta: {
-          webhooks_enabled: true,
-        },
-      };
-    } catch (error) {
-      return {
-        service: 'paypal',
-        status: 'down',
-        latency_ms: Date.now() - startTime,
-        last_heartbeat: new Date().toISOString(),
-        notes: `PayPal health check failed: ${error.message}`,
-      };
-    }
+  async getPaypalHealth(window: string = '1h'): Promise<HealthStatus> {
+    return this.getWebhookProviderHealth('paypal', window);
   }
 
   async getStorageHealth(): Promise<HealthStatus> {
@@ -389,14 +407,150 @@ export class AdminHealthService {
     }
   }
 
-  private async getQueueStats(): Promise<Array<{ name: string; depth: number }>> {
-    // This would integrate with BullMQ to get actual queue stats
-    // For now, return mock data
-    return [
-      { name: 'cad', depth: 5 },
-      { name: 'qap', depth: 2 },
-      { name: 'email', depth: 1 },
+  private async getWebhookProviderHealth(provider: string, window: string): Promise<HealthStatus> {
+    const startTime = Date.now();
+    const windowMs = this.parseWindow(window);
+    const since = new Date(Date.now() - windowMs).toISOString();
+
+    try {
+      const baseQuery = this.supabase.client
+        .from('admin_webhook_status')
+        .select('provider, status, failed_24h, last_event_type, last_delivery_at, updated_at')
+        .eq('provider', provider)
+        .gte('updated_at', since)
+        .order('updated_at', { ascending: false })
+        .limit(1);
+
+      let { data, error } = await baseQuery;
+      if (error) {
+        throw error;
+      }
+
+      if (!data?.length) {
+        const fallback = await this.supabase.client
+          .from('admin_webhook_status')
+          .select('provider, status, failed_24h, last_event_type, last_delivery_at, updated_at')
+          .eq('provider', provider)
+          .order('updated_at', { ascending: false })
+          .limit(1);
+
+        if (fallback.error) {
+          throw fallback.error;
+        }
+
+        data = fallback.data ?? [];
+      }
+
+      const row = data[0];
+
+      if (!row) {
+        return {
+          service: provider,
+          status: 'warn',
+          latency_ms: Date.now() - startTime,
+          last_heartbeat: new Date().toISOString(),
+          notes: `No webhook telemetry found for ${provider}`,
+        };
+      }
+
+      const latency = Date.now() - startTime;
+      const failed24h = row.failed_24h ?? 0;
+      const providerStatus = (row.status ?? '').toLowerCase();
+      const lastDeliveryAgeSec = row.last_delivery_at
+        ? Math.max(0, Math.round((Date.now() - Date.parse(row.last_delivery_at)) / 1000))
+        : null;
+
+      let status: HealthStatus['status'] = 'ok';
+      const notes: string[] = [];
+
+      if (providerStatus === 'down') {
+        status = 'down';
+        notes.push('Provider reported as down');
+      } else if (providerStatus === 'degraded') {
+        status = 'warn';
+        notes.push('Provider reported as degraded');
+      }
+
+      if (failed24h > 0) {
+        status = status === 'down' ? 'down' : 'warn';
+        notes.push(`${failed24h} failed deliveries in the last 24h`);
+      }
+
+      if (lastDeliveryAgeSec !== null && lastDeliveryAgeSec > 3600) {
+        status = status === 'down' ? 'down' : 'warn';
+        notes.push(`Last delivery ${Math.floor(lastDeliveryAgeSec / 60)} minutes ago`);
+      }
+
+      return {
+        service: provider,
+        status,
+        latency_ms: latency,
+        last_heartbeat: row.updated_at ?? new Date().toISOString(),
+        notes: notes.length ? notes.join('; ') : null,
+        meta: {
+          failed_24h: failed24h,
+          last_event_type: row.last_event_type ?? null,
+          last_delivery_age_sec: lastDeliveryAgeSec,
+        },
+      };
+    } catch (error) {
+      const latency = Date.now() - startTime;
+      const message = error instanceof Error ? error.message : `Unknown ${provider} webhook error`;
+      this.logger.error(`${provider} health check failed`, error);
+      return {
+        service: provider,
+        status: 'down',
+        latency_ms: latency,
+        last_heartbeat: new Date().toISOString(),
+        notes: message,
+      };
+    }
+  }
+
+  private async getQueueStats(): Promise<QueueSnapshot[]> {
+    const queues: Array<{ name: string; queue: Queue }> = [
+      { name: 'cad', queue: this.cadQueue },
+      { name: 'pricing', queue: this.pricingQueue },
+      { name: 'pdf', queue: this.pdfQueue },
+      { name: 'email', queue: this.emailQueue },
+      { name: 'qap', queue: this.qapQueue },
+      { name: 'files', queue: this.filesQueue },
     ];
+
+    const snapshots: QueueSnapshot[] = [];
+
+    for (const { name, queue } of queues) {
+      try {
+        const counts = await queue.getJobCounts();
+        const waitingJobs = await queue.getWaiting(0, 1);
+        const delayedJobs = await queue.getDelayed(0, 1);
+        const oldestTimestamp = waitingJobs[0]?.timestamp ?? delayedJobs[0]?.timestamp ?? null;
+        const oldestAgeSec = oldestTimestamp ? Math.max(0, Math.floor((Date.now() - oldestTimestamp) / 1000)) : null;
+
+        snapshots.push({
+          name,
+          waiting: counts.waiting ?? 0,
+          delayed: counts.delayed ?? 0,
+          active: counts.active ?? 0,
+          failed: counts.failed ?? 0,
+          oldest_age_sec: oldestAgeSec,
+        });
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Unknown queue error';
+        this.logger.error(`Failed to collect queue stats for ${name}`, error);
+        snapshots.push({
+          name,
+          waiting: 0,
+          delayed: 0,
+          active: 0,
+          failed: 0,
+          oldest_age_sec: null,
+          error: message,
+        });
+      }
+    }
+
+    return snapshots;
   }
 
   private parseWindow(window: string): number {
@@ -412,5 +566,15 @@ export class AdminHealthService {
       case 'd': return value * 24 * 60 * 60 * 1000;
       default: return 60 * 60 * 1000;
     }
+  }
+
+  private buildServiceUrl(baseUrl: string, path: string): string {
+    if (!baseUrl) {
+      return path;
+    }
+
+    const trimmedBase = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
+    const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+    return `${trimmedBase}${normalizedPath}`;
   }
 }

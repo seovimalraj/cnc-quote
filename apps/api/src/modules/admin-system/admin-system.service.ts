@@ -1,6 +1,8 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { SupabaseService } from '../../lib/supabase/supabase.service';
 import { CacheService } from '../../lib/cache/cache.service';
+import { AdminHealthService, HealthStatus } from '../admin-health/admin-health.service';
 
 export interface SystemHealthSummary {
   overall_status: 'healthy' | 'degraded' | 'unhealthy';
@@ -44,313 +46,139 @@ export interface LegalDocument {
   effective_date: string;
 }
 
+/**
+ * @module AdminSystemService
+ * @ownership platform-observability
+ * Provides aggregated system telemetry and regulated legal document retrieval for the admin workcenter.
+ * The service intentionally delegates health probes to dedicated modules and Supabase so that summary
+ * endpoints stay deterministic and auditable, while legal copy is sourced from a single canonical store.
+ */
 @Injectable()
 export class AdminSystemService {
+  private static readonly HEALTH_SUMMARY_CACHE_KEY = 'admin:system:health_summary';
+  private static readonly HEALTH_SUMMARY_TTL_SECONDS = 30;
+  private static readonly LEGAL_DOCUMENT_CACHE_TTL_SECONDS = 60 * 5;
+  private static readonly LEGAL_DOCUMENT_COLLECTION_CACHE_KEY = 'admin:system:legal_documents';
+  private static readonly KNOWN_LEGAL_TYPES = ['terms', 'privacy', 'dpa', 'security', 'aup'];
+
   private readonly logger = new Logger(AdminSystemService.name);
-  private readonly startTime = Date.now();
+  private readonly bootedAt = new Date();
+  private readonly legalDocumentsTable?: string;
+  private readonly legalDocumentsBucket?: string;
+  private readonly legalDocumentsPrefix?: string;
+  private legalDocumentsTableAvailable = true;
+  private legalDocumentsBucketAvailable = true;
 
   constructor(
     private readonly supabase: SupabaseService,
     private readonly cache: CacheService,
-  ) {}
+    private readonly adminHealthService: AdminHealthService,
+    private readonly configService: ConfigService,
+  ) {
+  const table = this.configService.get<string>('LEGAL_DOCUMENTS_TABLE', 'legal_documents');
+  this.legalDocumentsTable = table?.trim() ? table.trim() : 'legal_documents';
+
+  const bucket = this.configService.get<string>('LEGAL_DOCUMENTS_BUCKET', 'legal-documents');
+  this.legalDocumentsBucket = bucket?.trim() ? bucket.trim() : 'legal-documents';
+
+    const prefix = this.configService.get<string>('LEGAL_DOCUMENTS_PREFIX');
+    this.legalDocumentsPrefix = prefix?.trim() ? prefix.trim() : 'legal';
+  }
 
   async getSystemHealthSummary(): Promise<SystemHealthSummary> {
-    try {
-      const now = new Date().toISOString();
-      const uptime = Math.floor((Date.now() - this.startTime) / 1000);
-
-      // Simulate health checks (in real implementation, these would be actual checks)
-      const services = {
-        api: {
-          status: 'healthy' as const,
-          latency_ms: 45,
-          last_check: now,
-        },
-        cad: {
-          status: 'healthy' as const,
-          latency_ms: 120,
-          last_check: now,
-        },
-        database: {
-          status: 'healthy' as const,
-          latency_ms: 15,
-          last_check: now,
-        },
-        redis: {
-          status: 'healthy' as const,
-          latency_ms: 5,
-          last_check: now,
-        },
-        queues: {
-          status: 'healthy' as const,
-          depth: 0,
-          last_check: now,
-        },
-      };
-
-      // Determine overall status
-      const unhealthyServices = Object.values(services).filter(
-        (service: any) => service.status === 'unhealthy'
-      );
-      const degradedServices = Object.values(services).filter(
-        (service: any) => service.status === 'degraded'
-      );
-
-      let overallStatus: 'healthy' | 'degraded' | 'unhealthy' = 'healthy';
-      if (unhealthyServices.length > 0) {
-        overallStatus = 'unhealthy';
-      } else if (degradedServices.length > 0) {
-        overallStatus = 'degraded';
-      }
-
-      return {
-        overall_status: overallStatus,
-        services,
-        uptime_seconds: uptime,
-        last_updated: now,
-      };
-    } catch (error) {
-      this.logger.error('Failed to get system health summary', error);
-      throw error;
+    const cached = await this.cache.get<SystemHealthSummary>(AdminSystemService.HEALTH_SUMMARY_CACHE_KEY);
+    if (cached) {
+      return cached;
     }
+
+    const observedAt = new Date().toISOString();
+
+    const [apiResult, cadResult, dbResult, queuesResult] = await Promise.allSettled([
+      this.adminHealthService.getApiHealth(),
+      this.adminHealthService.getCadHealth(),
+      this.adminHealthService.getDbHealth(),
+      this.adminHealthService.getQueuesHealth(),
+    ]);
+
+    const apiHealth = this.unwrapHealthResult(apiResult, 'api');
+    const cadHealth = this.unwrapHealthResult(cadResult, 'cad');
+    const dbHealth = this.unwrapHealthResult(dbResult, 'database');
+    const queueHealth = this.unwrapHealthResult(queuesResult, 'queues');
+    const redisHealth = await this.checkRedisHealth();
+
+    const services = {
+      api: this.buildStandardServiceEntry(apiHealth, observedAt),
+      cad: this.buildStandardServiceEntry(cadHealth, observedAt),
+      database: this.buildStandardServiceEntry(dbHealth, observedAt),
+      redis: redisHealth,
+      queues: this.buildQueueServiceEntry(queueHealth, observedAt),
+    };
+
+    const overallStatus = this.deriveOverallStatus([
+      services.api.status,
+      services.cad.status,
+      services.database.status,
+      services.redis.status,
+      services.queues.status,
+    ]);
+
+    const summary: SystemHealthSummary = {
+      overall_status: overallStatus,
+      services,
+      uptime_seconds: await this.resolveUptimeSeconds(),
+      last_updated: observedAt,
+    };
+
+    await this.cache.set(
+      AdminSystemService.HEALTH_SUMMARY_CACHE_KEY,
+      summary,
+      AdminSystemService.HEALTH_SUMMARY_TTL_SECONDS,
+    );
+
+    return summary;
   }
 
   async getLegalDocument(type: string): Promise<LegalDocument> {
-    try {
-      // In a real implementation, these would be stored in the database
-      // For now, return mock data
-      const documents: Record<string, LegalDocument> = {
-        terms: {
-          id: 'terms',
-          title: 'Terms of Service',
-          content: `# Terms of Service
-
-## 1. Acceptance of Terms
-By accessing and using this service, you accept and agree to be bound by the terms and provision of this agreement.
-
-## 2. Use License
-Permission is granted to temporarily use this service for personal, non-commercial transitory viewing only.
-
-## 3. Disclaimer
-The materials on this service are provided on an 'as is' basis. This service makes no warranties, expressed or implied.
-
-## 4. Limitations
-In no event shall this service or its suppliers be liable for any damages arising out of the use or inability to use this service.
-
-## 5. Revisions
-The materials appearing on this service could include technical, typographical, or photographic errors.
-
-Last updated: September 5, 2025`,
-          version: '1.2.0',
-          last_updated: '2025-09-05T00:00:00Z',
-          effective_date: '2025-09-05T00:00:00Z',
-        },
-        privacy: {
-          id: 'privacy',
-          title: 'Privacy Policy',
-          content: `# Privacy Policy
-
-## 1. Information We Collect
-We collect information you provide directly to us, such as when you create an account, use our services, or contact us for support.
-
-## 2. How We Use Information
-We use the information we collect to provide, maintain, and improve our services, process transactions, and communicate with you.
-
-## 3. Information Sharing
-We do not sell, trade, or otherwise transfer your personal information to third parties without your consent, except as described in this policy.
-
-## 4. Data Security
-We implement appropriate technical and organizational measures to protect your personal information against unauthorized access, alteration, disclosure, or destruction.
-
-## 5. Data Retention
-We retain personal information for as long as necessary to provide our services and fulfill the purposes outlined in this policy.
-
-## 6. Your Rights
-You have the right to access, update, or delete your personal information. You may also have the right to data portability.
-
-Last updated: September 5, 2025`,
-          version: '1.1.0',
-          last_updated: '2025-09-05T00:00:00Z',
-          effective_date: '2025-09-05T00:00:00Z',
-        },
-        dpa: {
-          id: 'dpa',
-          title: 'Data Processing Addendum',
-          content: `# Data Processing Addendum
-
-## 1. Definitions
-"Personal Data" means any information relating to an identified or identifiable natural person.
-
-"Processing" means any operation or set of operations performed on Personal Data.
-
-"Controller" means the entity which determines the purposes and means of the Processing of Personal Data.
-
-"Processor" means the entity which Processes Personal Data on behalf of the Controller.
-
-## 2. Scope and Applicability
-This DPA applies to the Processing of Personal Data by the Processor on behalf of the Controller.
-
-## 3. Processing Instructions
-The Processor shall only Process Personal Data in accordance with the Controller's documented instructions.
-
-## 4. Security Measures
-The Processor shall implement appropriate technical and organizational measures to ensure a level of security appropriate to the risk.
-
-## 5. Sub-processing
-The Processor may engage sub-processors, provided that the same data protection obligations are imposed on the sub-processor.
-
-## 6. Data Subject Rights
-The Processor shall assist the Controller in fulfilling its obligations to respond to requests from data subjects.
-
-## 7. Data Breach Notification
-The Processor shall notify the Controller without undue delay after becoming aware of a Personal Data breach.
-
-Last updated: September 5, 2025`,
-          version: '1.0.0',
-          last_updated: '2025-09-05T00:00:00Z',
-          effective_date: '2025-09-05T00:00:00Z',
-        },
-        security: {
-          id: 'security',
-          title: 'Security & Compliance',
-          content: `# Security & Compliance
-
-## 1. Security Measures
-We implement comprehensive security measures to protect your data:
-
-### Infrastructure Security
-- Multi-layered network security
-- Encrypted data transmission (TLS 1.3)
-- Regular security audits and penetration testing
-- DDoS protection and rate limiting
-
-### Access Controls
-- Role-based access control (RBAC)
-- Multi-factor authentication (MFA)
-- Principle of least privilege
-- Regular access reviews
-
-### Data Protection
-- Data encryption at rest and in transit
-- Regular backups with encryption
-- Secure data disposal procedures
-- Data classification and handling policies
-
-## 2. Compliance Certifications
-- SOC 2 Type II compliant
-- GDPR compliant
-- ISO 27001 certified
-- PCI DSS compliant (for payment processing)
-
-## 3. Incident Response
-- 24/7 security monitoring
-- Automated alerting for security events
-- Incident response plan and procedures
-- Regular incident response drills
-
-## 4. Third-Party Risk Management
-- Vendor security assessments
-- Contractual security requirements
-- Ongoing vendor monitoring
-- Incident notification procedures
-
-Last updated: September 5, 2025`,
-          version: '1.3.0',
-          last_updated: '2025-09-05T00:00:00Z',
-          effective_date: '2025-09-05T00:00:00Z',
-        },
-        aup: {
-          id: 'aup',
-          title: 'Acceptable Use Policy',
-          content: `# Acceptable Use Policy
-
-## 1. Purpose
-This Acceptable Use Policy defines acceptable practices for using our services and systems.
-
-## 2. Acceptable Use
-You agree to use our services only for lawful purposes and in accordance with this policy.
-
-### Permitted Activities
-- Processing legitimate business data
-- Using services in accordance with applicable documentation
-- Implementing reasonable security measures
-- Reporting security incidents promptly
-
-## 3. Prohibited Activities
-The following activities are strictly prohibited:
-
-### Security Violations
-- Attempting to gain unauthorized access
-- Circumventing security controls
-- Conducting security research without authorization
-- Using compromised credentials
-
-### System Abuse
-- Generating excessive load or traffic
-- Attempting to disrupt service availability
-- Using services for cryptocurrency mining
-- Distributing malware or malicious code
-
-### Content Violations
-- Processing illegal content
-- Violating intellectual property rights
-- Distributing spam or unsolicited communications
-- Hosting malicious or deceptive content
-
-### Data Misuse
-- Processing personal data without legal basis
-- Exceeding licensed usage limits
-- Attempting to extract or export restricted data
-- Sharing access credentials
-
-## 4. Monitoring and Enforcement
-We reserve the right to monitor usage and enforce this policy. Violations may result in:
-- Temporary suspension of services
-- Permanent termination of account
-- Legal action where appropriate
-- Reporting to relevant authorities
-
-## 5. Reporting Violations
-Please report suspected violations to security@company.com.
-
-Last updated: September 5, 2025`,
-          version: '1.1.0',
-          last_updated: '2025-09-05T00:00:00Z',
-          effective_date: '2025-09-05T00:00:00Z',
-        },
-      };
-
-      const document = documents[type];
-      if (!document) {
-        throw new Error(`Legal document '${type}' not found`);
-      }
-
-      return document;
-    } catch (error) {
-      this.logger.error(`Failed to get legal document: ${type}`, error);
-      throw error;
+    const slug = type.trim().toLowerCase();
+    const cacheKey = this.getLegalDocumentCacheKey(slug);
+    const cached = await this.cache.get<LegalDocument>(cacheKey);
+    if (cached) {
+      return cached;
     }
+
+    const document = await this.loadLegalDocument(slug);
+    if (!document) {
+      throw new NotFoundException(`Legal document '${slug}' not found`);
+    }
+
+    await this.cache.set(cacheKey, document, AdminSystemService.LEGAL_DOCUMENT_CACHE_TTL_SECONDS);
+    return document;
   }
 
   async getAllLegalDocuments(): Promise<LegalDocument[]> {
-    try {
-      const types = ['terms', 'privacy', 'dpa', 'security', 'aup'];
-      const documents: LegalDocument[] = [];
-
-      for (const type of types) {
-        try {
-          const doc = await this.getLegalDocument(type);
-          documents.push(doc);
-        } catch (error) {
-          this.logger.warn(`Failed to load legal document: ${type}`, error);
-        }
-      }
-
-      return documents;
-    } catch (error) {
-      this.logger.error('Failed to get all legal documents', error);
-      throw error;
+    const cached = await this.cache.get<LegalDocument[]>(
+      AdminSystemService.LEGAL_DOCUMENT_COLLECTION_CACHE_KEY,
+    );
+    if (cached?.length) {
+      return cached;
     }
+
+    const tableDocuments = await this.loadAllLegalDocumentsFromTable();
+    const documents = tableDocuments.length
+      ? tableDocuments
+      : await this.loadDocumentsFromFallbackTypes();
+
+    if (!documents.length) {
+      throw new NotFoundException('No legal documents available');
+    }
+
+    await this.cache.set(
+      AdminSystemService.LEGAL_DOCUMENT_COLLECTION_CACHE_KEY,
+      documents,
+      AdminSystemService.LEGAL_DOCUMENT_CACHE_TTL_SECONDS,
+    );
+
+    return documents;
   }
 
   async logSystemEvent(
@@ -372,5 +200,318 @@ Last updated: September 5, 2025`,
     } catch (error) {
       this.logger.error('Failed to log system event', error);
     }
+  }
+
+  private async loadDocumentsFromFallbackTypes(): Promise<LegalDocument[]> {
+    const results = await Promise.allSettled(
+      AdminSystemService.KNOWN_LEGAL_TYPES.map((slug) => this.loadLegalDocument(slug)),
+    );
+
+    return results
+      .filter((result): result is PromiseFulfilledResult<LegalDocument | null> => result.status === 'fulfilled')
+      .map((result) => result.value)
+      .filter((doc): doc is LegalDocument => Boolean(doc));
+  }
+
+  private buildStandardServiceEntry(
+    health: HealthStatus | null,
+    observedAt: string,
+  ): SystemHealthSummary['services']['api'] {
+    return {
+      status: this.mapHealthStatus(health?.status),
+      latency_ms: health?.latency_ms ?? 0,
+      last_check: health?.last_heartbeat ?? observedAt,
+    };
+  }
+
+  private buildQueueServiceEntry(
+    health: HealthStatus | null,
+    observedAt: string,
+  ): SystemHealthSummary['services']['queues'] {
+    const depth = typeof health?.meta?.total_waiting === 'number' ? health.meta.total_waiting : 0;
+    return {
+      status: this.mapHealthStatus(health?.status),
+      depth,
+      last_check: health?.last_heartbeat ?? observedAt,
+    };
+  }
+
+  private mapHealthStatus(status?: HealthStatus['status']): 'healthy' | 'degraded' | 'unhealthy' {
+    if (status === 'warn') {
+      return 'degraded';
+    }
+    if (status === 'ok') {
+      return 'healthy';
+    }
+    return 'unhealthy';
+  }
+
+  private deriveOverallStatus(statuses: Array<'healthy' | 'degraded' | 'unhealthy'>): 'healthy' | 'degraded' | 'unhealthy' {
+    if (statuses.includes('unhealthy')) {
+      return 'unhealthy';
+    }
+    if (statuses.includes('degraded')) {
+      return 'degraded';
+    }
+    return 'healthy';
+  }
+
+  private unwrapHealthResult(
+    result: PromiseSettledResult<HealthStatus>,
+    service: string,
+  ): HealthStatus | null {
+    if (result.status === 'fulfilled') {
+      return result.value;
+    }
+
+    this.logger.error(`Health probe for ${service} failed`, result.reason);
+    return null;
+  }
+
+  private async checkRedisHealth(): Promise<SystemHealthSummary['services']['redis']> {
+    const pulseKey = 'admin:system:redis:pulse';
+    const observedAt = new Date().toISOString();
+    const start = Date.now();
+
+    try {
+      const token = `${observedAt}:${Math.random()}`;
+      await this.cache.set(pulseKey, token, 10);
+      const roundTrip = await this.cache.get<string>(pulseKey);
+      const latency = Date.now() - start;
+
+      if (roundTrip !== token) {
+        this.logger.warn('Redis pulse check returned unexpected payload');
+        return {
+          status: 'degraded',
+          latency_ms: latency,
+          last_check: observedAt,
+        };
+      }
+
+      return {
+        status: 'healthy',
+        latency_ms: latency,
+        last_check: observedAt,
+      };
+    } catch (error) {
+      this.logger.error('Redis health check failed', error);
+      return {
+        status: 'unhealthy',
+        latency_ms: Date.now() - start,
+        last_check: observedAt,
+      };
+    }
+  }
+
+  private async resolveUptimeSeconds(): Promise<number> {
+    try {
+      const { data, error } = await this.supabase.client
+        .from('metrics_gauges')
+        .select('value')
+        .eq('metric', 'system.uptime_seconds')
+        .order('timestamp', { ascending: false })
+        .limit(1);
+
+      if (!error && data?.length && typeof data[0].value === 'number') {
+        return Math.floor(data[0].value);
+      }
+
+      if (error) {
+        this.logger.warn('Failed to resolve uptime from metrics', error);
+      }
+    } catch (error) {
+      this.logger.warn('Failed to resolve uptime from metrics', error);
+    }
+
+    return Math.floor((Date.now() - this.bootedAt.getTime()) / 1000);
+  }
+
+  private getLegalDocumentCacheKey(slug: string): string {
+    return `admin:system:legal:${slug}`;
+  }
+
+  private async loadLegalDocument(slug: string): Promise<LegalDocument | null> {
+    const tableDocument = await this.loadLegalDocumentFromTable(slug);
+    if (tableDocument) {
+      return tableDocument;
+    }
+
+    return this.loadLegalDocumentFromStorage(slug);
+  }
+
+  private async loadLegalDocumentFromTable(slug: string): Promise<LegalDocument | null> {
+    if (!this.legalDocumentsTable || !this.legalDocumentsTableAvailable) {
+      return null;
+    }
+
+    try {
+      const { data, error } = await this.supabase.client
+        .from(this.legalDocumentsTable)
+        .select('id, slug, type, title, version, content, content_md, updated_at, last_updated, effective_date, effective_at, metadata')
+        .or(`slug.eq.${slug},type.eq.${slug}`)
+        .order('updated_at', { ascending: false })
+        .limit(1);
+
+      if (error) {
+        if (error.message?.includes('does not exist')) {
+          this.logger.warn(
+            `Legal documents table '${this.legalDocumentsTable}' is unavailable; disabling table lookups until restart`,
+          );
+          this.legalDocumentsTableAvailable = false;
+          return null;
+        }
+
+        this.logger.error(`Failed to fetch legal document '${slug}' from table`, error);
+        return null;
+      }
+
+      const row = data?.[0];
+      if (!row) {
+        return null;
+      }
+
+      const content = row.content_md ?? row.content;
+      if (!content) {
+        this.logger.warn(`Legal document '${slug}' returned without content payload`);
+      }
+
+      return {
+        id: row.id?.toString() ?? row.slug ?? row.type ?? slug,
+        title: row.title ?? this.inferTitle(slug),
+        content: content ?? '',
+        version: row.version ?? row.metadata?.version ?? 'unknown',
+        last_updated: this.normalizeIsoString(row.updated_at ?? row.last_updated) ?? new Date().toISOString(),
+        effective_date: this.normalizeIsoString(row.effective_date ?? row.effective_at) ?? new Date().toISOString(),
+      };
+    } catch (error) {
+      this.logger.error(`Unexpected failure loading legal document '${slug}' from table`, error);
+      return null;
+    }
+  }
+
+  private async loadAllLegalDocumentsFromTable(): Promise<LegalDocument[]> {
+    if (!this.legalDocumentsTable || !this.legalDocumentsTableAvailable) {
+      return [];
+    }
+
+    try {
+      const { data, error } = await this.supabase.client
+        .from(this.legalDocumentsTable)
+        .select('id, slug, type, title, version, content, content_md, updated_at, last_updated, effective_date, effective_at, metadata')
+        .order('updated_at', { ascending: false });
+
+      if (error) {
+        if (error.message?.includes('does not exist')) {
+          this.logger.warn(
+            `Legal documents table '${this.legalDocumentsTable}' is unavailable; disabling table lookups until restart`,
+          );
+          this.legalDocumentsTableAvailable = false;
+          return [];
+        }
+
+        this.logger.error('Failed to fetch legal documents from table', error);
+        return [];
+      }
+
+      return (
+        data?.map((row: any) => {
+          const content = row.content_md ?? row.content ?? '';
+          const slug = row.slug ?? row.type ?? 'document';
+          return {
+            id: row.id?.toString() ?? slug,
+            title: row.title ?? this.inferTitle(slug),
+            content,
+            version: row.version ?? row.metadata?.version ?? 'unknown',
+            last_updated: this.normalizeIsoString(row.updated_at ?? row.last_updated) ?? new Date().toISOString(),
+            effective_date: this.normalizeIsoString(row.effective_date ?? row.effective_at) ?? new Date().toISOString(),
+          } as LegalDocument;
+        }) ?? []
+      );
+    } catch (error) {
+      this.logger.error('Unexpected failure loading legal documents from table', error);
+      return [];
+    }
+  }
+
+  private async loadLegalDocumentFromStorage(slug: string): Promise<LegalDocument | null> {
+    if (!this.legalDocumentsBucket || !this.legalDocumentsBucketAvailable) {
+      return null;
+    }
+
+    const prefix = this.legalDocumentsPrefix ? `${this.legalDocumentsPrefix}/${slug}` : slug;
+
+    try {
+      const { data: files, error } = await this.supabase.client.storage
+        .from(this.legalDocumentsBucket)
+        .list(prefix, { limit: 1, sortBy: { column: 'updated_at', order: 'desc' } });
+
+      if (error) {
+        this.logger.error(`Failed to list legal document files for '${slug}'`, error);
+        if (error.message?.includes('not found')) {
+          this.legalDocumentsBucketAvailable = false;
+        }
+        return null;
+      }
+
+      const file = files?.[0];
+      if (!file) {
+        return null;
+      }
+
+      const path = prefix ? `${prefix}/${file.name}` : file.name;
+      const { data: blob, error: downloadError } = await this.supabase.client.storage
+        .from(this.legalDocumentsBucket)
+        .download(path);
+
+      if (downloadError || !blob) {
+        this.logger.error(`Failed to download legal document '${slug}' at path ${path}`, downloadError);
+        return null;
+      }
+
+      const content = await blob.text();
+      const version = file.metadata?.version ?? this.extractVersionFromFilename(file.name) ?? 'unknown';
+      const effectiveDate = this.normalizeIsoString(file.metadata?.effective_date ?? file.updated_at);
+
+      return {
+        id: `${slug}:${file.name}`,
+        title: this.inferTitle(slug),
+        content,
+        version,
+        last_updated: this.normalizeIsoString(file.updated_at) ?? new Date().toISOString(),
+        effective_date: effectiveDate ?? new Date().toISOString(),
+      };
+    } catch (error) {
+      this.logger.error(`Unexpected failure retrieving legal document '${slug}' from storage`, error);
+      return null;
+    }
+  }
+
+  private inferTitle(slug: string): string {
+    return slug
+      .split(/[-_]/)
+      .map((segment) => segment.charAt(0).toUpperCase() + segment.slice(1))
+      .join(' ');
+  }
+
+  private normalizeIsoString(value?: string | Date | null): string | undefined {
+    if (!value) {
+      return undefined;
+    }
+
+    if (value instanceof Date) {
+      return value.toISOString();
+    }
+
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) {
+      return undefined;
+    }
+
+    return date.toISOString();
+  }
+
+  private extractVersionFromFilename(filename: string): string | undefined {
+    const match = filename.match(/v?(\d+\.\d+\.\d+)/i);
+    return match?.[1];
   }
 }

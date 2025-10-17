@@ -4,9 +4,11 @@ import { AdminService } from "./admin.service";
 import { AdminFinishOperationsController } from './admin-finish-operations.controller';
 import { FinishesModule } from '../finishes/finishes.module';
 import { FormulaModule } from '../../common/formula/formula.module';
+import { AdminMetricsModule } from '../admin-metrics/admin-metrics.module';
+import { SupabaseModule } from '../../lib/supabase/supabase.module';
 
 @Module({
-  imports: [FinishesModule, FormulaModule],
+  imports: [FinishesModule, FormulaModule, AdminMetricsModule, SupabaseModule],
   controllers: [AdminController, AdminFinishOperationsController],
   providers: [AdminService],
   exports: [AdminService],

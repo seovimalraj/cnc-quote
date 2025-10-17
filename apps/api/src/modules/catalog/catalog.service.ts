@@ -1,6 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { SupabaseService } from '../../lib/supabase/supabase.service';
 import { ContractsV1 } from '@cnc-quote/shared';
+import { MaterialsService } from './materials.service';
+import { FinishesService } from './finishes.service';
 
 export interface MaterialCatalogItem {
   id: string;
@@ -25,7 +27,11 @@ export interface FinishCatalogItem {
 
 @Injectable()
 export class CatalogService {
-  constructor(private readonly supabase: SupabaseService) {}
+  constructor(
+    private readonly supabase: SupabaseService,
+    private readonly materialsService: MaterialsService,
+    private readonly finishesService: FinishesService,
+  ) {}
 
   async getCatalogStats(orgId: string) {
     // Get counts for each catalog type
@@ -154,61 +160,23 @@ export class CatalogService {
     process_type?: ContractsV1.ProcessType;
     available_only?: boolean;
   }): Promise<MaterialCatalogItem[]> {
-    // Mock data for instant quote - in production, fetch from materials table
-    const materials: MaterialCatalogItem[] = [
-      {
-        id: 'al6061t6',
-        name: 'Aluminum 6061-T6',
-        category: 'aluminum',
-        cost_per_kg: 4.50,
-        density: 2700,
-        availability: true,
-        lead_time_days: 1,
-        processes: ['cnc_milling', 'cnc_turning', 'sheet_metal_laser'],
-      },
-      {
-        id: 'al7075t6',
-        name: 'Aluminum 7075-T6',
-        category: 'aluminum',
-        cost_per_kg: 6.80,
-        density: 2810,
-        availability: true,
-        lead_time_days: 2,
-        processes: ['cnc_milling', 'cnc_turning'],
-      },
-      {
-        id: 'steel1018',
-        name: 'Steel 1018',
-        category: 'steel',
-        cost_per_kg: 2.20,
-        density: 7870,
-        availability: true,
-        lead_time_days: 1,
-        processes: ['cnc_milling', 'cnc_turning', 'sheet_metal_laser'],
-      },
-      {
-        id: 'ss304',
-        name: 'Stainless Steel 304',
-        category: 'stainless',
-        cost_per_kg: 8.50,
-        density: 8000,
-        availability: true,
-        lead_time_days: 2,
-        processes: ['cnc_milling', 'cnc_turning', 'sheet_metal_laser'],
-      },
-    ];
+    // Fetch from real materials service
+    const materials = await this.materialsService.getMaterials('', {
+      process: filters?.process_type,
+      includeInactive: !filters?.available_only,
+    });
 
-    let filtered = materials;
-
-    if (filters?.process_type) {
-      filtered = filtered.filter(m => m.processes.includes(filters.process_type));
-    }
-
-    if (filters?.available_only) {
-      filtered = filtered.filter(m => m.availability);
-    }
-
-    return filtered;
+    // Transform to catalog format
+    return materials.map(material => ({
+      id: material.code,
+      name: material.name,
+      category: material.category?.code || 'unknown',
+      cost_per_kg: material.cost_per_kg_base,
+      density: material.density_kg_m3 / 1000, // Convert to g/cm³
+      availability: material.is_active,
+      lead_time_days: 1, // Default, could be derived from material properties
+      processes: material.processes as ContractsV1.ProcessType[] || [],
+    }));
   }
 
   /**
@@ -218,73 +186,61 @@ export class CatalogService {
     process_type?: ContractsV1.ProcessType;
     material_id?: string;
   }): Promise<FinishCatalogItem[]> {
-    // Mock data for instant quote
-    const finishes: FinishCatalogItem[] = [
-      {
-        id: 'anodize_clear',
-        name: 'Clear Anodize Type II',
-        category: 'anodizing',
-        cost_per_area: 0.12,
-        lead_time_days: 3,
-        processes: ['cnc_milling', 'cnc_turning', 'sheet_metal_laser'],
-      },
-      {
-        id: 'anodize_black',
-        name: 'Black Anodize Type II',
-        category: 'anodizing',
-        cost_per_area: 0.15,
-        lead_time_days: 3,
-        processes: ['cnc_milling', 'cnc_turning', 'sheet_metal_laser'],
-      },
-      {
-        id: 'powder_coat_black',
-        name: 'Black Powder Coat',
-        category: 'coating',
-        cost_per_area: 0.08,
-        lead_time_days: 5,
-        processes: ['cnc_milling', 'sheet_metal_laser'],
-      },
-      {
-        id: 'as_machined',
-        name: 'As Machined',
-        category: 'machined',
-        cost_per_part: 0,
-        lead_time_days: 0,
-        processes: ['cnc_milling', 'cnc_turning', 'sheet_metal_laser'],
-      },
-    ];
+    // Fetch from real finishes service
+    const finishes = await this.finishesService.getFinishes({
+      process: filters?.process_type,
+    });
 
-    let filtered = finishes;
-
-    if (filters?.process_type) {
-      filtered = filtered.filter(f => f.processes.includes(filters.process_type));
-    }
-
-    // Basic material compatibility
-    if (filters?.material_id?.startsWith('al')) {
-      filtered = filtered.filter(f => 
-        f.category === 'anodizing' || 
-        f.category === 'coating' || 
-        f.category === 'machined'
-      );
-    }
-
-    return filtered;
+    // Transform to catalog format
+    return finishes.map(finish => ({
+      id: finish.id,
+      name: finish.name,
+      category: finish.process.toLowerCase(),
+      cost_per_part: finish.rate_per_part_usd || undefined,
+      cost_per_area: finish.rate_per_area_usd_m2 || undefined,
+      lead_time_days: finish.lead_time_days,
+      processes: [finish.process.toLowerCase() as ContractsV1.ProcessType],
+    }));
   }
 
   /**
    * Get material by ID
    */
   async getMaterialById(id: string): Promise<MaterialCatalogItem | null> {
-    const materials = await this.getMaterials();
-    return materials.find(m => m.id === id) || null;
+    try {
+      const material = await this.materialsService.getMaterial(id);
+      return {
+        id: material.code,
+        name: material.name,
+        category: material.category?.code || 'unknown',
+        cost_per_kg: material.cost_per_kg_base,
+        density: material.density_kg_m3 / 1000,
+        availability: material.is_active,
+        lead_time_days: 1,
+        processes: material.processes as ContractsV1.ProcessType[] || [],
+      };
+    } catch {
+      return null;
+    }
   }
 
   /**
    * Get finish by ID
    */
   async getFinishById(id: string): Promise<FinishCatalogItem | null> {
-    const finishes = await this.getFinishes();
-    return finishes.find(f => f.id === id) || null;
+    try {
+      const finish = await this.finishesService.getFinish(id);
+      return {
+        id: finish.id,
+        name: finish.name,
+        category: finish.process.toLowerCase(),
+        cost_per_part: finish.rate_per_part_usd || undefined,
+        cost_per_area: finish.rate_per_area_usd_m2 || undefined,
+        lead_time_days: finish.lead_time_days,
+        processes: [finish.process.toLowerCase() as ContractsV1.ProcessType],
+      };
+    } catch {
+      return null;
+    }
   }
 }

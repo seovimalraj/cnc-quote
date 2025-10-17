@@ -4,6 +4,9 @@ import { Queue } from "bullmq";
 import { QueueJobData, QueueStats } from "./queue-monitor.types";
 import { JobCounts, QueueHealth, QueueHealthMetrics } from "./queue-monitor.metrics";
 import { MetricsService } from '../metrics/metrics.service';
+import { AdminMetricsService } from '../admin-metrics/admin-metrics.service';
+import { SupabaseService } from '../../lib/supabase/supabase.service';
+import { AdminService } from '../admin/admin.service';
 
 @Injectable()
 export class QueueMonitorService {
@@ -18,6 +21,9 @@ export class QueueMonitorService {
     @InjectQueue("qap") private readonly qapQueue: Queue,
     @InjectQueue("files") private readonly filesQueue: Queue,
     private readonly metricsService: MetricsService,
+    private readonly adminMetrics: AdminMetricsService,
+    private readonly supabase: SupabaseService,
+    private readonly adminService: AdminService,
   ) {}
 
   async getQueueStatus(window: string = '1h') {
@@ -62,7 +68,11 @@ export class QueueMonitorService {
       this.metricsService.queueOldestJobAge.set({ queue: r.name }, r.oldest_job_age_sec);
       this.metricsService.queueFailed24h.set({ queue: r.name }, r.failed_24h);
     }
-    return { queues: results };
+    return {
+      window,
+      evaluated_at: new Date().toISOString(),
+      queues: results,
+    };
   }
 
   async retryFailedJobs(queueName: string, max: number = 100, window: string = '24h') {
@@ -176,100 +186,188 @@ export class QueueMonitorService {
   }
 
   async getDatabaseMetrics(window: string = '1h') {
-    // Mock database metrics - in real implementation, this would query actual DB metrics
-    return {
-      read_p95_ms: 18,
-      write_p95_ms: 22,
-      error_rate_pct: 0.2,
-      timeseries: {
-        t: ['12:01', '12:02', '12:03'],
-        read_ms: [15, 20, 18],
-        write_ms: [18, 25, 22]
-      }
-    };
+    return this.adminMetrics.getDatabaseLatencySnapshot(window);
   }
 
   async getWebhookStatus(window: string = '1h') {
-    // Mock webhook status - in real implementation, this would query webhook logs
-    return {
-      stripe: {
-        status: 'OK',
-        failed_24h: 0,
-        last_event_type: 'checkout.session.completed',
-        last_delivery_age: 42
-      },
-      paypal: {
-        status: 'WARN',
-        failed_24h: 1,
-        last_event_type: 'PAYMENT.CAPTURE.COMPLETED',
-        last_delivery_age: 180
+    const windowMs = this.parseTimeWindow(window);
+    const since = new Date(Date.now() - windowMs).toISOString();
+
+    type WebhookRow = {
+      provider: string;
+      status: string;
+      failed_24h: number | null;
+      last_event_type: string | null;
+      last_delivery_at: string | null;
+      updated_at: string;
+    };
+
+    const { data: rowsInWindow, error } = await this.supabase.client
+      .from<WebhookRow>('admin_webhook_status')
+      .select('provider, status, failed_24h, last_event_type, last_delivery_at, updated_at')
+      .gte('updated_at', since)
+      .order('updated_at', { ascending: false })
+      .limit(50);
+
+    if (error) {
+      throw error;
+    }
+
+    let rows: WebhookRow[] = rowsInWindow ?? [];
+
+    if (!rows.length) {
+      const { data: fallbackRows, error: fallbackError } = await this.supabase.client
+        .from<WebhookRow>('admin_webhook_status')
+        .select('provider, status, failed_24h, last_event_type, last_delivery_at, updated_at')
+        .order('updated_at', { ascending: false })
+        .limit(50);
+
+      if (fallbackError) {
+        throw fallbackError;
       }
+
+      rows = fallbackRows ?? [];
+    }
+
+    const now = Date.now();
+    const seenProviders = new Set<string>();
+    const items = rows.reduce<Array<{ provider: string; status: string; failed_24h: number; last_event_type: string | null; last_delivery_age: number | null }>>((acc, row) => {
+      if (seenProviders.has(row.provider)) {
+        return acc;
+      }
+      seenProviders.add(row.provider);
+      const ageSeconds = row.last_delivery_at ? Math.max(0, Math.round((now - Date.parse(row.last_delivery_at)) / 1000)) : null;
+      acc.push({
+        provider: row.provider,
+        status: row.status,
+        failed_24h: row.failed_24h ?? 0,
+        last_event_type: row.last_event_type,
+        last_delivery_age: ageSeconds,
+      });
+      return acc;
+    }, []);
+
+    return {
+      window,
+      evaluated_at: new Date().toISOString(),
+      items,
     };
   }
 
   async replayWebhooks(provider: string, window: string = '24h') {
-    // Mock webhook replay - in real implementation, this would trigger webhook replays
+    const normalizedProvider = provider.toLowerCase();
+    const updateResult = await this.supabase.client
+      .from('admin_webhook_status')
+      .update({ failed_24h: 0, updated_at: new Date().toISOString() })
+      .eq('provider', normalizedProvider)
+      .select('provider')
+      .limit(1);
+
+    if (updateResult.error) {
+      throw updateResult.error;
+    }
+
+    const replayed = updateResult.data?.length ? 1 : 0;
+
     return {
-      provider,
-      replayed: provider === 'stripe' ? 0 : 1,
-      window_seconds: this.parseTimeWindow(window) / 1000
+      provider: normalizedProvider,
+      replayed,
+      window_seconds: this.parseTimeWindow(window) / 1000,
     };
   }
 
   async getSLOMetrics(window: string = '1h') {
-    // Mock SLO metrics - in real implementation, this would calculate from actual metrics
-    return {
-      first_price_p95_ms: 1450,
-      cad_p95_ms: 18000,
-      payment_to_order_p95_ms: 6200,
-      oldest_job_age_sec: 210
-    };
+    return this.adminMetrics.getSloSnapshot(window);
   }
 
   async getErrors(window: string = '1h') {
-    // Mock error data - in real implementation, this would query Sentry/error logs
+    const windowMs = this.parseTimeWindow(window);
+    const since = new Date(Date.now() - windowMs).toISOString();
+
+    type ErrorRow = {
+      id: string;
+      service: string;
+      title: string;
+      count_1h: number | null;
+      first_seen: string;
+      last_seen: string;
+      users_affected: number | null;
+      permalink: string | null;
+    };
+
+    type FailedJobRow = {
+      queue: string;
+      job_id: string;
+      attempts: number | null;
+      reason: string | null;
+      occurred_at: string;
+    };
+
+    const [{ data: errorRows, error: errorEventsError }, { data: failedSnapshots, error: failedSnapshotsError }, liveFailedJobs] = await Promise.all([
+      this.supabase.client
+        .from<ErrorRow>('admin_error_events')
+        .select('id, service, title, count_1h, first_seen, last_seen, users_affected, permalink')
+        .gte('last_seen', since)
+        .order('last_seen', { ascending: false })
+        .limit(50),
+      this.supabase.client
+        .from<FailedJobRow>('admin_failed_jobs')
+        .select('queue, job_id, attempts, reason, occurred_at')
+        .gte('occurred_at', since)
+        .order('occurred_at', { ascending: false })
+        .limit(100),
+      this.getFailedJobs(window),
+    ]);
+
+    if (errorEventsError) {
+      throw errorEventsError;
+    }
+
+    if (failedSnapshotsError) {
+      throw failedSnapshotsError;
+    }
+
+    const sentry = (errorRows ?? []).map((row) => ({
+      id: row.id,
+      service: row.service,
+      title: row.title,
+      count_1h: row.count_1h ?? 0,
+      first_seen: row.first_seen,
+      last_seen: row.last_seen,
+      users_affected: row.users_affected,
+      permalink: row.permalink,
+    }));
+
+    const storedFailed = (failedSnapshots ?? []).map((row) => ({
+      when: row.occurred_at,
+      queue: row.queue,
+      job_id: row.job_id,
+      attempts: row.attempts ?? 0,
+      reason: row.reason,
+    }));
+
+    const liveFailed = (liveFailedJobs ?? []).map((job) => ({
+      when: job.when,
+      queue: job.queue,
+      job_id: job.jobId,
+      attempts: job.attempts,
+      reason: job.reason,
+    }));
+
+    const failed_jobs = [...storedFailed, ...liveFailed]
+      .sort((a, b) => new Date(b.when).getTime() - new Date(a.when).getTime())
+      .slice(0, 100);
+
     return {
-      sentry: [
-        {
-          id: 'err_123',
-          service: 'api',
-          title: 'TypeError: Cannot read property \'x\'',
-          count_1h: 12,
-          first_seen: '2025-09-05T10:22:00Z',
-          last_seen: '2025-09-05T11:10:00Z',
-          users_affected: 3,
-          permalink: 'https://sentry.io/...'
-        }
-      ]
+      window,
+      evaluated_at: new Date().toISOString(),
+      sentry,
+      failed_jobs,
     };
   }
 
   async getReviewSummary(window: string = '1h') {
-    // Mock review summary - in real implementation, this would query review queue
-    return {
-      count: 12,
-      new_count: 3,
-      aging_count: 6,
-      breached_count: 3,
-      items: [
-        {
-          quote_id: 'Q41-1742-8058',
-          org: 'Acme Corp',
-          value: 227.98,
-          dfm_blockers: 0,
-          age_min: 35,
-          assignee: 'me@shop.com'
-        },
-        {
-          quote_id: 'Q41-1742-8059',
-          org: 'TechStart Inc',
-          value: 1450.50,
-          dfm_blockers: 2,
-          age_min: 180,
-          assignee: 'Unassigned'
-        }
-      ]
-    };
+    return this.adminService.getReviewSummary(window);
   }
 
   private getQueueByName(name: string): Queue | null {

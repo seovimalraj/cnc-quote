@@ -1,11 +1,11 @@
 import { Suspense } from 'react'
-import { redirect } from 'next/navigation'
 import Link from 'next/link'
+import { headers, cookies } from 'next/headers'
+import { ContractsVNext } from '@cnc-quote/shared'
+
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { createClient } from '@/lib/supabase/server'
-import { cookies } from 'next/headers'
 
 interface InvitePageProps {
   searchParams: {
@@ -14,37 +14,69 @@ interface InvitePageProps {
   }
 }
 
-async function getInviteDetails(token: string) {
-  const supabase = await createClient()
+const STATUS_LABEL: Record<ContractsVNext.OrgInviteStatus, string> = {
+  pending: 'Pending',
+  accepted: 'Accepted',
+  expired: 'Expired'
+}
 
+const STATUS_BADGE_VARIANT: Record<ContractsVNext.OrgInviteStatus, 'secondary' | 'outline' | 'destructive'> = {
+  pending: 'secondary',
+  accepted: 'outline',
+  expired: 'destructive'
+}
+
+const ROLE_LABEL: Record<ContractsVNext.OrgInviteRole, string> = {
+  admin: 'Admin',
+  engineer: 'Engineer',
+  buyer: 'Buyer',
+  viewer: 'Viewer'
+}
+
+const resolveAppOrigin = () => {
+  const explicit = process.env.NEXT_PUBLIC_APP_URL || process.env.APP_URL;
+  if (explicit) {
+    return explicit.replace(/\/$/, '')
+  }
+
+  const hdrs = headers()
+  const host = hdrs.get('x-forwarded-host') || hdrs.get('host')
+  if (!host) {
+    throw new Error('Unable to resolve request host for invite lookup')
+  }
+  const proto = hdrs.get('x-forwarded-proto') || 'https'
+  return `${proto}://${host}`
+}
+
+async function getInviteDetails(token: string) {
   try {
-    // In a real implementation, you'd verify the invite token
-    // and fetch organization details from your database
-    // For now, we'll return mock data
-    const mockInvite = {
-      organization: {
-        name: 'Acme Manufacturing',
-        id: 'org_123'
+    const baseUrl = resolveAppOrigin()
+    const cookieHeader = cookies().toString()
+    const response = await fetch(`${baseUrl}/api/invites/${encodeURIComponent(token)}`, {
+      method: 'GET',
+      headers: {
+        accept: 'application/json',
+        ...(cookieHeader ? { cookie: cookieHeader } : {})
       },
-      inviter: {
-        name: 'John Doe',
-        email: 'john@acme.com'
-      },
-      role: 'member',
-      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 days
+      cache: 'no-store'
+    })
+
+    if (!response.ok) {
+      return null
     }
 
-    return mockInvite
+    const payload = await response.json()
+    return ContractsVNext.OrgInviteDetailsSchema.parse(payload)
   } catch (error) {
     console.error('Error fetching invite details:', error)
     return null
   }
 }
 
-function InviteContent({ searchParams }: InvitePageProps) {
+async function InviteContent({ searchParams }: InvitePageProps) {
   const { token, email } = searchParams
 
-  if (!token || !email) {
+  if (!token) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
         <Card className="max-w-md w-full">
@@ -67,6 +99,39 @@ function InviteContent({ searchParams }: InvitePageProps) {
     )
   }
 
+  const invite = await getInviteDetails(token)
+
+  if (!invite) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+        <Card className="max-w-md w-full">
+          <CardHeader className="text-center">
+            <CardTitle className="text-red-600">Invite Not Found</CardTitle>
+            <CardDescription>
+              We couldn&apos;t locate an invite for this link. Please request a new invitation.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="text-center space-y-4">
+            <p className="text-sm text-gray-600">
+              The invite may have expired or been revoked by an administrator.
+            </p>
+            <Link href="/auth/sign-in">
+              <Button>Go to Sign In</Button>
+            </Link>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
+  const statusLabel = STATUS_LABEL[invite.status]
+  const statusVariant = STATUS_BADGE_VARIANT[invite.status]
+  const roleLabel = ROLE_LABEL[invite.role]
+  const emailMismatch = Boolean(email) && email.toLowerCase() !== invite.email.toLowerCase()
+  const expiresDisplay = new Date(invite.expiresAt).toLocaleString()
+  const invitedDisplay = new Date(invite.invitedAt).toLocaleString()
+  const inviterDisplay = invite.inviter ? `${invite.inviter.name} (${invite.inviter.email})` : 'System Administrator'
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">
@@ -88,7 +153,7 @@ function InviteContent({ searchParams }: InvitePageProps) {
           <CardHeader>
             <CardTitle className="flex items-center justify-between">
               Join Organization
-              <Badge variant="secondary">Pending</Badge>
+              <Badge variant={statusVariant}>{statusLabel}</Badge>
             </CardTitle>
             <CardDescription>
               Review the details below and accept the invitation
@@ -98,26 +163,45 @@ function InviteContent({ searchParams }: InvitePageProps) {
             <div className="space-y-2">
               <div className="flex justify-between">
                 <span className="text-sm font-medium text-gray-700">Organization:</span>
-                <span className="text-sm text-gray-900">Acme Manufacturing</span>
+                <span className="text-sm text-gray-900">{invite.organization.name}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-sm font-medium text-gray-700">Invited by:</span>
-                <span className="text-sm text-gray-900">John Doe (john@acme.com)</span>
+                <span className="text-sm text-gray-900">{inviterDisplay}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-sm font-medium text-gray-700">Role:</span>
-                <Badge variant="outline">Member</Badge>
+                <Badge variant="outline">{roleLabel}</Badge>
               </div>
               <div className="flex justify-between">
                 <span className="text-sm font-medium text-gray-700">Expires:</span>
-                <span className="text-sm text-gray-900">
-                  {new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toLocaleDateString()}
-                </span>
+                <span className="text-sm text-gray-900">{expiresDisplay}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-sm font-medium text-gray-700">Invite sent:</span>
+                <span className="text-sm text-gray-900">{invitedDisplay}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-sm font-medium text-gray-700">Recipient:</span>
+                <span className="text-sm text-gray-900">{invite.email}</span>
               </div>
             </div>
 
+            {emailMismatch && (
+              <div className="rounded-md bg-yellow-50 border border-yellow-200 p-3 text-xs text-yellow-800">
+                The email on this invite ({invite.email}) does not match the address in the link ({email}).
+                You can continue if you trust the link, but the accepting user must match the invited email.
+              </div>
+            )}
+
+            {invite.status !== 'pending' && (
+              <div className="rounded-md bg-slate-50 border border-slate-200 p-3 text-xs text-slate-700">
+                This invite is no longer active. Contact your administrator to request a new invitation.
+              </div>
+            )}
+
             <div className="pt-4 space-y-3">
-              <Button className="w-full">
+              <Button className="w-full" disabled={!invite.canAccept}>
                 Accept Invitation
               </Button>
 

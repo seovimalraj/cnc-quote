@@ -119,9 +119,137 @@ export const KanbanBoardVNextSchema = z
   })
   .passthrough();
 
+export const AdminReviewSummaryItemVNextSchema = z.object({
+  task_id: z.string(),
+  quote_id: z.string(),
+  quote_number: z.string().nullable().optional(),
+  org: z.string().nullable().optional(),
+  currency: z.string().nullable().optional(),
+  value: z.number().nullable().optional(),
+  dfm_blockers: z.number().nullable().optional(),
+  age_min: z.number().int().nonnegative(),
+  sla_minutes: z.number().int().nullable().optional(),
+  breached: z.boolean(),
+  assignee: z.string().nullable().optional(),
+  created_at: z.string().datetime().nullable().optional(),
+  due_at: z.string().datetime().nullable().optional(),
+});
+
+export const AdminReviewSummarySnapshotVNextSchema = z.object({
+  window: z.string().min(1),
+  count: z.number().int().nonnegative(),
+  new_count: z.number().int().nonnegative(),
+  aging_count: z.number().int().nonnegative(),
+  breached_count: z.number().int().nonnegative(),
+  items: z.array(AdminReviewSummaryItemVNextSchema),
+  evaluated_at: z.string().datetime(),
+});
+
+export const AdminQueueSnapshotItemVNextSchema = z.object({
+  name: z.string(),
+  waiting: z.number().int().nonnegative(),
+  active: z.number().int().nonnegative(),
+  delayed: z.number().int().nonnegative(),
+  failed_24h: z.number().int().nonnegative(),
+  oldest_job_age_sec: z.number().int().nonnegative(),
+});
+
+export const AdminQueueSnapshotVNextSchema = z.object({
+  window: z.string().min(1),
+  evaluated_at: z.string().datetime(),
+  queues: z.array(AdminQueueSnapshotItemVNextSchema),
+});
+
+export const AdminWebhookStatusItemVNextSchema = z.object({
+  provider: z.string(),
+  status: z.string(),
+  failed_24h: z.number().int().nonnegative(),
+  last_event_type: z.string().nullable().optional(),
+  last_delivery_age: z.number().int().nullable().optional(),
+});
+
+export const AdminWebhookStatusSnapshotVNextSchema = z.object({
+  window: z.string().min(1),
+  evaluated_at: z.string().datetime(),
+  items: z.array(AdminWebhookStatusItemVNextSchema),
+});
+
+export const AdminErrorEventVNextSchema = z.object({
+  id: z.string(),
+  service: z.string(),
+  title: z.string(),
+  count_1h: z.number().int().nonnegative(),
+  first_seen: z.string().datetime(),
+  last_seen: z.string().datetime(),
+  users_affected: z.number().int().nullable().optional(),
+  permalink: z.string().nullable().optional(),
+});
+
+export const AdminFailedJobEventVNextSchema = z.object({
+  when: z.string().datetime(),
+  queue: z.string(),
+  job_id: z.string(),
+  attempts: z.number().int().nonnegative(),
+  reason: z.string().nullable().optional(),
+});
+
+export const AdminErrorSnapshotVNextSchema = z.object({
+  window: z.string().min(1),
+  evaluated_at: z.string().datetime(),
+  sentry: z.array(AdminErrorEventVNextSchema),
+  failed_jobs: z.array(AdminFailedJobEventVNextSchema),
+});
+
+export const AdminSloSampleVNextSchema = z.object({
+  ts: z.string().datetime(),
+  first_price_ms: z.number().nullable().optional(),
+  cad_ms: z.number().nullable().optional(),
+  payment_to_order_ms: z.number().nullable().optional(),
+});
+
+export const AdminSloSnapshotVNextSchema = z.object({
+  window: z.string().min(1),
+  observed_at: z.string().datetime().nullable().optional(),
+  first_price_p95_ms: z.number().nullable(),
+  cad_p95_ms: z.number().nullable(),
+  payment_to_order_p95_ms: z.number().nullable(),
+  oldest_job_age_sec: z.number().nullable(),
+  samples: z.array(AdminSloSampleVNextSchema).optional(),
+  missing_metrics: z.array(z.string()).optional(),
+});
+
+export const AdminDbLatencySampleVNextSchema = z.object({
+  ts: z.string().datetime(),
+  read_ms: z.number().nullable().optional(),
+  write_ms: z.number().nullable().optional(),
+});
+
+export const AdminDbLatencySnapshotVNextSchema = z.object({
+  window: z.string().min(1),
+  observed_at: z.string().datetime().nullable().optional(),
+  read_p95_ms: z.number().nullable(),
+  write_p95_ms: z.number().nullable(),
+  error_rate_pct: z.number().nullable(),
+  samples: z.array(AdminDbLatencySampleVNextSchema).optional(),
+  missing_metrics: z.array(z.string()).optional(),
+});
+
 export type AbandonedQuoteVNext = z.infer<typeof AbandonedQuoteVNextSchema>;
 export type AbandonedQuotesListVNext = z.infer<typeof AbandonedQuotesListVNextSchema>;
 export type QuoteTimelineEventVNext = z.infer<typeof QuoteTimelineEventVNextSchema>;
 export type QuoteTimelineVNext = z.infer<typeof QuoteTimelineVNextSchema>;
 export type KanbanOrderVNext = z.infer<typeof KanbanOrderVNextSchema>;
 export type KanbanBoardVNext = z.infer<typeof KanbanBoardVNextSchema>;
+export type AdminReviewSummaryItemVNext = z.infer<typeof AdminReviewSummaryItemVNextSchema>;
+export type AdminReviewSummarySnapshotVNext = z.infer<typeof AdminReviewSummarySnapshotVNextSchema>;
+export type AdminQueueSnapshotItemVNext = z.infer<typeof AdminQueueSnapshotItemVNextSchema>;
+export type AdminQueueSnapshotVNext = z.infer<typeof AdminQueueSnapshotVNextSchema>;
+export type AdminWebhookStatusItemVNext = z.infer<typeof AdminWebhookStatusItemVNextSchema>;
+export type AdminWebhookStatusSnapshotVNext = z.infer<typeof AdminWebhookStatusSnapshotVNextSchema>;
+export type AdminErrorEventVNext = z.infer<typeof AdminErrorEventVNextSchema>;
+export type AdminFailedJobEventVNext = z.infer<typeof AdminFailedJobEventVNextSchema>;
+export type AdminErrorSnapshotVNext = z.infer<typeof AdminErrorSnapshotVNextSchema>;
+export type AdminSloSampleVNext = z.infer<typeof AdminSloSampleVNextSchema>;
+export type AdminSloSnapshotVNext = z.infer<typeof AdminSloSnapshotVNextSchema>;
+export type AdminDbLatencySampleVNext = z.infer<typeof AdminDbLatencySampleVNextSchema>;
+export type AdminDbLatencySnapshotVNext = z.infer<typeof AdminDbLatencySnapshotVNextSchema>;

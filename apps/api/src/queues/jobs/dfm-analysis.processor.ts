@@ -33,9 +33,29 @@ export class DfmAnalysisProcessor extends WorkerHost {
         })
         .eq('id', requestId);
 
-      // Step 1: Download and parse CAD file
+      // Step 1: Get quote line details for CAD analysis
+      const { data: dfmRequest } = await this.supabase.client
+        .from('dfm_requests')
+        .select('quote_line_id')
+        .eq('id', requestId)
+        .single();
+
+      if (!dfmRequest) {
+        throw new Error(`DFM request ${requestId} not found`);
+      }
+
+      const { data: quoteLine } = await this.supabase.client
+        .from('quote_lines')
+        .select('process, material')
+        .eq('id', dfmRequest.quote_line_id)
+        .single();
+
+      const process = quoteLine?.process || 'cnc_milling_3axis';
+      const material = quoteLine?.material || 'aluminum_6061';
+
+      // Step 2: Parse CAD file using CAD service
       this.logger.debug(`Parsing CAD file for request ${requestId}`);
-      const cadData = await this.parseCadFile(downloadUrl);
+      const cadData = await this.parseCadFile(fileId, dfmRequest.quote_line_id, process, material);
 
       // Step 2: Extract features from CAD
       this.logger.debug(`Extracting features for request ${requestId}`);
@@ -84,28 +104,115 @@ export class DfmAnalysisProcessor extends WorkerHost {
     }
   }
 
-  private async parseCadFile(downloadUrl: string) {
-    // TODO: Implement CAD file parsing
-    // This would typically call the CAD service to parse the file
-    // For now, return mock data
-    this.logger.debug('Parsing CAD file (mock implementation)');
+  private async parseCadFile(fileId: string, quoteLineId: string, process: string, material: string) {
+    // Call CAD service for actual geometry analysis
+    try {
+      const cadServiceUrl = process.env.CAD_SERVICE_URL || 'http://localhost:3002';
 
-    // Simulate parsing delay
-    await new Promise(resolve => setTimeout(resolve, 2000));
+      const response = await fetch(`${cadServiceUrl}/dfm/analyze`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          file_id: fileId,
+          quote_line_id: quoteLineId,
+          process: process,
+          material: material,
+          units: 'mm'
+        }),
+      });
 
-    return {
-      geometry: {
-        volume: 1000,
-        surfaceArea: 1500,
-        boundingBox: { x: 100, y: 50, z: 25 }
-      },
-      features: {
-        holes: 5,
-        pockets: 3,
-        fillets: 8,
-        chamfers: 2
+      if (!response.ok) {
+        throw new Error(`CAD service returned ${response.status}: ${response.statusText}`);
       }
+
+      const cadResult = await response.json();
+      const taskId = cadResult.task_id;
+
+      // Poll for completion (simplified - in production use websockets or better polling)
+      let attempts = 0;
+      const maxAttempts = 30; // 30 seconds max
+
+      while (attempts < maxAttempts) {
+        const statusResponse = await fetch(`${cadServiceUrl}/dfm/result/${taskId}`);
+        if (!statusResponse.ok) {
+          throw new Error(`Failed to get CAD result: ${statusResponse.status}`);
+        }
+
+        const statusResult = await statusResponse.json();
+
+        if (statusResult.status === 'Succeeded') {
+          // Extract geometry from CAD result
+          const geomProps = statusResult.geom_props || {};
+          return {
+            geometry: {
+              volume: geomProps.vol_mm3 || 1000,
+              surfaceArea: geomProps.area_mm2 || 1500,
+              boundingBox: this.extractBoundingBox(geomProps.bbox_mm)
+            },
+            features: this.extractFeatures(statusResult.checks || [])
+          };
+        } else if (statusResult.status === 'Failed') {
+          throw new Error('CAD analysis failed');
+        }
+
+        // Wait 1 second before next attempt
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        attempts++;
+      }
+
+      throw new Error('CAD analysis timed out');
+
+    } catch (error) {
+      this.logger.error('CAD service call failed, using fallback geometry', error);
+      // Fallback geometry for when CAD service is unavailable
+      return {
+        geometry: {
+          volume: 1000,
+          surfaceArea: 1500,
+          boundingBox: { x: 100, y: 50, z: 25 }
+        },
+        features: {
+          holes: 0,
+          pockets: 0,
+          fillets: 0,
+          chamfers: 0
+        }
+      };
+    }
+  }
+
+  private extractBoundingBox(bbox: number[]): { x: number; y: number; z: number } {
+    if (!bbox || bbox.length < 6) {
+      return { x: 100, y: 50, z: 25 };
+    }
+    return {
+      x: bbox[3] - bbox[0], // width
+      y: bbox[4] - bbox[1], // height
+      z: bbox[5] - bbox[2]  // depth
     };
+  }
+
+  private extractFeatures(checks: any[]): { holes: number; pockets: number; fillets: number; chamfers: number } {
+    // Extract feature counts from DFM checks (simplified)
+    let holes = 0, pockets = 0, fillets = 0, chamfers = 0;
+
+    for (const check of checks) {
+      if (check.metrics) {
+        if (check.id === 'min_hole_dia' && check.metrics.thread_count) {
+          holes = check.metrics.thread_count;
+        }
+        if (check.id === 'pocket_ratio' && check.metrics.max_pocket_ratio) {
+          pockets = Math.floor(check.metrics.max_pocket_ratio / 2); // rough estimate
+        }
+        if (check.id === 'corner_radius') {
+          fillets = 1; // simplified
+        }
+      }
+    }
+
+    return { holes, pockets, fillets, chamfers };
   }
 
   private async extractFeatures(cadData: any) {

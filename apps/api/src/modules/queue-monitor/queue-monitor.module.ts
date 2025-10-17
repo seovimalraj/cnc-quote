@@ -9,12 +9,15 @@ import { QueueMonitorService } from "./queue-monitor.service";
 import { QueueStatusGateway } from "./queue-status.gateway";
 import { QueueMonitorMiddleware } from "./queue-monitor.middleware";
 import { QueueModule } from "../../queues";
+import { AdminMetricsModule } from '../admin-metrics/admin-metrics.module';
+import { SupabaseModule } from '../../lib/supabase/supabase.module';
+import { AdminModule } from '../admin/admin.module';
 
 const QUEUE_NAMES = ["cad", "pricing", "email", "pdf"] as const;
 type _QueueName = (typeof QUEUE_NAMES)[number];
 
 @Module({
-  imports: [QueueModule],
+  imports: [QueueModule, AdminMetricsModule, SupabaseModule, AdminModule],
   controllers: [QueueMonitorController],
   providers: [
   QueueMonitorService,

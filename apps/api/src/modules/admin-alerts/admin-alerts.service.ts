@@ -395,7 +395,12 @@ export class AdminAlertsService {
       if (!condition) return;
 
       // Get current metric value
-      const currentValue = await this.getMetricValue(condition.metric, rule.window);
+      const currentValue = await this.getMetricValue(condition.metric, condition.aggregator, rule.window);
+
+      if (currentValue === null) {
+        this.logger.warn(`Metric ${condition.metric} (${condition.aggregator}) returned no datapoints for window ${rule.window}`);
+        return;
+      }
 
       // Check if condition is met
       const isTriggered = this.checkCondition(currentValue, condition.operator, condition.threshold);
@@ -408,22 +413,142 @@ export class AdminAlertsService {
     }
   }
 
-  private parseCondition(condition: string): { metric: string; operator: string; threshold: number } | null {
+  private parseCondition(condition: string): { metric: string; aggregator: string; operator: string; threshold: number } | null {
     // Simple condition parser: "p95(first_price) > 2000"
-    const match = condition.match(/^(\w+)\(([\w_]+)\) ([><=]+) (\d+)$/);
+    const match = condition.match(/^(\w+)\(([\w\.:-]+)\) ([><=]+) ([\d\.]+)$/);
     if (!match) return null;
 
     return {
+      aggregator: match[1].toLowerCase(),
       metric: match[2],
       operator: match[3],
-      threshold: parseInt(match[4]),
+      threshold: parseFloat(match[4]),
     };
   }
 
-  private async getMetricValue(metric: string, window: string): Promise<number> {
-    // This would integrate with the metrics service
-    // For now, return a mock value
-    return Math.random() * 3000;
+  private async getMetricValue(metric: string, aggregator: string, window: string): Promise<number | null> {
+    const cacheKey = `admin-alert-metric:${aggregator}:${metric}:${window}`;
+    const cached = await this.cache.get<number | null>(cacheKey);
+    if (cached !== undefined) {
+      return cached;
+    }
+
+    const windowMs = this.parseWindow(window);
+    const since = new Date(Date.now() - windowMs).toISOString();
+    const normalizedAggregator = aggregator?.toLowerCase() || 'latest';
+
+    const percentileMatch = normalizedAggregator.match(/^p(\d{2})$/);
+    if (percentileMatch) {
+      const { data, error } = await this.supabase.client
+        .from('metrics_timeseries')
+        .select('value')
+        .eq('metric', metric)
+        .eq('percentile', normalizedAggregator)
+        .gte('timestamp', since)
+        .order('timestamp', { ascending: false })
+        .limit(1);
+
+      if (error) {
+        this.logger.error(`Failed to fetch percentile metric ${normalizedAggregator} for ${metric}`, error);
+        await this.cache.set(cacheKey, null, 15);
+        return null;
+      }
+
+      const value = data?.[0]?.value ?? null;
+      await this.cache.set(cacheKey, value, 30);
+      return value;
+    }
+
+    if (normalizedAggregator === 'gauge' || normalizedAggregator === 'latest') {
+      const { data, error } = await this.supabase.client
+        .from('metrics_gauges')
+        .select('value')
+        .eq('metric', metric)
+        .order('timestamp', { ascending: false })
+        .limit(1);
+
+      if (error) {
+        this.logger.error(`Failed to fetch gauge metric for ${metric}`, error);
+        await this.cache.set(cacheKey, null, 15);
+        return null;
+      }
+
+      const value = data?.[0]?.value ?? null;
+      await this.cache.set(cacheKey, value, 30);
+      return value;
+    }
+
+    const { data, error } = await this.supabase.client
+      .from('metrics_timeseries')
+      .select('value')
+      .eq('metric', metric)
+      .gte('timestamp', since)
+      .order('timestamp', { ascending: false })
+      .limit(500);
+
+    if (error) {
+      this.logger.error(`Failed to fetch timeseries for metric ${metric}`, error);
+      await this.cache.set(cacheKey, null, 15);
+      return null;
+    }
+
+    const values = (data ?? [])
+      .map((row) => (typeof row.value === 'number' ? row.value : Number(row.value)))
+      .filter((value) => Number.isFinite(value)) as number[];
+
+    if (!values.length) {
+      await this.cache.set(cacheKey, null, 15);
+      return null;
+    }
+
+    let computed: number;
+    switch (normalizedAggregator) {
+      case 'avg':
+      case 'mean':
+        computed = values.reduce((sum, value) => sum + value, 0) / values.length;
+        break;
+      case 'max':
+        computed = Math.max(...values);
+        break;
+      case 'min':
+        computed = Math.min(...values);
+        break;
+      case 'sum':
+        computed = values.reduce((sum, value) => sum + value, 0);
+        break;
+      case 'count':
+        computed = values.length;
+        break;
+      default:
+        computed = values[0];
+        break;
+    }
+
+    await this.cache.set(cacheKey, computed, 30);
+    return computed;
+  }
+
+  private parseWindow(window: string): number {
+    const match = window.match(/^(\d+)([smhd])$/);
+    if (!match) {
+      return 60 * 60 * 1000; // default 1h
+    }
+
+    const value = parseInt(match[1], 10);
+    const unit = match[2];
+
+    switch (unit) {
+      case 's':
+        return value * 1000;
+      case 'm':
+        return value * 60 * 1000;
+      case 'h':
+        return value * 60 * 60 * 1000;
+      case 'd':
+        return value * 24 * 60 * 60 * 1000;
+      default:
+        return 60 * 60 * 1000;
+    }
   }
 
   private checkCondition(value: number, operator: string, threshold: number): boolean {

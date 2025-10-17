@@ -35,18 +35,10 @@ export async function POST(request: NextRequest) {
 
       if (!cadResponse.ok) {
         console.error('CAD service error:', cadResponse.status, cadResponse.statusText);
-        // Fall back to mock response if CAD service is unavailable
-        return NextResponse.json({
-          taskId,
-          fileId,
-          lineId,
-          quoteId,
-          status: 'queued',
-          createdAt: new Date().toISOString(),
-          estimatedDuration: 20000,
-          progress: 0,
-          message: 'CAD analysis queued (service temporarily unavailable)'
-        });
+        return NextResponse.json(
+          { error: 'CAD service is currently unavailable' },
+          { status: 503 }
+        );
       }
 
       const cadResult = await cadResponse.json();
@@ -65,18 +57,10 @@ export async function POST(request: NextRequest) {
 
     } catch (cadError) {
       console.error('CAD service connection error:', cadError);
-      // Fall back to mock response
-      return NextResponse.json({
-        taskId,
-        fileId,
-        lineId,
-        quoteId,
-        status: 'queued',
-        createdAt: new Date().toISOString(),
-        estimatedDuration: 20000,
-        progress: 0,
-        message: 'CAD analysis queued (service temporarily unavailable)'
-      });
+      return NextResponse.json(
+        { error: 'Failed to connect to CAD service' },
+        { status: 500 }
+      );
     }
 
   } catch (error) {

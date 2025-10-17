@@ -29,6 +29,7 @@ The platform is built on a modern, decoupled architecture:
 3.  Set up environment variables:
     -   Copy `.env.example` to `.env` in the root and in `apps/api`.
     -   Fill in the required variables, especially for the database and Supabase (if used for auth).
+    -   The admin API expects canonical legal copy in Supabase. Ensure `LEGAL_DOCUMENTS_TABLE=legal_documents` and `LEGAL_DOCUMENTS_BUCKET=legal-documents` are present in `apps/api/.env` before running migrations.
 
 ### 2.3. Running the Development Environment
 The easiest way to get all services running is with Docker Compose:

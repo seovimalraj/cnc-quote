@@ -1,8 +1,9 @@
-import { BadRequestException, Injectable, Logger } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { SupabaseService } from '../../lib/supabase/supabase.service';
 import { InviteDto } from '../orgs/dto/invite.dto';
 import { createHmac, timingSafeEqual } from 'crypto';
+import { ContractsVNext } from '@cnc-quote/shared';
 
 interface InviteTokenPayload {
   orgId: string;
@@ -102,6 +103,64 @@ export class InvitesService {
     }
 
     return { orgId: invite.org_id, role: invite.role };
+  }
+
+  async getInviteDetails(token: string): Promise<ContractsVNext.OrgInviteDetails> {
+    const { data, error } = await this.supabase.client
+      .from('org_invites')
+      .select(
+        `token, email, role, invited_at, expires_at, accepted_at, org_id,
+         org:org_id(id, name),
+         inviter:invited_by(id, email, name)`
+      )
+      .eq('token', token)
+      .maybeSingle();
+
+    if (error) throw error;
+    if (!data) {
+      throw new NotFoundException('Invite not found or revoked');
+    }
+
+    const expiresAt = new Date(data.expires_at);
+    const acceptedAt = data.accepted_at ? new Date(data.accepted_at) : null;
+    const now = new Date();
+
+    let status: ContractsVNext.OrgInviteStatus = 'pending';
+    if (acceptedAt) {
+      status = 'accepted';
+    } else if (expiresAt.getTime() <= now.getTime()) {
+      status = 'expired';
+    }
+
+    const organizationId = data.org?.id ?? data.org_id;
+    if (!organizationId) {
+      throw new BadRequestException('Invite missing organization context');
+    }
+    const orgName = data.org?.name?.trim() || 'Unnamed Organisation';
+
+    const inviter = data.inviter
+      ? {
+          id: data.inviter.id,
+          name: (data.inviter.name || data.inviter.email).trim() || data.inviter.email,
+          email: data.inviter.email,
+        }
+      : null;
+
+    return {
+      token: data.token,
+      email: data.email,
+      role: data.role as ContractsVNext.OrgInviteRole,
+      organization: {
+        id: organizationId,
+        name: orgName,
+      },
+      invitedAt: new Date(data.invited_at).toISOString(),
+      expiresAt: expiresAt.toISOString(),
+      acceptedAt: acceptedAt ? acceptedAt.toISOString() : null,
+      inviter,
+      status,
+      canAccept: status === 'pending',
+    };
   }
 
   private signPayload(payload: InviteTokenPayload): string {

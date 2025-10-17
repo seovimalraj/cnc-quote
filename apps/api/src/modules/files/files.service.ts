@@ -219,20 +219,28 @@ export class FilesService {
       .select('id, bucket, path, name, size_bytes')
       .in('id', fileIds);
 
-    if (!files) {
+    if (!files || files.length === 0) {
       throw new Error('Files not found');
     }
 
-    // Create ZIP file (implementation depends on storage solution)
-    // This would typically involve:
-    // 1. Download all files from storage
-    // 2. Create ZIP archive
-    // 3. Upload ZIP to temporary storage
-    // 4. Return signed URL for ZIP download
+    // Generate signed URLs for each file
+    const fileUrls = await Promise.all(
+      files.map(async (file) => {
+        const signedUrl = await this.getSignedUrl(file.id, 'attachment');
+        return {
+          id: file.id,
+          name: file.name,
+          url: signedUrl,
+          size: file.size_bytes
+        };
+      })
+    );
 
-    // For now, return mock response
+    // Log bulk download audit event
+    await this.logAuditEvent(null, 'bulk_download', userId, { file_ids: fileIds });
+
     return {
-      downloadUrl: 'signed-url-for-zip',
+      files: fileUrls,
       fileCount: files.length,
       totalSize: files.reduce((sum, file) => sum + (file.size_bytes || 0), 0),
     };
@@ -340,7 +348,7 @@ export class FilesService {
   async scanForVirus(fileId: string) {
     const { data: file } = await this.supabase.client
       .from('file_meta')
-      .select('bucket, path')
+      .select('bucket, path, mime, name')
       .eq('id', fileId)
       .single();
 
@@ -348,18 +356,81 @@ export class FilesService {
       throw new Error('File not found');
     }
 
-    // Implement virus scanning logic
-    // This would typically download the file and scan it
-    const isClean = true; // Mock result
+    // Basic file validation - check if file content matches expected MIME type
+    // This is a simplified security check, not full virus scanning
+    let isClean = true;
+    let scanResult = 'clean';
+
+    try {
+      // Download file content to validate
+      const { data: fileData, error } = await this.supabase.client.storage
+        .from(file.bucket)
+        .download(file.path);
+
+      if (error) {
+        throw new Error(`Failed to download file for scanning: ${error.message}`);
+      }
+
+      // Convert blob to buffer for validation
+      const buffer = Buffer.from(await fileData.arrayBuffer());
+
+      // Basic file signature validation
+      if (buffer.length < 4) {
+        isClean = false;
+        scanResult = 'file_too_small';
+      } else {
+        // Check file signatures for common CAD and document formats
+        const signature = buffer.subarray(0, 4).toString('hex');
+
+        // PDF files should start with %PDF
+        if (file.mime === 'application/pdf' && !buffer.subarray(0, 4).equals(Buffer.from('%PDF'))) {
+          isClean = false;
+          scanResult = 'invalid_pdf_signature';
+        }
+        // ZIP files should start with PK
+        else if (file.mime === 'application/zip' && signature !== '504b0304') {
+          isClean = false;
+          scanResult = 'invalid_zip_signature';
+        }
+        // STL files (binary) should start with solid or have specific binary signature
+        else if (file.mime === 'model/stl' && !this.isValidSTL(buffer)) {
+          isClean = false;
+          scanResult = 'invalid_stl_format';
+        }
+        // STEP files should contain ISO-10303
+        else if (file.name.toLowerCase().endsWith('.step') || file.name.toLowerCase().endsWith('.stp')) {
+          const content = buffer.toString('utf8', 0, 1000);
+          if (!content.includes('ISO-10303')) {
+            isClean = false;
+            scanResult = 'invalid_step_format';
+          }
+        }
+      }
+    } catch (error) {
+      this.logger.error(`Error during file validation for ${fileId}:`, error);
+      isClean = false;
+      scanResult = 'scan_error';
+    }
 
     await this.supabase.client
       .from('file_meta')
       .update({
         virus_scanned: true,
+        virus_scan_result: scanResult,
         updated_at: new Date().toISOString(),
       })
       .eq('id', fileId);
 
-    return { isClean };
+    return { isClean, result: scanResult };
+  }
+
+  private isValidSTL(buffer: Buffer): boolean {
+    // Check for ASCII STL (starts with "solid")
+    const asciiCheck = buffer.subarray(0, 5).toString('ascii').toLowerCase() === 'solid';
+
+    // Check for binary STL (first 80 bytes are comment, then uint32 triangle count)
+    const binaryCheck = buffer.length >= 84; // Minimum binary STL size
+
+    return asciiCheck || binaryCheck;
   }
 }

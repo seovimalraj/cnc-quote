@@ -1,29 +1,87 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+/**
+ * @module AdminWorkcenterPage
+ * Translates live operational signals (manual review load, queue depth, and SLO health) into an admin-facing dashboard.
+ * Pulls deterministic data via Next.js API proxies that validate against shared contracts before rendering.
+ */
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import useSWR from 'swr';
+import { ContractsVNext } from '@cnc-quote/shared';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
-import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   ArrowPathIcon,
   ExclamationTriangleIcon,
-  CheckCircleIcon,
-  ClockIcon,
-  XCircleIcon,
-  InformationCircleIcon,
   PlayIcon,
   TrashIcon,
   EyeIcon,
-  QuestionMarkCircleIcon,
-  UserIcon
+  QuestionMarkCircleIcon
 } from '@heroicons/react/24/outline';
 import { trackEvent } from '@/lib/analytics/posthog';
+
+const fetcherJson = async <T,>(url: string): Promise<T> => {
+  const response = await fetch(url, { headers: { accept: 'application/json' } });
+  if (!response.ok) {
+    throw new Error(`Failed to load ${url}: ${response.status}`);
+  }
+  return response.json();
+};
+
+const formatCurrency = (value?: number | null, currency?: string | null) => {
+  if (value === null || value === undefined) {
+    return '—';
+  }
+
+  try {
+    return new Intl.NumberFormat(undefined, {
+      style: 'currency',
+      currency: currency ?? 'USD',
+      maximumFractionDigits: value >= 1000 ? 0 : 2,
+    }).format(value);
+  } catch {
+    return `$${value.toFixed(value >= 1000 ? 0 : 2)}`;
+  }
+};
+
+const formatAgeLabel = (minutes?: number) => {
+  if (minutes === undefined || minutes === null || Number.isNaN(minutes)) {
+    return '—';
+  }
+  if (minutes < 60) {
+    return `${minutes}m`;
+  }
+  const hours = Math.floor(minutes / 60);
+  const remaining = minutes % 60;
+  return remaining ? `${hours}h ${remaining}m` : `${hours}h`;
+};
+
+const formatLatencyMs = (value?: number | null) => {
+  if (value === null || value === undefined || Number.isNaN(value)) {
+    return '—';
+  }
+  return `${Math.round(value)} ms`;
+};
+
+const formatSeconds = (value?: number | null) => {
+  if (value === null || value === undefined || Number.isNaN(value)) {
+    return '—';
+  }
+  return `${Math.round(value)} s`;
+};
+
+const formatPercent = (value?: number | null) => {
+  if (value === null || value === undefined || Number.isNaN(value)) {
+    return '—';
+  }
+  return `${Math.round(value * 100) / 100}%`;
+};
 
 // Time range options
 const TIME_RANGES = [
@@ -31,49 +89,6 @@ const TIME_RANGES = [
   { value: '1h', label: 'Last 1h' },
   { value: '24h', label: 'Last 24h' },
   { value: '7d', label: 'Last 7d' }
-];
-
-// Mock data for workcenter
-const mockNeedsReview = [
-  {
-    id: 'Q-2024-001',
-    org: 'Acme Corp',
-    complexity: 'High',
-    dfmBlockers: 3,
-    value: '$2,450',
-    slaAge: '2h 15m',
-    assignee: 'Unassigned'
-  },
-  {
-    id: 'Q-2024-002',
-    org: 'TechStart Inc',
-    complexity: 'Medium',
-    dfmBlockers: 1,
-    value: '$1,200',
-    slaAge: '45m',
-    assignee: 'Unassigned'
-  }
-];
-
-const mockPriced = [
-  {
-    id: 'Q-2024-003',
-    org: 'BuildCo LLC',
-    complexity: 'Low',
-    dfmBlockers: 0,
-    value: '$850',
-    slaAge: '1h 30m',
-    assignee: 'Sarah Chen'
-  },
-  {
-    id: 'Q-2024-004',
-    org: 'InnovateLab',
-    complexity: 'High',
-    dfmBlockers: 2,
-    value: '$3,200',
-    slaAge: '3h 45m',
-    assignee: 'Mike Johnson'
-  }
 ];
 
 // Environment badge component
@@ -113,175 +128,276 @@ export default function WorkcenterDashboardPage() {
   const [refreshing, setRefreshing] = useState(false);
   const [lastRefresh, setLastRefresh] = useState(new Date());
 
-  // Mock data - in real implementation, this would come from API calls
-  const [dashboardData, setDashboardData] = useState({
-    openReviews: {
-      count: 12,
-      new_count: 3,
-      aging_count: 6,
-      breached_count: 3,
-      items: [
-        {
-          quote_id: 'Q41-1742-8058',
-          org: 'Acme Corp',
-          value: 227.98,
-          dfm_blockers: 0,
-          age_min: 35,
-          assignee: 'me@shop.com'
-        },
-        {
-          quote_id: 'Q41-1742-8059',
-          org: 'TechStart Inc',
-          value: 1450.50,
-          dfm_blockers: 2,
-          age_min: 180,
-          assignee: 'Unassigned'
-        }
-      ]
+  const {
+    data: reviewSummary,
+    isLoading: reviewLoading,
+    isValidating: reviewValidating,
+    mutate: mutateReviewSummary,
+  } = useSWR(
+    ['admin-review-summary', timeRange],
+    ([, window]) => fetcherJson<ContractsVNext.AdminReviewSummarySnapshotVNext>(`/api/admin/review/summary?window=${window}`),
+    {
+      refreshInterval: autoRefresh ? 30000 : 0,
+      keepPreviousData: true,
+      revalidateOnFocus: false,
     },
-    queues: [
-      {
-        name: 'cad:analyze',
-        waiting: 0,
-        active: 2,
-        delayed: 1,
-        failed_24h: 0,
-        oldest_job_age_sec: 120
-      },
-      {
-        name: 'pdf:render',
-        waiting: 10,
-        active: 1,
-        delayed: 0,
-        failed_24h: 2,
-        oldest_job_age_sec: 900
-      },
-      {
-        name: 'pricing:calculate',
-        waiting: 3,
-        active: 0,
-        delayed: 0,
-        failed_24h: 1,
-        oldest_job_age_sec: 45
-      }
-    ],
-    db: {
-      read_p95_ms: 18,
-      write_p95_ms: 22,
-      error_rate_pct: 0.2,
-      timeseries: {
-        t: ['12:01', '12:02', '12:03'],
-        read_ms: [15, 20, 18],
-        write_ms: [18, 25, 22]
-      }
+  );
+
+  const {
+    data: queueStatus,
+    isValidating: queueValidating,
+    mutate: mutateQueueStatus,
+  } = useSWR(
+    ['admin-queue-status', timeRange],
+    ([, window]) => fetcherJson<ContractsVNext.AdminQueueSnapshotVNext>(`/api/admin/queues/status?window=${window}`),
+    {
+      refreshInterval: autoRefresh ? 25000 : 0,
+      keepPreviousData: true,
+      revalidateOnFocus: false,
     },
-    webhooks: {
-      stripe: {
-        status: 'OK',
-        failed_24h: 0,
-        last_event_type: 'checkout.session.completed',
-        last_delivery_age: 42
-      },
-      paypal: {
-        status: 'WARN',
-        failed_24h: 1,
-        last_event_type: 'PAYMENT.CAPTURE.COMPLETED',
-        last_delivery_age: 180
-      }
+  );
+
+  const {
+    data: webhookStatus,
+    isValidating: webhookValidating,
+    mutate: mutateWebhookStatus,
+  } = useSWR(
+    ['admin-webhook-status', timeRange],
+    ([, window]) => fetcherJson<ContractsVNext.AdminWebhookStatusSnapshotVNext>(`/api/admin/webhooks/status?window=${window}`),
+    {
+      refreshInterval: autoRefresh ? 40000 : 0,
+      keepPreviousData: true,
+      revalidateOnFocus: false,
     },
-    slos: {
-      first_price_p95_ms: 1450,
-      cad_p95_ms: 18000,
-      payment_to_order_p95_ms: 6200,
-      oldest_job_age_sec: 210
+  );
+
+  const {
+    data: errorSnapshot,
+    isValidating: errorValidating,
+    mutate: mutateErrorSnapshot,
+  } = useSWR(
+    ['admin-error-snapshot', timeRange],
+    ([, window]) => fetcherJson<ContractsVNext.AdminErrorSnapshotVNext>(`/api/admin/errors?window=${window}`),
+    {
+      refreshInterval: autoRefresh ? 45000 : 0,
+      keepPreviousData: true,
+      revalidateOnFocus: false,
     },
-    errors: {
-      sentry: [
-        {
-          id: 'err_123',
-          service: 'api',
-          title: 'TypeError: Cannot read property \'x\'',
-          count_1h: 12,
-          first_seen: '2025-09-05T10:22:00Z',
-          last_seen: '2025-09-05T11:10:00Z',
-          users_affected: 3,
-          permalink: 'https://sentry.io/...'
-        }
-      ],
-      jobs: [
-        {
-          when: '2025-09-05T11:08:00Z',
-          queue: 'cad:analyze',
-          jobId: 'a1b2',
-          attempts: 3,
-          reason: 'Timeout'
-        },
-        {
-          when: '2025-09-05T11:05:00Z',
-          queue: 'pdf:render',
-          jobId: 'c3d4',
-          attempts: 2,
-          reason: 'File not found'
-        }
-      ]
-    }
-  });
+  );
+
+  const {
+    data: sloSnapshotData,
+    isValidating: sloValidating,
+    mutate: mutateSloSnapshot,
+  } = useSWR(
+    ['admin-slo-snapshot', timeRange],
+    ([, window]) => fetcherJson<ContractsVNext.AdminSloSnapshotVNext>(`/api/admin/metrics/slo?window=${window}`),
+    {
+      refreshInterval: autoRefresh ? 40000 : 0,
+      keepPreviousData: true,
+      revalidateOnFocus: false,
+    },
+  );
+
+  const {
+    data: dbLatencySnapshotData,
+    isValidating: dbValidating,
+    mutate: mutateDbLatencySnapshot,
+  } = useSWR(
+    ['admin-db-latency-snapshot', timeRange],
+    ([, window]) => fetcherJson<ContractsVNext.AdminDbLatencySnapshotVNext>(`/api/admin/metrics/db?window=${window}`),
+    {
+      refreshInterval: autoRefresh ? 60000 : 0,
+      keepPreviousData: true,
+      revalidateOnFocus: false,
+    },
+  );
+
+  const fallbackOpenReviews = useMemo<ContractsVNext.AdminReviewSummarySnapshotVNext>(() => ({
+    window: timeRange,
+    count: 0,
+    new_count: 0,
+    aging_count: 0,
+    breached_count: 0,
+    evaluated_at: new Date().toISOString(),
+    items: [],
+  }), [timeRange]);
+
+  const openReviews = reviewSummary ?? fallbackOpenReviews;
+
+  const fallbackQueueSnapshot = useMemo<ContractsVNext.AdminQueueSnapshotVNext>(() => ({
+    window: timeRange,
+    evaluated_at: new Date().toISOString(),
+    queues: [],
+  }), [timeRange]);
+
+  const queueSnapshot = queueStatus ?? fallbackQueueSnapshot;
+
+  const fallbackWebhookSnapshot = useMemo<ContractsVNext.AdminWebhookStatusSnapshotVNext>(() => ({
+    window: timeRange,
+    evaluated_at: new Date().toISOString(),
+    items: [],
+  }), [timeRange]);
+
+  const webhookSnapshot = webhookStatus ?? fallbackWebhookSnapshot;
+
+  const fallbackErrorSnapshot = useMemo<ContractsVNext.AdminErrorSnapshotVNext>(() => ({
+    window: timeRange,
+    evaluated_at: new Date().toISOString(),
+    sentry: [],
+    failed_jobs: [],
+  }), [timeRange]);
+
+  const errors = errorSnapshot ?? fallbackErrorSnapshot;
+
+  const fallbackSloSnapshot = useMemo<ContractsVNext.AdminSloSnapshotVNext>(() => ({
+    window: timeRange,
+    observed_at: null,
+    first_price_p95_ms: null,
+    cad_p95_ms: null,
+    payment_to_order_p95_ms: null,
+    oldest_job_age_sec: null,
+    samples: [],
+  }), [timeRange]);
+
+  const sloSnapshot = sloSnapshotData ?? fallbackSloSnapshot;
+
+  const fallbackDbLatencySnapshot = useMemo<ContractsVNext.AdminDbLatencySnapshotVNext>(() => ({
+    window: timeRange,
+    observed_at: null,
+    read_p95_ms: null,
+    write_p95_ms: null,
+    error_rate_pct: null,
+    samples: [],
+  }), [timeRange]);
+
+  const dbLatencySnapshot = dbLatencySnapshotData ?? fallbackDbLatencySnapshot;
+
+  const dbReadSeries = useMemo(() => {
+    return (dbLatencySnapshot.samples ?? [])
+      .map((sample) => sample.read_ms ?? null)
+      .filter((value): value is number => value !== null && Number.isFinite(value));
+  }, [dbLatencySnapshot]);
+
+  const dbWriteSeries = useMemo(() => {
+    return (dbLatencySnapshot.samples ?? [])
+      .map((sample) => sample.write_ms ?? null)
+      .filter((value): value is number => value !== null && Number.isFinite(value));
+  }, [dbLatencySnapshot]);
 
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);
     trackEvent('workcenter_refresh');
 
-    // Mock API calls - in real implementation, these would be actual API calls
-    await new Promise(resolve => setTimeout(resolve, 1000));
-
-    setLastRefresh(new Date());
-    setRefreshing(false);
-  }, []);
+    try {
+      await Promise.all([
+        mutateReviewSummary(),
+        mutateQueueStatus(),
+        mutateWebhookStatus(),
+        mutateErrorSnapshot(),
+        mutateSloSnapshot(),
+        mutateDbLatencySnapshot(),
+      ]);
+    } catch (error) {
+      trackEvent('workcenter_refresh_failed', {
+        message: error instanceof Error ? error.message : 'unknown error',
+      });
+    } finally {
+      setLastRefresh(new Date());
+      setRefreshing(false);
+    }
+  }, [mutateReviewSummary, mutateQueueStatus, mutateWebhookStatus, mutateErrorSnapshot, mutateSloSnapshot, mutateDbLatencySnapshot]);
 
   const handleRetryFailed = useCallback(async (queueName: string) => {
     trackEvent('workcenter_retry_failed', { queue: queueName });
-    // Mock retry action
-    await new Promise(resolve => setTimeout(resolve, 500));
-    // Update local state to reflect changes
-    setDashboardData(prev => ({
-      ...prev,
-      queues: prev.queues.map(q =>
-        q.name === queueName ? { ...q, failed_24h: 0 } : q
-      )
-    }));
-  }, []);
+    try {
+      const response = await fetch(`/api/admin/queues/${encodeURIComponent(queueName)}/retry-failed`, {
+        method: 'POST',
+      });
+      if (!response.ok) {
+        throw new Error(`Retry failed jobs responded with ${response.status}`);
+      }
+      await Promise.all([mutateQueueStatus(), mutateErrorSnapshot()]);
+    } catch (error) {
+      trackEvent('workcenter_retry_failed_error', {
+        queue: queueName,
+        message: error instanceof Error ? error.message : 'unknown error',
+      });
+    }
+  }, [mutateQueueStatus, mutateErrorSnapshot]);
+
+  const handleCleanCompleted = useCallback(async (queueName: string) => {
+    trackEvent('workcenter_clean_completed', { queue: queueName });
+    try {
+      const response = await fetch(`/api/admin/queues/${encodeURIComponent(queueName)}/clean-completed`, {
+        method: 'POST',
+      });
+      if (!response.ok) {
+        throw new Error(`Clean completed jobs responded with ${response.status}`);
+      }
+      await mutateQueueStatus();
+    } catch (error) {
+      trackEvent('workcenter_clean_completed_error', {
+        queue: queueName,
+        message: error instanceof Error ? error.message : 'unknown error',
+      });
+    }
+  }, [mutateQueueStatus]);
 
   const handleWebhookReplay = useCallback(async (provider: string) => {
-    trackEvent(`webhook_replay_${provider.toLowerCase()}`);
-    // Mock replay action
-    await new Promise(resolve => setTimeout(resolve, 500));
-    // Update local state
-    setDashboardData(prev => ({
-      ...prev,
-      webhooks: {
-        ...prev.webhooks,
-        [provider.toLowerCase()]: {
-          ...prev.webhooks[provider.toLowerCase() as keyof typeof prev.webhooks],
-          failed_24h: 0,
-          status: 'OK' as const
-        }
+    const providerKey = provider.toLowerCase();
+    trackEvent(`webhook_replay_${providerKey}`);
+    try {
+      const response = await fetch(`/api/admin/webhooks/${encodeURIComponent(providerKey)}/replay`, {
+        method: 'POST',
+      });
+      if (!response.ok) {
+        throw new Error(`Webhook replay responded with ${response.status}`);
       }
-    }));
-  }, []);
+      await mutateWebhookStatus();
+    } catch (error) {
+      trackEvent('webhook_replay_error', {
+        provider: providerKey,
+        message: error instanceof Error ? error.message : 'unknown error',
+      });
+    }
+  }, [mutateWebhookStatus]);
 
   const handleRetryJob = useCallback(async (queue: string, jobId: string) => {
     trackEvent('workcenter_retry_one', { queue, jobId });
-    // Mock retry action
-    await new Promise(resolve => setTimeout(resolve, 500));
-    // Remove from failed jobs list
-    setDashboardData(prev => ({
-      ...prev,
-      errors: {
-        ...prev.errors,
-        jobs: prev.errors.jobs.filter(j => j.jobId !== jobId)
+    try {
+      const params = new URLSearchParams({ queue });
+      const response = await fetch(`/api/admin/queues/jobs/${encodeURIComponent(jobId)}/retry?${params.toString()}`, {
+        method: 'POST',
+      });
+      if (!response.ok) {
+        throw new Error(`Retry job responded with ${response.status}`);
       }
-    }));
-  }, []);
+      await Promise.all([mutateErrorSnapshot(), mutateQueueStatus()]);
+    } catch (error) {
+      trackEvent('workcenter_retry_one_error', {
+        queue,
+        jobId,
+        message: error instanceof Error ? error.message : 'unknown error',
+      });
+    }
+  }, [mutateErrorSnapshot, mutateQueueStatus]);
+
+  useEffect(() => {
+    const timestamps = [
+      reviewSummary?.evaluated_at,
+      queueSnapshot?.evaluated_at,
+      webhookSnapshot?.evaluated_at,
+      errors?.evaluated_at,
+      sloSnapshot?.observed_at ?? null,
+      dbLatencySnapshot?.observed_at ?? null,
+    ].filter((value): value is string => Boolean(value));
+
+    if (timestamps.length) {
+      const latest = new Date(Math.max(...timestamps.map((value) => Date.parse(value))));
+      setLastRefresh(latest);
+    }
+  }, [reviewSummary, queueSnapshot, webhookSnapshot, errors, sloSnapshot, dbLatencySnapshot]);
 
   useEffect(() => {
     trackEvent('workcenter_load');
@@ -297,10 +413,22 @@ export default function WorkcenterDashboardPage() {
     return () => clearInterval(interval);
   }, [autoRefresh, handleRefresh]);
 
-  const getSLOTileColor = (value: number, target: number, warningThreshold?: number) => {
+  const getSLOTileColor = (value: number | null | undefined, target: number, warningThreshold?: number) => {
+    if (value === null || value === undefined || Number.isNaN(value)) {
+      return 'bg-gray-100 text-gray-600';
+    }
     if (value <= target) return 'bg-green-100 text-green-800';
     if (warningThreshold && value <= warningThreshold) return 'bg-yellow-100 text-yellow-800';
     return 'bg-red-100 text-red-800';
+  };
+
+  const resolveSloBadge = (value: number | null | undefined, target: number, warningThreshold?: number) => {
+    if (value === null || value === undefined || Number.isNaN(value)) {
+      return '?';
+    }
+    if (value <= target) return '✓';
+    if (warningThreshold && value <= warningThreshold) return '⚠';
+    return '✗';
   };
 
   return (
@@ -360,11 +488,11 @@ export default function WorkcenterDashboardPage() {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {/* Alerts */}
-        {dashboardData.openReviews.breached_count > 0 && (
+        {openReviews.breached_count > 0 && (
           <Alert className="mb-6">
             <ExclamationTriangleIcon className="h-4 w-4" />
             <AlertDescription>
-              Manual review SLA breached for {dashboardData.openReviews.breached_count} quotes.
+              Manual review SLA breached for {openReviews.breached_count} quotes.
             </AlertDescription>
           </Alert>
         )}
@@ -379,17 +507,17 @@ export default function WorkcenterDashboardPage() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                <div className="text-3xl font-bold">{dashboardData.openReviews.count}</div>
+                <div className="text-3xl font-bold">{openReviews.count}</div>
 
                 <div className="flex space-x-2">
                   <Badge className="bg-green-100 text-green-800">
-                    {dashboardData.openReviews.new_count} New (&lt;1h)
+                    {openReviews.new_count} New (&lt;1h)
                   </Badge>
                   <Badge className="bg-yellow-100 text-yellow-800">
-                    {dashboardData.openReviews.aging_count} Aging (1–4h)
+                    {openReviews.aging_count} Aging (1–4h)
                   </Badge>
                   <Badge className="bg-red-100 text-red-800">
-                    {dashboardData.openReviews.breached_count} Breached (&gt;4h)
+                    {openReviews.breached_count} Breached (&gt;4h)
                   </Badge>
                 </div>
 
@@ -414,14 +542,25 @@ export default function WorkcenterDashboardPage() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {dashboardData.openReviews.items.slice(0, 3).map((item) => (
-                        <TableRow key={item.quote_id} className="cursor-pointer hover:bg-gray-50">
-                          <TableCell className="text-xs font-mono">{item.quote_id}</TableCell>
-                          <TableCell className="text-xs">{item.org}</TableCell>
-                          <TableCell className="text-xs">${item.value}</TableCell>
-                          <TableCell className="text-xs">{Math.floor(item.age_min / 60)}h</TableCell>
+                      {openReviews.items.length ? (
+                        openReviews.items.slice(0, 3).map((item) => (
+                          <TableRow
+                            key={item.quote_id}
+                            className={`cursor-pointer hover:bg-gray-50 ${item.breached ? 'border-l-2 border-l-red-400' : ''}`}
+                          >
+                            <TableCell className="text-xs font-mono">{item.quote_id}</TableCell>
+                            <TableCell className="text-xs">{item.org ?? '—'}</TableCell>
+                            <TableCell className="text-xs">{formatCurrency(item.value, item.currency)}</TableCell>
+                            <TableCell className="text-xs">{formatAgeLabel(item.age_min)}</TableCell>
+                          </TableRow>
+                        ))
+                      ) : (
+                        <TableRow>
+                          <TableCell colSpan={4} className="text-xs text-gray-500 text-center py-4">
+                            {reviewLoading || reviewValidating ? 'Loading review tasks…' : 'No pending manual reviews'}
+                          </TableCell>
                         </TableRow>
-                      ))}
+                      )}
                     </TableBody>
                   </Table>
                 </div>
@@ -449,32 +588,44 @@ export default function WorkcenterDashboardPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {dashboardData.queues.map((queue) => (
-                      <TableRow key={queue.name}>
-                        <TableCell className="text-xs font-mono">{queue.name}</TableCell>
-                        <TableCell className="text-xs">{queue.waiting}</TableCell>
-                        <TableCell className="text-xs">{queue.active}</TableCell>
-                        <TableCell className="text-xs">{queue.failed_24h}</TableCell>
-                        <TableCell className="text-xs">
-                          {Math.floor(queue.oldest_job_age_sec / 60)}m
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex space-x-1">
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              disabled={queue.failed_24h === 0}
-                              onClick={() => handleRetryFailed(queue.name)}
-                            >
-                              <PlayIcon className="w-3 h-3" />
-                            </Button>
-                            <Button size="sm" variant="ghost">
-                              <TrashIcon className="w-3 h-3" />
-                            </Button>
-                          </div>
+                    {queueSnapshot.queues.length ? (
+                      queueSnapshot.queues.map((queue) => (
+                        <TableRow key={queue.name}>
+                          <TableCell className="text-xs font-mono">{queue.name}</TableCell>
+                          <TableCell className="text-xs">{queue.waiting}</TableCell>
+                          <TableCell className="text-xs">{queue.active}</TableCell>
+                          <TableCell className="text-xs">{queue.failed_24h}</TableCell>
+                          <TableCell className="text-xs">
+                            {Math.floor(queue.oldest_job_age_sec / 60)}m
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex space-x-1">
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                disabled={queue.failed_24h === 0}
+                                onClick={() => handleRetryFailed(queue.name)}
+                              >
+                                <PlayIcon className="w-3 h-3" />
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => handleCleanCompleted(queue.name)}
+                              >
+                                <TrashIcon className="w-3 h-3" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    ) : (
+                      <TableRow>
+                        <TableCell colSpan={6} className="text-xs text-gray-500 text-center py-4">
+                          {queueValidating ? 'Loading queue status…' : 'No queues reporting metrics'}
                         </TableCell>
                       </TableRow>
-                    ))}
+                    )}
                   </TableBody>
                 </Table>
               </div>
@@ -492,28 +643,42 @@ export default function WorkcenterDashboardPage() {
                 <div className="grid grid-cols-3 gap-4">
                   <div>
                     <div className="text-sm text-gray-600">Read P95</div>
-                    <div className="text-lg font-semibold">{dashboardData.db.read_p95_ms} ms</div>
+                    <div className="text-lg font-semibold">{formatLatencyMs(dbLatencySnapshot.read_p95_ms)}</div>
                   </div>
                   <div>
                     <div className="text-sm text-gray-600">Write P95</div>
-                    <div className="text-lg font-semibold">{dashboardData.db.write_p95_ms} ms</div>
+                    <div className="text-lg font-semibold">{formatLatencyMs(dbLatencySnapshot.write_p95_ms)}</div>
                   </div>
                   <div>
                     <div className="text-sm text-gray-600">Error Rate</div>
-                    <div className="text-lg font-semibold">{dashboardData.db.error_rate_pct}%</div>
+                    <div className="text-lg font-semibold">{formatPercent(dbLatencySnapshot.error_rate_pct)}</div>
                   </div>
                 </div>
 
-                {/* Simple sparkline placeholder */}
-                <div className="h-16 bg-gray-100 rounded flex items-end justify-between px-2">
-                  {dashboardData.db.timeseries.read_ms.map((value, i) => (
-                    <div
-                      key={i}
-                      className="bg-blue-500 w-2 rounded-t"
-                      style={{ height: `${(value / 30) * 100}%` }}
-                    />
-                  ))}
+                <div className="text-xs text-gray-500">
+                  Observed {dbLatencySnapshot.observed_at ? new Date(dbLatencySnapshot.observed_at).toLocaleTimeString() : '—'}
                 </div>
+
+                {dbReadSeries.length || dbWriteSeries.length ? (
+                  <div className="space-y-3">
+                    {dbReadSeries.length ? (
+                      <div>
+                        <div className="text-xs text-gray-500 mb-1">Read trend</div>
+                        <SparkBars data={dbReadSeries} color="bg-blue-500" />
+                      </div>
+                    ) : null}
+                    {dbWriteSeries.length ? (
+                      <div>
+                        <div className="text-xs text-gray-500 mb-1">Write trend</div>
+                        <SparkBars data={dbWriteSeries} color="bg-purple-500" />
+                      </div>
+                    ) : null}
+                  </div>
+                ) : (
+                  <div className="text-xs text-gray-500">
+                    {dbValidating ? 'Loading database latency…' : 'No database latency samples captured'}
+                  </div>
+                )}
 
                 <Button size="sm" variant="outline" className="w-full">
                   Open DB Health
@@ -530,53 +695,34 @@ export default function WorkcenterDashboardPage() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {/* Stripe */}
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div className="font-medium">Stripe</div>
-                    <div className="text-sm text-gray-600">
-                      Last: {dashboardData.webhooks.stripe.last_event_type}
+                {webhookSnapshot.items.length ? (
+                  webhookSnapshot.items.map((item) => (
+                    <div key={item.provider} className="flex items-center justify-between">
+                      <div>
+                        <div className="font-medium">{item.provider}</div>
+                        <div className="text-sm text-gray-600">
+                          Last: {item.last_event_type || '—'}
+                        </div>
+                        <div className="text-sm text-gray-600">
+                          {item.last_delivery_age != null ? `${item.last_delivery_age}s ago` : 'No deliveries in window'}
+                        </div>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <StatusBadge status={item.status} />
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          disabled={item.failed_24h === 0}
+                          onClick={() => handleWebhookReplay(item.provider)}
+                        >
+                          <PlayIcon className="w-3 h-3" />
+                        </Button>
+                      </div>
                     </div>
-                    <div className="text-sm text-gray-600">
-                      {dashboardData.webhooks.stripe.last_delivery_age}s ago
-                    </div>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <StatusBadge status={dashboardData.webhooks.stripe.status} />
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      disabled={dashboardData.webhooks.stripe.failed_24h === 0}
-                      onClick={() => handleWebhookReplay('stripe')}
-                    >
-                      <PlayIcon className="w-3 h-3" />
-                    </Button>
-                  </div>
-                </div>
-
-                {/* PayPal */}
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div className="font-medium">PayPal</div>
-                    <div className="text-sm text-gray-600">
-                      Last: {dashboardData.webhooks.paypal.last_event_type}
-                    </div>
-                    <div className="text-sm text-gray-600">
-                      {dashboardData.webhooks.paypal.last_delivery_age}s ago
-                    </div>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <StatusBadge status={dashboardData.webhooks.paypal.status} />
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      disabled={dashboardData.webhooks.paypal.failed_24h === 0}
-                      onClick={() => handleWebhookReplay('paypal')}
-                    >
-                      <PlayIcon className="w-3 h-3" />
-                    </Button>
-                  </div>
-                </div>
+                  ))
+                ) : (
+                  <div className="text-sm text-gray-500">{webhookValidating ? 'Loading webhook telemetry…' : 'No webhook providers reporting'}</div>
+                )}
 
                 <Button size="sm" variant="outline" className="w-full">
                   Open Monitor
@@ -597,40 +743,48 @@ export default function WorkcenterDashboardPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div className="p-4 border rounded">
                   <div className="text-sm text-gray-600">Time to First Price</div>
-                  <div className="text-2xl font-bold">{dashboardData.slos.first_price_p95_ms} ms</div>
+                  <div className="text-2xl font-bold">{formatLatencyMs(sloSnapshot.first_price_p95_ms)}</div>
                   <div className="text-sm text-gray-600">Target: ≤ 2000 ms</div>
-                  <Badge className={`mt-2 ${getSLOTileColor(dashboardData.slos.first_price_p95_ms, 2000, 2500)}`}>
-                    {dashboardData.slos.first_price_p95_ms <= 2000 ? '✓' : dashboardData.slos.first_price_p95_ms <= 2500 ? '⚠' : '✗'}
+                  <Badge className={`mt-2 ${getSLOTileColor(sloSnapshot.first_price_p95_ms, 2000, 2500)}`}>
+                    {resolveSloBadge(sloSnapshot.first_price_p95_ms, 2000, 2500)}
                   </Badge>
                 </div>
 
                 <div className="p-4 border rounded">
                   <div className="text-sm text-gray-600">CAD Analysis</div>
-                  <div className="text-2xl font-bold">{dashboardData.slos.cad_p95_ms} ms</div>
+                  <div className="text-2xl font-bold">{formatLatencyMs(sloSnapshot.cad_p95_ms)}</div>
                   <div className="text-sm text-gray-600">Target: ≤ 20000 ms</div>
-                  <Badge className={`mt-2 ${getSLOTileColor(dashboardData.slos.cad_p95_ms, 20000, 30000)}`}>
-                    {dashboardData.slos.cad_p95_ms <= 20000 ? '✓' : dashboardData.slos.cad_p95_ms <= 30000 ? '⚠' : '✗'}
+                  <Badge className={`mt-2 ${getSLOTileColor(sloSnapshot.cad_p95_ms, 20000, 30000)}`}>
+                    {resolveSloBadge(sloSnapshot.cad_p95_ms, 20000, 30000)}
                   </Badge>
                 </div>
 
                 <div className="p-4 border rounded">
                   <div className="text-sm text-gray-600">Payment → Order</div>
-                  <div className="text-2xl font-bold">{dashboardData.slos.payment_to_order_p95_ms} ms</div>
+                  <div className="text-2xl font-bold">{formatLatencyMs(sloSnapshot.payment_to_order_p95_ms)}</div>
                   <div className="text-sm text-gray-600">Target: ≤ 10000 ms</div>
-                  <Badge className={`mt-2 ${getSLOTileColor(dashboardData.slos.payment_to_order_p95_ms, 10000, 15000)}`}>
-                    {dashboardData.slos.payment_to_order_p95_ms <= 10000 ? '✓' : dashboardData.slos.payment_to_order_p95_ms <= 15000 ? '⚠' : '✗'}
+                  <Badge className={`mt-2 ${getSLOTileColor(sloSnapshot.payment_to_order_p95_ms, 10000, 15000)}`}>
+                    {resolveSloBadge(sloSnapshot.payment_to_order_p95_ms, 10000, 15000)}
                   </Badge>
                 </div>
 
                 <div className="p-4 border rounded">
                   <div className="text-sm text-gray-600">Queue Staleness</div>
-                  <div className="text-2xl font-bold">{dashboardData.slos.oldest_job_age_sec} s</div>
+                  <div className="text-2xl font-bold">{formatSeconds(sloSnapshot.oldest_job_age_sec)}</div>
                   <div className="text-sm text-gray-600">Target: ≤ 600 s</div>
-                  <Badge className={`mt-2 ${getSLOTileColor(dashboardData.slos.oldest_job_age_sec, 600, 1800)}`}>
-                    {dashboardData.slos.oldest_job_age_sec <= 600 ? '✓' : dashboardData.slos.oldest_job_age_sec <= 1800 ? '⚠' : '✗'}
+                  <Badge className={`mt-2 ${getSLOTileColor(sloSnapshot.oldest_job_age_sec, 600, 1800)}`}>
+                    {resolveSloBadge(sloSnapshot.oldest_job_age_sec, 600, 1800)}
                   </Badge>
                 </div>
               </div>
+              <div className="mt-3 text-xs text-gray-500">
+                Observed {sloSnapshot.observed_at ? new Date(sloSnapshot.observed_at).toLocaleTimeString() : '—'}{sloValidating ? ' (refreshing…)' : ''}
+              </div>
+              {sloSnapshot.missing_metrics?.length ? (
+                <div className="mt-3 rounded border border-amber-200 bg-amber-50 p-2 text-xs text-amber-700">
+                  Missing metrics: {sloSnapshot.missing_metrics.join(', ')}
+                </div>
+              ) : null}
             </CardContent>
           </Card>
         </div>
@@ -661,7 +815,8 @@ export default function WorkcenterDashboardPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {dashboardData.errors.sentry.map((error) => (
+                    {errors.sentry.length ? (
+                      errors.sentry.map((error) => (
                       <TableRow key={error.id}>
                         <TableCell>{new Date(error.last_seen).toLocaleTimeString()}</TableCell>
                         <TableCell>
@@ -681,7 +836,14 @@ export default function WorkcenterDashboardPage() {
                           </div>
                         </TableCell>
                       </TableRow>
-                    ))}
+                      ))
+                    ) : (
+                      <TableRow>
+                        <TableCell colSpan={6} className="text-center text-sm text-gray-500 py-6">
+                          {errorValidating ? 'Loading error events…' : 'No error events recorded'}
+                        </TableCell>
+                      </TableRow>
+                    )}
                   </TableBody>
                 </Table>
               </TabsContent>
@@ -699,13 +861,14 @@ export default function WorkcenterDashboardPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {dashboardData.errors.jobs.map((job) => (
-                      <TableRow key={job.jobId}>
-                        <TableCell>{new Date(job.when).toLocaleTimeString()}</TableCell>
+                    {errors.failed_jobs.length ? (
+                      errors.failed_jobs.map((job) => (
+                        <TableRow key={`${job.queue}-${job.job_id}-${job.when}`}>
+                          <TableCell>{new Date(job.when).toLocaleTimeString()}</TableCell>
                         <TableCell>
                           <Badge variant="outline">{job.queue}</Badge>
                         </TableCell>
-                        <TableCell className="font-mono text-sm">{job.jobId}</TableCell>
+                          <TableCell className="font-mono text-sm">{job.job_id}</TableCell>
                         <TableCell>{job.attempts}</TableCell>
                         <TableCell>{job.reason}</TableCell>
                         <TableCell>
@@ -713,7 +876,7 @@ export default function WorkcenterDashboardPage() {
                             <Button
                               size="sm"
                               variant="ghost"
-                              onClick={() => handleRetryJob(job.queue, job.jobId)}
+                                onClick={() => handleRetryJob(job.queue, job.job_id)}
                             >
                               <PlayIcon className="w-4 h-4" />
                             </Button>
@@ -722,14 +885,21 @@ export default function WorkcenterDashboardPage() {
                             </Button>
                           </div>
                         </TableCell>
+                        </TableRow>
+                      ))
+                    ) : (
+                      <TableRow>
+                        <TableCell colSpan={6} className="text-center text-sm text-gray-500 py-6">
+                          {errorValidating ? 'Loading failed jobs…' : 'No failed jobs in window'}
+                        </TableCell>
                       </TableRow>
-                    ))}
+                    )}
                   </TableBody>
                 </Table>
 
                 <div className="flex justify-between items-center mt-4 pt-4 border-t">
                   <div className="text-sm text-gray-600">
-                    Showing {dashboardData.errors.jobs.length} failed jobs
+                    Showing {errors.failed_jobs.length} failed jobs
                   </div>
                   <Button size="sm" variant="outline">
                     Retry All Failed (24h)
@@ -744,221 +914,27 @@ export default function WorkcenterDashboardPage() {
   );
 }
 
-function NeedsReviewQueue() {
-  return (
-    <Card className="mb-6">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <ExclamationTriangleIcon className="h-5 w-5 text-yellow-500" />
-          Needs Review
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b">
-                <th className="text-left p-3 font-medium">Quote ID</th>
-                <th className="text-left p-3 font-medium">Org</th>
-                <th className="text-left p-3 font-medium">Complexity</th>
-                <th className="text-left p-3 font-medium">DFM Blockers</th>
-                <th className="text-left p-3 font-medium">Value</th>
-                <th className="text-left p-3 font-medium">SLA Age</th>
-                <th className="text-left p-3 font-medium">Assignee</th>
-                <th className="text-left p-3 font-medium">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {mockNeedsReview.map((item) => (
-                <tr key={item.id} className="border-b hover:bg-gray-50">
-                  <td className="p-3 font-medium">{item.id}</td>
-                  <td className="p-3">{item.org}</td>
-                  <td className="p-3">
-                    <Badge
-                      variant="secondary"
-                      className={
-                        item.complexity === 'High'
-                          ? 'bg-red-100 text-red-800'
-                          : 'bg-yellow-100 text-yellow-800'
-                      }
-                    >
-                      {item.complexity}
-                    </Badge>
-                  </td>
-                  <td className="p-3">
-                    {item.dfmBlockers > 0 ? (
-                      <Badge variant="destructive">
-                        {item.dfmBlockers}
-                      </Badge>
-                    ) : (
-                      <CheckCircleIcon className="h-5 w-5 text-green-500" />
-                    )}
-                  </td>
-                  <td className="p-3 font-medium">${item.value.toLocaleString()}</td>
-                  <td className="p-3">
-                    <span className={`px-2 py-1 rounded text-xs ${
-                      item.slaAge.includes('2h')
-                        ? 'bg-green-100 text-green-800'
-                        : 'bg-yellow-100 text-yellow-800'
-                    }`}>
-                      {item.slaAge}
-                    </span>
-                  </td>
-                  <td className="p-3">
-                    {item.assignee === 'Unassigned' ? (
-                      <span className="text-gray-500">Unassigned</span>
-                    ) : (
-                      <span className="flex items-center gap-1">
-                        <UserIcon className="h-4 w-4" />
-                        {item.assignee}
-                      </span>
-                    )}
-                  </td>
-                  <td className="p-3">
-                    <div className="flex gap-2">
-                      <Button size="sm" variant="outline">
-                        <EyeIcon className="h-4 w-4" />
-                      </Button>
-                      <Button size="sm" variant="outline">
-                        Assign
-                      </Button>
-                      <Button size="sm">
-                        Approve & Send
-                      </Button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
+function SparkBars({ data, color, maxBars = 24 }: { data: number[]; color: string; maxBars?: number }) {
+  if (!data.length) {
+    return <div className="h-16 flex items-center justify-center text-xs text-gray-500 bg-gray-100 rounded">No samples</div>;
+  }
 
-function PricedQueue() {
-  return (
-    <Card className="mb-6">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <CheckCircleIcon className="h-5 w-5 text-green-500" />
-          Priced
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b">
-                <th className="text-left p-3 font-medium">Quote ID</th>
-                <th className="text-left p-3 font-medium">Org</th>
-                <th className="text-left p-3 font-medium">Price</th>
-                <th className="text-left p-3 font-medium">Speed</th>
-                <th className="text-left p-3 font-medium">Updated</th>
-                <th className="text-left p-3 font-medium">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {mockPriced.map((item) => (
-                <tr key={item.id} className="border-b hover:bg-gray-50">
-                  <td className="p-3 font-medium">{item.id}</td>
-                  <td className="p-3">{item.org}</td>
-                  <td className="p-3 font-medium text-green-600">
-                    ${item.price.toLocaleString()}
-                  </td>
-                  <td className="p-3">
-                    <Badge variant="secondary">
-                      {item.speed}
-                    </Badge>
-                  </td>
-                  <td className="p-3 text-sm text-gray-600">
-                    {new Date(item.updated).toLocaleDateString()}
-                  </td>
-                  <td className="p-3">
-                    <div className="flex gap-2">
-                      <Button size="sm" variant="outline">
-                        <EyeIcon className="h-4 w-4" />
-                      </Button>
-                      <Button size="sm">
-                        Send
-                      </Button>
-                      <Button size="sm" variant="outline">
-                        Lock Price
-                      </Button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
-
-function SystemHealthRail() {
-  const healthItems = [
-    { label: 'API OK', status: 'good' },
-    { label: 'CAD OK', status: 'good' },
-    { label: 'Webhooks OK', status: 'good' },
-    { label: 'Queue Depth', status: 'warn', value: '23' }
-  ];
-
-  const sloItems = [
-    { label: 'First Price', value: '1.8s', target: '2.0s', status: 'good' },
-    { label: 'CAD Analysis', value: '45s', target: '60s', status: 'good' },
-    { label: 'Payment→Order', value: '3.2s', target: '5.0s', status: 'good' }
-  ];
+  const series = data.slice(-maxBars);
+  const ceiling = Math.max(...series) || 1;
 
   return (
-    <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>System Health</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-3">
-            {healthItems.map((item, index) => (
-              <div key={index} className="flex items-center justify-between">
-                <span className="text-sm">{item.label}</span>
-                <div className="flex items-center gap-2">
-                  {item.value && (
-                    <span className="text-sm font-medium">{item.value}</span>
-                  )}
-                  <div className={`w-2 h-2 rounded-full ${
-                    item.status === 'good' ? 'bg-green-500' : 'bg-yellow-500'
-                  }`} />
-                </div>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>P95 SLOs</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-3">
-            {sloItems.map((item, index) => (
-              <div key={index} className="flex items-center justify-between">
-                <span className="text-sm">{item.label}</span>
-                <div className="flex items-center gap-2">
-                  <span className={`text-sm font-medium ${
-                    item.status === 'good' ? 'text-green-600' : 'text-red-600'
-                  }`}>
-                    {item.value}
-                  </span>
-                  <span className="text-xs text-gray-500">/ {item.target}</span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+    <div className="h-16 bg-gray-100 rounded flex items-end justify-between px-2">
+      {series.map((value, index) => {
+        const ratio = Math.max(value / ceiling, 0);
+        const height = Math.max(ratio * 100, 4);
+        return (
+          <div
+            key={`${index}-${value}`}
+            className={`${color} w-2 rounded-t`}
+            style={{ height: `${Math.min(height, 100)}%` }}
+          />
+        );
+      })}
     </div>
   );
 }
