@@ -30,6 +30,24 @@ describe('pricing-diff.util', () => {
     expect(patches).toHaveLength(0);
   });
 
+  it('emits patch when compliance snapshot changes without price change', () => {
+    const withCompliancePrev = [{
+      ...prev[0],
+      compliance: { quantity: 1, alerts: [], currency: 'USD', unit_price: 100, price_before_discounts: 100, total_price: 100, margin_percent: 0.25, lead_time_option: 'standard', expedited: false } as any,
+    }, prev[1]];
+    const withComplianceNext = [{
+      ...withCompliancePrev[0],
+      compliance: {
+        ...(withCompliancePrev[0] as any).compliance,
+        alerts: [{ code: 'margin_floor_breach', severity: 'critical', message: 'Margin below floor' }],
+      },
+    }, prev[1]];
+    const patches = diffPricingMatrix(withCompliancePrev as any, withComplianceNext as any);
+    expect(patches).toHaveLength(1);
+    expect(patches[0]).toMatchObject({ quantity: 1 });
+    expect((patches[0] as any).compliance.alerts?.[0]?.code).toBe('margin_floor_breach');
+  });
+
   it('subtotal delta reflects change only in updated item selected quantity', () => {
     const prevItems = [
       { id: 'A', matrix: prev, selected_quantity: 1 },

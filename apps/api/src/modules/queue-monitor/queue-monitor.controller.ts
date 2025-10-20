@@ -9,7 +9,7 @@ import { Roles } from "../../auth/roles.decorator";
 @ApiTags("Queue Monitor")
 @Controller("admin")
 @UseGuards(JwtAuthGuard, OrgGuard, RolesGuard)
-@Roles('admin')
+@Roles('admin', 'org_admin', 'reviewer')
 @ApiBearerAuth()
 export class QueueMonitorController {
   constructor(private readonly queueMonitorService: QueueMonitorService) {}

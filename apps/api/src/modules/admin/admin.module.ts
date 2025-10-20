@@ -1,6 +1,7 @@
 import { Module } from "@nestjs/common";
 import { AdminController } from "./admin.controller";
 import { AdminService } from "./admin.service";
+import { AdminRiskComplianceService } from './admin-risk-compliance.service';
 import { AdminFinishOperationsController } from './admin-finish-operations.controller';
 import { FinishesModule } from '../finishes/finishes.module';
 import { FormulaModule } from '../../common/formula/formula.module';
@@ -10,7 +11,7 @@ import { SupabaseModule } from '../../lib/supabase/supabase.module';
 @Module({
   imports: [FinishesModule, FormulaModule, AdminMetricsModule, SupabaseModule],
   controllers: [AdminController, AdminFinishOperationsController],
-  providers: [AdminService],
+  providers: [AdminService, AdminRiskComplianceService],
   exports: [AdminService],
 })
 export class AdminModule {}

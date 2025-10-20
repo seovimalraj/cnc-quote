@@ -227,7 +227,9 @@ export class PricingGateway implements OnGatewayConnection, OnGatewayDisconnect 
         await this.pricingPersistence.persistMatrixAndTotals({
             quote_id: quoteId,
             quote_item_id,
-            matrix: pricingMatrix as any
+      matrix: pricingMatrix as any,
+      partConfig,
+      traceId: `pricing-realtime:${quoteId}:${quote_item_id}:${Date.now()}`,
         });
         const patches = diffPricingMatrix(prevForItem as any, pricingMatrix as any);
         const subtotalDelta = computeSelectedSubtotalDelta({
@@ -256,7 +258,15 @@ export class PricingGateway implements OnGatewayConnection, OnGatewayDisconnect 
             payload: {
               quote_item_id,
               matrix_patches: patches.length ? patches : [
-                { quantity: selectedRow.quantity, unit_price: selectedRow.unit_price, total_price: selectedRow.total_price, lead_time_days: selectedRow.lead_time_days, breakdown: selectedRow.breakdown, status: 'ready' }
+                {
+                  quantity: selectedRow.quantity,
+                  unit_price: selectedRow.unit_price,
+                  total_price: selectedRow.total_price,
+                  lead_time_days: selectedRow.lead_time_days,
+                  breakdown: selectedRow.breakdown,
+                  status: 'ready',
+                  compliance: selectedRow.compliance ?? null,
+                }
               ],
               pricing_version: Date.now(),
               subtotal_delta: subtotalDelta,

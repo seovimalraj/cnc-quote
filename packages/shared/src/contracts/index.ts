@@ -3,6 +3,10 @@ import * as V1 from './v1';
 import * as VNext from './vnext';
 
 export const computeQuoteDiffSummaryV1 = V1.computeQuoteDiffSummaryV1;
+export const QUOTE_RATIONALE_CACHE_PREFIX_V1 = V1.QUOTE_RATIONALE_CACHE_PREFIX_V1;
+export const QUOTE_RATIONALE_CACHE_TTL_SECONDS = V1.QUOTE_RATIONALE_CACHE_TTL_SECONDS;
+export const buildQuoteRationaleCacheKeyV1 = V1.buildQuoteRationaleCacheKeyV1;
+export const buildQuoteRationaleRevisionCacheKeyV1 = V1.buildQuoteRationaleRevisionCacheKeyV1;
 
 /**
  * @deprecated Use ContractsVNext instead. V1 contracts are frozen and scheduled for removal once
@@ -27,6 +31,32 @@ export namespace ContractsV1 {
   export type QuoteSummaryV1 = V1.QuoteSummaryV1;
   export type QuoteRevisionSummaryV1 = V1.QuoteRevisionSummaryV1;
   export type QuoteRevisionApplyResultV1 = V1.QuoteRevisionApplyResultV1;
+  export type AdminRecentEventActorV1 = V1.AdminRecentEventActorV1;
+  export type AdminRecentEventTargetV1 = V1.AdminRecentEventTargetV1;
+  export type AdminRecentEventDiffV1 = V1.AdminRecentEventDiffV1;
+  export type AdminRecentEventAlertSeverityV1 = V1.AdminRecentEventAlertSeverityV1;
+  export type AdminRecentEventAlertV1 = V1.AdminRecentEventAlertV1;
+  export type AdminRecentEventV1 = V1.AdminRecentEventV1;
+  export type AdminRecentEventsResponseV1 = V1.AdminRecentEventsResponseV1;
+  export type AdminCmsStatusV1 = V1.AdminCmsStatusV1;
+  export type AdminCmsPageV1 = V1.AdminCmsPageV1;
+  export type AdminCmsDocumentV1 = V1.AdminCmsDocumentV1;
+  export type AdminCmsPagesResponseV1 = V1.AdminCmsPagesResponseV1;
+  export type AdminCmsDocumentsResponseV1 = V1.AdminCmsDocumentsResponseV1;
+  export type QuoteComplianceAlertV1 = V1.QuoteComplianceAlertV1;
+  export type QuoteComplianceAlertSeverityV1 = V1.QuoteComplianceAlertSeverityV1;
+  export type QuoteComplianceAlertCodeV1 = V1.QuoteComplianceAlertCodeV1;
+  export type QuoteComplianceSnapshotV1 = V1.QuoteComplianceSnapshotV1;
+  export type QuoteComplianceSurchargeV1 = V1.QuoteComplianceSurchargeV1;
+  export type QuoteComplianceMlAssistJobV1 = V1.QuoteComplianceMlAssistJobV1;
+  export type QuoteComplianceMlInsightV1 = V1.QuoteComplianceMlInsightV1;
+  export type QuoteRationaleHighlightCategoryV1 = V1.QuoteRationaleHighlightCategoryV1;
+  export type QuoteRationaleBreakdownHighlightV1 = V1.QuoteRationaleBreakdownHighlightV1;
+  export type QuoteRationaleSummaryV1 = V1.QuoteRationaleSummaryV1;
+  export type QuoteRationaleCostSheetItemV1 = V1.QuoteRationaleCostSheetItemV1;
+  export type QuoteRationaleCostSheetV1 = V1.QuoteRationaleCostSheetV1;
+  export type QuoteRationaleCachePayloadV1 = V1.QuoteRationaleCachePayloadV1;
+  export type PricingRationaleSummaryJobV1 = V1.PricingRationaleSummaryJobV1;
 
   // Realtime Events
   export type PricingUpdateEventV1 = V1.PricingUpdateEventV1;
@@ -57,6 +87,8 @@ export namespace ContractsVNext {
   export const AdminReviewListSchema = VNext.AdminReviewListResponseVNextSchema;
   export const AdminReviewDetailSchema = VNext.AdminReviewDetailResponseVNextSchema;
   export const AdminReviewWorkspaceSchema = VNext.AdminReviewWorkspaceVNextSchema;
+  export const AdminReviewLaneSchema = VNext.AdminReviewLaneVNextSchema;
+  export const AdminReviewPrioritySchema = VNext.AdminReviewPriorityVNextSchema;
   export const AdminReviewSummaryItemSchema = VNext.AdminReviewSummaryItemVNextSchema;
   export const AdminReviewSummarySnapshotSchema = VNext.AdminReviewSummarySnapshotVNextSchema;
   export const AdminQueueSnapshotItemSchema = VNext.AdminQueueSnapshotItemVNextSchema;
@@ -66,6 +98,9 @@ export namespace ContractsVNext {
   export const AdminErrorEventSchema = VNext.AdminErrorEventVNextSchema;
   export const AdminFailedJobEventSchema = VNext.AdminFailedJobEventVNextSchema;
   export const AdminErrorSnapshotSchema = VNext.AdminErrorSnapshotVNextSchema;
+  export const AdminDashboardKpiDeltaSchema = VNext.AdminDashboardKpiDeltaVNextSchema;
+  export const AdminDashboardKpiSchema = VNext.AdminDashboardKpiVNextSchema;
+  export const AdminDashboardStatsSchema = VNext.AdminDashboardStatsResponseVNextSchema;
 
   export const OrgInviteDetailsSchema = VNext.OrgInviteDetailsSchema;
   export const OrgInviteInviterSchema = VNext.OrgInviteInviterSchema;
@@ -114,6 +149,8 @@ export namespace ContractsVNext {
   export type AdminReviewWorkspaceVNext = VNext.AdminReviewWorkspaceVNext;
   export type AdminReviewListResponseVNext = VNext.AdminReviewListResponseVNext;
   export type AdminReviewDetailResponseVNext = VNext.AdminReviewDetailResponseVNext;
+  export type AdminReviewLaneVNext = VNext.AdminReviewLaneVNext;
+  export type AdminReviewPriorityVNext = VNext.AdminReviewPriorityVNext;
   export type AdminReviewSummaryItemVNext = VNext.AdminReviewSummaryItemVNext;
   export type AdminReviewSummarySnapshotVNext = VNext.AdminReviewSummarySnapshotVNext;
   export type AdminQueueSnapshotItemVNext = VNext.AdminQueueSnapshotItemVNext;
@@ -123,6 +160,9 @@ export namespace ContractsVNext {
   export type AdminErrorEventVNext = VNext.AdminErrorEventVNext;
   export type AdminFailedJobEventVNext = VNext.AdminFailedJobEventVNext;
   export type AdminErrorSnapshotVNext = VNext.AdminErrorSnapshotVNext;
+  export type AdminDashboardKpiDeltaVNext = VNext.AdminDashboardKpiDeltaVNext;
+  export type AdminDashboardKpiVNext = VNext.AdminDashboardKpiVNext;
+  export type AdminDashboardStatsResponseVNext = VNext.AdminDashboardStatsResponseVNext;
 
   export type PricingComputationVNext = VNext.PricingComputationVNext;
   export type PricingEstimateRequestVNext = VNext.PricingEstimateRequestVNext;

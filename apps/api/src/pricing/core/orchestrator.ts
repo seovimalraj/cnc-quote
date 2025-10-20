@@ -1,14 +1,26 @@
 import { InMemoryFactorRegistry } from './registry';
 import { PricingContext, PricingInput } from './types';
+import type { AdminPricingConfig } from '@cnc-quote/shared';
 
 export interface OrchestratorSeed extends Partial<PricingContext> {
   flags?: Record<string, boolean>;
 }
 
 export class PricingOrchestrator {
-  constructor(private readonly registry = new InMemoryFactorRegistry()) {}
+  constructor(
+    private readonly registry = new InMemoryFactorRegistry(),
+    private config?: AdminPricingConfig,
+  ) {}
 
   register = this.registry.register.bind(this.registry);
+
+  setConfig(config: AdminPricingConfig) {
+    this.config = config;
+  }
+
+  getConfig(): AdminPricingConfig | undefined {
+    return this.config;
+  }
 
   async run(input: PricingInput, seed?: OrchestratorSeed) {
     const ctx: PricingContext = {
@@ -19,6 +31,7 @@ export class PricingOrchestrator {
       breakdown: seed?.breakdown ? [...seed.breakdown] : [],
       logs: seed?.logs ? [...seed.logs] : [],
       flags: seed?.flags ?? {},
+      config: seed?.config ?? this.config,
     };
 
     for (const factor of this.registry.list()) {

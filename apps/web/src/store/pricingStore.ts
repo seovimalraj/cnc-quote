@@ -10,6 +10,7 @@ export interface PricingRowView {
   breakdown?: any;
   status?: string;
   optimistic?: boolean;
+  compliance?: ContractsV1.QuoteComplianceSnapshotV1 | null;
 }
 
 export interface ItemPricingView {
@@ -32,6 +33,7 @@ interface PricingState {
   markDrift: () => void;
   reconcile: (itemIds?: string[]) => Promise<void>;
   reset: () => void;
+  hydrateFromSummary: (items: Array<{ id: string; pricing_matrix?: any[]; config_json?: any; pricing_version?: number }>) => void;
 }
 
 function mergeRows(existing: PricingRowView[], patches: ContractsV1.PricingMatrixRowPatchV1[], optimistic: boolean) {
@@ -47,6 +49,7 @@ function mergeRows(existing: PricingRowView[], patches: ContractsV1.PricingMatri
       breakdown: p.breakdown !== undefined ? p.breakdown : prev.breakdown,
       status: p.status !== undefined ? p.status : prev.status,
       optimistic: optimistic || p.status === 'optimistic' || prev.optimistic,
+      compliance: p.compliance !== undefined ? (p.compliance ?? null) : prev.compliance ?? null,
     };
     map.set(p.quantity, next);
   }
@@ -119,4 +122,38 @@ export const usePricingStore = create<PricingState>((set, get) => ({
     }
   },
   reset: () => set({ quoteId: undefined, items: {}, driftDetected: false, lastSubtotalDelta: undefined }),
+  hydrateFromSummary: (summaryItems) => {
+    const timestamp = new Date().toISOString();
+    set((state) => {
+      const nextItems = { ...state.items };
+      for (const item of summaryItems) {
+        const matrix = Array.isArray((item as any).pricing_matrix)
+          ? (item as any).pricing_matrix
+          : Array.isArray((item as any).pricing?.matrix)
+            ? (item as any).pricing.matrix
+            : Array.isArray(item.config_json?.pricing?.matrix)
+              ? item.config_json.pricing.matrix
+              : undefined;
+        if (!Array.isArray(matrix) || matrix.length === 0) {
+          continue;
+        }
+        nextItems[item.id] = {
+          quote_item_id: item.id,
+          pricing_version: item.pricing_version ?? (item as any).pricing?.version ?? item.config_json?.pricing?.version ?? nextItems[item.id]?.pricing_version,
+          rows: matrix.map((row: any) => ({
+            quantity: row.quantity,
+            unit_price: row.unit_price,
+            total_price: row.total_price,
+            lead_time_days: row.lead_time_days,
+            breakdown: row.breakdown,
+            status: row.status || 'ready',
+            optimistic: Boolean(row.optimistic),
+            compliance: row.compliance ?? null,
+          })),
+          last_updated: timestamp,
+        };
+      }
+      return { ...state, items: nextItems };
+    });
+  },
 }));

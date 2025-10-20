@@ -54,3 +54,12 @@ groups:
     annotations:
       summary: "Low disk space on {{ $labels.instance }}"
       description: "Disk space is below 10% free"
+
+  - alert: ComplianceCriticalAlertsSpike
+    expr: compliance_alert_count{severity="critical"} > 5
+    for: 10m
+    labels:
+      severity: critical
+    annotations:
+      summary: "Critical compliance alerts exceeded SLO for {{ $labels.code }}"
+      description: "Daily compliance rollup recorded {{ $value }} critical alerts for {{ $labels.code }} (org={{ $labels.org }}). Escalate via the on-call channel."

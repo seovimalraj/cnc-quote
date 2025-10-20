@@ -84,6 +84,22 @@ export class AdminFeatureFlagsService {
       rollout_percentage: 0,
       conditions: {},
     },
+    {
+      name: 'Pricing Compliance ML Assist',
+      key: 'pricing_compliance_ml_assist',
+      description: 'Generate AI-assisted rationales for critical pricing compliance alerts',
+      enabled: false,
+      rollout_percentage: 0,
+      conditions: {},
+    },
+    {
+      name: 'Pricing Quote Rationale Summaries',
+      key: 'pricing_quote_rationale',
+      description: 'Translate deterministic cost sheets into advisory explanations for customers',
+      enabled: false,
+      rollout_percentage: 0,
+      conditions: {},
+    },
   ];
 
   constructor(

@@ -7,6 +7,7 @@ import { InstantQuoteStateProvider } from '../../components/instant-quote/Instan
 import { PartListPanel } from '../../components/instant-quote/PartListPanel';
 import { SelectedPartWorkspace } from '../../components/instant-quote/SelectedPartWorkspace';
 import { QuoteSummaryPanel } from '../../components/instant-quote/QuoteSummaryPanel';
+import { usePricingStore } from '../../store/pricingStore';
 
 interface QuoteSummaryItem { id: string; file_id?: string; config_json?: any; pricing_matrix?: any[]; dfm_json?: any; }
 
@@ -15,6 +16,8 @@ export default function InstantQuotePage() {
   const [quoteId, setQuoteId] = useState<string | undefined>(undefined);
   const [items, setItems] = useState<QuoteSummaryItem[]>([]);
   const [loadingQuote, setLoadingQuote] = useState(false);
+  const hydratePricing = usePricingStore(s => s.hydrateFromSummary);
+  const setPricingQuoteId = usePricingStore(s => s.setQuoteId);
 
   const fetchSummary = useCallback(async (id: string) => {
     setLoadingQuote(true);
@@ -23,17 +26,19 @@ export default function InstantQuotePage() {
       if (res.ok) {
         const data = await res.json();
         setItems(data.parts || data.items || []);
+        hydratePricing(data.parts || data.items || []);
       }
     } finally {
       setLoadingQuote(false);
     }
-  }, []);
+  }, [hydratePricing]);
 
   const handleQuoteReady = useCallback((id: string) => {
     setQuoteId(id);
+    setPricingQuoteId(id);
     joinQuote(id);
     fetchSummary(id);
-  }, [fetchSummary, joinQuote]);
+  }, [fetchSummary, joinQuote, setPricingQuoteId]);
 
   const handleUploaded = useCallback((ctx: { quote_id?: string }) => {
     if (ctx.quote_id && ctx.quote_id !== quoteId) {

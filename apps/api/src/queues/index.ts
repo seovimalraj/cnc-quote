@@ -2,7 +2,18 @@ import { Module } from "@nestjs/common";
 import { BullModule } from "@nestjs/bullmq";
 import { ConfigModule, ConfigService } from "@nestjs/config";
 
-const QUEUE_NAMES = ["cad", "pricing", "email", "pdf", "qap", "dfm-analysis", "files"] as const;
+const QUEUE_NAMES = [
+  "cad",
+  "pricing",
+  "pricing-rationale",
+  "email",
+  "pdf",
+  "qap",
+  "dfm-analysis",
+  "files",
+  "manual-review",
+  "compliance-ml-assist",
+] as const;
 
 @Module({
   imports: [

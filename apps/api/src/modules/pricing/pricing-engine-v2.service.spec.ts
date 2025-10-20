@@ -1,5 +1,6 @@
 import { PricingEngineV2Service } from './pricing-engine-v2.service';
 import { ContractsV1 } from '@cnc-quote/shared';
+import defaultPricingConfig from '../admin-pricing/default-config.json';
 
 const globalRef = globalThis as Record<string, any>;
 const { describe, it, expect, beforeEach } = globalRef;
@@ -83,7 +84,17 @@ describe('PricingEngineV2Service tolerance integration', () => {
       findMatches: async () => [],
       getCatalogVersion: async () => 1,
     } as any;
-    service = new PricingEngineV2Service(config, supabase, geometryService, toleranceRepo);
+    const taxService = {
+      computeTax: async () => ({ totalTax: 0, lines: [] }),
+    } as any;
+    const pricingConfig = {
+      getActiveConfig: async () => ({
+        config: defaultPricingConfig as any,
+        status: 'default' as const,
+        version: defaultPricingConfig.version ?? 'v-test',
+      }),
+    } as any;
+    service = new PricingEngineV2Service(config, supabase, geometryService, toleranceRepo, taxService, pricingConfig);
   });
 
   it('applies tolerance multipliers for precision class resulting in higher machining and inspection cost', async () => {
@@ -228,5 +239,52 @@ describe('PricingEngineV2Service tolerance integration', () => {
     expect(getMaterialSpy).toHaveBeenCalled();
     const regionArg = getMaterialSpy.mock.calls[0]?.[1];
     expect(regionArg).toBe('EU');
+  });
+
+  it('attaches compliance snapshot and flags margin floor breaches', async () => {
+  (service as any).marginFloorPercent = 0.35;
+
+    const result = await service.calculatePricing({
+      part_config: createBasePartConfig(),
+      geometry: baseGeometry(),
+      quantities: [1],
+    });
+
+    const compliance = result.pricing_matrix[0]?.compliance;
+    expect(compliance).toBeDefined();
+    expect(compliance?.margin_floor_percent).toBeCloseTo(0.35, 4);
+    expect(
+      compliance?.alerts.some(
+        (alert) => alert.code === 'margin_floor_breach' && alert.severity === 'critical',
+      ),
+    ).toBe(true);
+  });
+
+  it('records manual overrides in compliance snapshot', async () => {
+    const result = await service.calculatePricing({
+      part_config: createBasePartConfig({ overrides: { unit_price: 25 } }),
+      geometry: baseGeometry(),
+      quantities: [1],
+    });
+
+    const compliance = result.pricing_matrix[0]?.compliance;
+    expect(compliance?.manual_override_applied).toBe(true);
+    expect(
+      compliance?.alerts.some((alert) => alert.code === 'manual_override_applied'),
+    ).toBe(true);
+  });
+
+  it('warns when expedited lead time hits capacity guardrail', async () => {
+  (service as any).expediteLeadTimeGuardrail = 4;
+
+    const result = await service.calculatePricing({
+      part_config: createBasePartConfig({ lead_time_option: 'expedited' }),
+      geometry: baseGeometry(),
+      quantities: [1],
+    });
+
+    const compliance = result.pricing_matrix[0]?.compliance;
+    expect(compliance?.alerts.some((alert) => alert.code === 'lead_time_capacity_risk')).toBe(true);
+    expect(compliance?.expedited).toBe(true);
   });
 });

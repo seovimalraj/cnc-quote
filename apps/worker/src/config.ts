@@ -20,10 +20,19 @@ const configSchema = z.object({
   // Service URLs
   apiBaseUrl: z.string().url(),
   cadServiceUrl: z.string().url(),
+  supabaseUrl: z.string().url(),
+  supabaseServiceKey: z.string().min(1),
+
+  // LLM
+  ollamaHost: z.string().url().default('http://localhost:11434'),
+  ollamaModel: z.string().min(1).default('llama3.1:8b'),
+  ollamaTimeoutMs: z.coerce.number().int().min(1000).max(120000).default(45000),
 
   // Observability
   otelEndpoint: z.string().url().optional(),
   nodeEnv: z.enum(['development', 'production', 'test']).default('development'),
+  pushgatewayUrl: z.string().url().optional(),
+  complianceRollupCron: z.string().default('0 2 * * *'),
 
   // Health check
   healthPort: z.coerce.number().int().min(1024).max(65535).default(3001),
@@ -39,8 +48,15 @@ function loadConfig(): Config {
     jobTtlSeconds: process.env.JOB_TTL_SECONDS,
     apiBaseUrl: process.env.API_BASE_URL,
     cadServiceUrl: process.env.CAD_SERVICE_URL,
+    supabaseUrl: process.env.SUPABASE_URL,
+    supabaseServiceKey: process.env.SUPABASE_SERVICE_KEY,
+  ollamaHost: process.env.OLLAMA_HOST,
+  ollamaModel: process.env.OLLAMA_MODEL,
+  ollamaTimeoutMs: process.env.OLLAMA_TIMEOUT_MS,
     otelEndpoint: process.env.OTEL_EXPORTER_OTLP_ENDPOINT,
     nodeEnv: process.env.NODE_ENV,
+    pushgatewayUrl: process.env.PUSHGATEWAY_URL,
+    complianceRollupCron: process.env.COMPLIANCE_ROLLUP_CRON,
     healthPort: process.env.HEALTH_PORT,
   };
 

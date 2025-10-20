@@ -40,6 +40,9 @@ For debugging, it's useful to run the tests in UI mode, which provides a visual 
 pnpm --filter @cnc-quote/web test:e2e:ui
 ```
 
+### 2.4. Pricing Compliance Analytics Rollup
+`pnpm qa:check-pricing` now validates the pricing API and triggers the nightly compliance rollup job via the worker health endpoint. Ensure `WORKER_URL` and `WORKER_SECRET` are set when running against non-default environments so the script can enqueue the BullMQ rollup. The job should succeed before QA sign-off to confirm compliance analytics coverage.
+
 ## 3. QA Test Cases and Scenarios
 
 Our test suite covers the following key areas of the application.

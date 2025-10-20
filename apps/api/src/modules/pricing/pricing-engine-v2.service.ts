@@ -5,7 +5,7 @@ import { ContractsV1, MaterialRegion } from '@cnc-quote/shared';
 import { GeometryService, GeometryMetrics } from '../geometry/geometry.service';
 import { resolveToleranceMapping, ToleranceCategory } from '../../pricing/tolerance';
 import { NormalizedToleranceMap, parseTolerances, StructuredToleranceEntry } from '../../dfm/tolerance.parser';
-import { buildDefaultOrchestrator, PricingBreakdownLine, PricingInput } from '../../pricing';
+import { buildDefaultOrchestrator, PricingBreakdownLine, PricingInput, PricingOrchestrator } from '../../pricing';
 import {
   PricingToleranceEntry,
   PricingToleranceMatch,
@@ -30,6 +30,11 @@ import {
   RISK_SEVERITY_MARKUP,
 } from '../dfm/risk.model';
 import { TaxService } from '../../tax/tax.service';
+import { PricingConfigService } from './pricing-config.service';
+
+type QuoteComplianceSnapshotV1 = ContractsV1.QuoteComplianceSnapshotV1;
+type QuoteComplianceAlertV1 = ContractsV1.QuoteComplianceAlertV1;
+type QuoteComplianceSurchargeV1 = ContractsV1.QuoteComplianceSurchargeV1;
 
 export interface PricingEngineRequest {
   part_config: ContractsV1.PartConfigV1;
@@ -89,6 +94,10 @@ export interface PricingEngineResponse {
       taxableAmount: number;
     }>;
     metadata?: Record<string, any>;
+  };
+  pricing_config?: {
+    version: string;
+    status: 'draft' | 'published' | 'default';
   };
 }
 
@@ -175,6 +184,9 @@ interface EnginePricingBreakdown {
     contributions: RiskContribution[];
     tags: IssueTag[];
   };
+  pricing_config_version?: string;
+  pricing_config_status?: 'draft' | 'published' | 'default';
+  compliance?: QuoteComplianceSnapshotV1;
 }
 
 interface PricingRiskSnapshot {
@@ -184,6 +196,11 @@ interface PricingRiskSnapshot {
   contributions: RiskContribution[];
   markupMultiplier: number;
   tags: IssueTag[];
+}
+
+interface ConfigStatusSnapshot {
+  version: string;
+  status: 'draft' | 'published' | 'default';
 }
 
 const ZERO_RISK_VECTOR: RiskVector = {
@@ -197,16 +214,21 @@ const ZERO_RISK_VECTOR: RiskVector = {
 @Injectable()
 export class PricingEngineV2Service {
   private readonly logger = new Logger(PricingEngineV2Service.name);
-  private readonly orchestrator = buildDefaultOrchestrator();
   private readonly breakdownEnabled = process.env.PRICING_BREAKDOWN_ENABLE !== 'false';
   private readonly orchestratorVersion: string;
   private readonly pricingFactorsVersion: string;
+  private readonly marginFloorPercent: number;
+  private readonly discountAlertThreshold: number;
+  private readonly expediteLeadTimeGuardrail: number;
   private static readonly MATERIAL_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
   private static readonly MATERIAL_CACHE_MAX_ENTRIES = 256;
+  private static readonly RISK_SEVERITY_ORDER: ReadonlyArray<RiskSeverity> = ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'];
   private static readonly UUID_REGEX =
     /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
   private readonly materialCache = new Map<string, { value: MaterialCatalogItem; expiresAt: number }>();
+  private orchestratorRef: { version: string; instance: PricingOrchestrator } | null = null;
+  private activeConfigStatus: ConfigStatusSnapshot | null = null;
 
   constructor(
     private readonly config: ConfigService,
@@ -214,9 +236,13 @@ export class PricingEngineV2Service {
     private readonly geometryService: GeometryService,
     private readonly toleranceCostBook: ToleranceCostBookRepository,
     private readonly taxService: TaxService,
+    private readonly pricingConfig: PricingConfigService,
   ) {
     this.orchestratorVersion = this.getEnv('PRICING_PIPELINE_V', '3.0.0');
     this.pricingFactorsVersion = this.getEnv('PRICING_FACTORS_VERSION', '1.0.0');
+    this.marginFloorPercent = this.parseNumberEnv('PRICING_MARGIN_FLOOR', 0.24);
+    this.discountAlertThreshold = this.parseNumberEnv('PRICING_DISCOUNT_ALERT_THRESHOLD', 0.22);
+    this.expediteLeadTimeGuardrail = this.parseNumberEnv('PRICING_EXPEDITE_ALERT_DAYS', 2);
   }
 
   getOrchestratorVersion(): string {
@@ -227,9 +253,44 @@ export class PricingEngineV2Service {
     return this.pricingFactorsVersion;
   }
 
+  private async resolveOrchestrator(): Promise<PricingOrchestrator> {
+    const snapshot = await this.pricingConfig.getActiveConfig();
+    const isFreshLoad = !this.orchestratorRef || this.orchestratorRef.version !== snapshot.version;
+    this.activeConfigStatus = {
+      version: snapshot.version,
+      status: snapshot.status,
+    };
+
+    if (!isFreshLoad) {
+      this.orchestratorRef.instance.setConfig(snapshot.config);
+      return this.orchestratorRef.instance;
+    }
+
+    if (snapshot.status !== 'published') {
+      this.logger.warn(
+        `No published pricing config detected; using ${snapshot.status} version ${snapshot.version} for runtime pricing`,
+      );
+    } else {
+      this.logger.log(`Loading published pricing config version ${snapshot.version} into pricing engine`);
+    }
+
+    const orchestrator = buildDefaultOrchestrator({ config: snapshot.config });
+    this.orchestratorRef = {
+      version: snapshot.version,
+      instance: orchestrator,
+    };
+    return orchestrator;
+  }
+
   private getEnv(key: string, fallback: string): string {
     const value = this.config.get<string>(key);
     return value && value.length > 0 ? value : fallback;
+  }
+
+  private parseNumberEnv(key: string, fallback: number): number {
+    const raw = this.getEnv(key, fallback.toString());
+    const parsed = Number(raw);
+    return Number.isFinite(parsed) ? parsed : fallback;
   }
 
   /**
@@ -240,9 +301,16 @@ export class PricingEngineV2Service {
 
     const pricing_matrix: EnginePricingBreakdown[] = [];
     const riskSnapshot = await this.loadRiskSnapshot(part_config);
+    const orchestrator = await this.resolveOrchestrator();
 
     for (const quantity of quantities) {
-      const breakdown = await this.calculateQuantityPricing(part_config, geometry, quantity, riskSnapshot);
+      const breakdown = await this.calculateQuantityPricing(
+        part_config,
+        geometry,
+        quantity,
+        riskSnapshot,
+        orchestrator,
+      );
       pricing_matrix.push(breakdown);
     }
 
@@ -258,6 +326,12 @@ export class PricingEngineV2Service {
       lead_times,
       minimums,
       currency: 'USD',
+      pricing_config: this.activeConfigStatus
+        ? {
+            version: this.activeConfigStatus.version,
+            status: this.activeConfigStatus.status,
+          }
+        : undefined,
     };
 
     // Calculate tax if requested
@@ -320,7 +394,9 @@ export class PricingEngineV2Service {
     geometry: GeometryMetrics | undefined,
     quantity: number,
     riskSnapshot: PricingRiskSnapshot | null,
+    orchestrator: PricingOrchestrator,
   ): Promise<EnginePricingBreakdown> {
+    const leadTimeOption = (part_config as any).lead_time ?? part_config.lead_time_option;
     const materialCode = this.resolveMaterialCode(part_config);
     const materialRegion = this.resolveMaterialRegion(part_config);
     const materialDetail = await this.getMaterialById(materialCode, materialRegion);
@@ -358,11 +434,13 @@ export class PricingEngineV2Service {
     );
 
     try {
-      const orchestratorResult = await this.orchestrator.run(pricingInput, {
+      const orchestratorResult = await orchestrator.run(pricingInput, {
         flags: this.buildFlagMap(part_config),
       });
 
       const breakdownMap = this.indexBreakdown(orchestratorResult.breakdown);
+      const riskUpliftLine = breakdownMap.get('risk_uplift');
+      const riskUpliftAmount = riskUpliftLine?.amount ?? 0;
       const quantityDiscount = this.calculateQuantityDiscount(quantity, part_config.process_type);
 
       const unitPriceBeforeDiscount = orchestratorResult.price;
@@ -386,6 +464,7 @@ export class PricingEngineV2Service {
           inspection: 0,
           overhead: breakdownMap.get('overhead')?.amount ?? 0,
           margin: marginAmount,
+          ...(riskUpliftAmount > 0 ? { risk_markup: this.toMoney(riskUpliftAmount) } : {}),
         },
         unit_price: unitPrice,
         total_price: totalPrice,
@@ -413,6 +492,8 @@ export class PricingEngineV2Service {
         logs: orchestratorResult.logs,
         time_minutes: orchestratorResult.timeMinutes,
         orchestrator_version: this.orchestratorVersion,
+        pricing_config_version: this.activeConfigStatus?.version,
+        pricing_config_status: this.activeConfigStatus?.status,
       };
 
       if (riskSnapshot) {
@@ -424,6 +505,25 @@ export class PricingEngineV2Service {
           tags: riskSnapshot.tags,
         };
       }
+
+      response.compliance = this.buildComplianceSnapshot({
+        part: part_config,
+        quantity,
+        currency: 'USD',
+        unitPrice,
+        unitPriceBeforeDiscount,
+        totalPrice,
+        marginPercent: response.margin_percentage,
+        quantityDiscount,
+        riskSnapshot,
+        riskUpliftAmount: riskUpliftAmount > 0 ? this.toMoney(riskUpliftAmount) : undefined,
+        riskUpliftPercent:
+          typeof riskUpliftLine?.meta?.upliftPct === 'number'
+            ? Number(Number(riskUpliftLine.meta.upliftPct).toFixed(4))
+            : undefined,
+        pricingConfigStatus: this.activeConfigStatus,
+        leadTimeOption: typeof leadTimeOption === 'string' ? leadTimeOption : undefined,
+      });
 
       this.emitTelemetry(part_config, quantity, orchestratorResult);
 
@@ -454,6 +554,7 @@ export class PricingEngineV2Service {
     materialDetail?: MaterialCatalogItem | null,
     materialRegion?: MaterialRegion,
   ): Promise<EnginePricingBreakdown> {
+    const leadTimeOption = (part_config as any).lead_time ?? part_config.lead_time_option;
     const process_type = part_config.process_type;
     const materialCode =
       part_config.material_id ??
@@ -514,16 +615,19 @@ export class PricingEngineV2Service {
 
     let unit_cost_before_margin = baseUnitCostBeforeMargin;
     let riskMarkupAmount = 0;
+    let riskMarkupPercent = 0;
     if (riskSnapshot && riskSnapshot.markupMultiplier > 1) {
       const delta = riskSnapshot.markupMultiplier - 1;
       riskMarkupAmount = unit_cost_before_margin * delta;
       unit_cost_before_margin += riskMarkupAmount;
+      riskMarkupPercent = delta;
     }
 
     const margin_percentage = await this.getMarginPercentage(process_type, unit_cost_before_margin);
     const margin_value = unit_cost_before_margin * margin_percentage;
 
     let unit_price = unit_cost_before_margin + margin_value;
+    const priceBeforeDiscount = unit_price;
     if (quantity_discount > 0) {
       unit_price *= 1 - quantity_discount;
     }
@@ -568,6 +672,29 @@ export class PricingEngineV2Service {
         tags: riskSnapshot.tags,
       };
     }
+
+  const complianceUnitPrice = this.toMoney(unit_price);
+  const complianceTotalPrice = this.toMoney(total_price);
+  const unitPriceBeforeDiscount = this.toMoney(priceBeforeDiscount);
+
+  response.unit_price = complianceUnitPrice;
+  response.total_price = complianceTotalPrice;
+
+    response.compliance = this.buildComplianceSnapshot({
+      part: part_config,
+      quantity,
+      currency: 'USD',
+      unitPrice: complianceUnitPrice,
+      unitPriceBeforeDiscount,
+      totalPrice: complianceTotalPrice,
+      marginPercent: response.margin_percentage,
+      quantityDiscount,
+      riskSnapshot,
+      riskUpliftAmount: riskMarkupAmount > 0 ? this.toMoney(riskMarkupAmount) : undefined,
+      riskUpliftPercent: riskMarkupPercent > 0 ? Number(riskMarkupPercent.toFixed(4)) : undefined,
+      pricingConfigStatus: this.activeConfigStatus,
+      leadTimeOption: typeof leadTimeOption === 'string' ? leadTimeOption : undefined,
+    });
 
     return response;
   }
@@ -739,6 +866,295 @@ export class PricingEngineV2Service {
     }
 
     return snapshot;
+  }
+
+  /**
+   * Compiles a deterministic compliance snapshot per quantity row so downstream consumers can audit
+   * guardrail breaches (margin, manual overrides, risk uplifts, lead times) without rehydrating
+   * pricing context. This keeps compliance alerts co-located with the pricing payload we persist.
+   */
+  private buildComplianceSnapshot(params: {
+    part: ContractsV1.PartConfigV1;
+    quantity: number;
+    currency: string;
+    unitPrice: number;
+    unitPriceBeforeDiscount: number;
+    totalPrice: number;
+    marginPercent: number;
+    quantityDiscount: number;
+    riskSnapshot: PricingRiskSnapshot | null;
+    riskUpliftAmount?: number;
+    riskUpliftPercent?: number;
+    pricingConfigStatus?: ConfigStatusSnapshot | null;
+    leadTimeOption?: string;
+  }): QuoteComplianceSnapshotV1 {
+    const {
+      part,
+      quantity,
+      currency,
+      unitPrice,
+      unitPriceBeforeDiscount,
+      totalPrice,
+      marginPercent,
+      quantityDiscount,
+      riskSnapshot,
+      riskUpliftAmount,
+      riskUpliftPercent,
+      pricingConfigStatus,
+      leadTimeOption,
+    } = params;
+
+    const normalizedUnitPrice = this.toMoney(unitPrice);
+    const normalizedUnitPriceBeforeDiscount = this.toMoney(unitPriceBeforeDiscount);
+    const normalizedTotalPrice = this.toMoney(totalPrice);
+    const marginFloor = Number(this.marginFloorPercent.toFixed(4));
+    const normalizedMargin = Number(Number(marginPercent ?? 0).toFixed(4));
+    const normalizedDiscount = Number(Number(quantityDiscount ?? 0).toFixed(4));
+
+    let normalizedRiskUpliftPercent =
+      typeof riskUpliftPercent === 'number'
+        ? Number(Number(riskUpliftPercent).toFixed(4))
+        : undefined;
+    if (
+      normalizedRiskUpliftPercent === undefined &&
+      riskSnapshot &&
+      riskSnapshot.markupMultiplier > 1
+    ) {
+      normalizedRiskUpliftPercent = Number((riskSnapshot.markupMultiplier - 1).toFixed(4));
+    }
+
+    const leadOptionRaw =
+      typeof leadTimeOption === 'string'
+        ? leadTimeOption
+        : (part as any).lead_time ?? part.lead_time_option ?? 'standard';
+    const leadOptionNormalized = typeof leadOptionRaw === 'string' ? leadOptionRaw.toLowerCase() : 'standard';
+    const expedited = leadOptionNormalized === 'expedited' || leadOptionNormalized === 'rush';
+    const leadTimes = this.calculateLeadTimes(part.process_type, expedited ? 'expedited' : 'standard');
+
+    const alerts: QuoteComplianceAlertV1[] = [];
+    const toPercent = (value: number) => `${(value * 100).toFixed(1)}%`;
+
+    if (normalizedMargin + 1e-6 < marginFloor) {
+      alerts.push({
+        code: 'margin_floor_breach',
+        severity: 'critical',
+        message: `Margin ${toPercent(normalizedMargin)} below guardrail ${toPercent(marginFloor)}`,
+        metadata: {
+          margin_percent: normalizedMargin,
+          margin_floor_percent: marginFloor,
+        },
+      });
+    } else if (normalizedMargin < marginFloor + 0.03) {
+      alerts.push({
+        code: 'margin_floor_breach',
+        severity: 'warning',
+        message: `Margin ${toPercent(normalizedMargin)} within 3.0% of guardrail ${toPercent(marginFloor)}`,
+        metadata: {
+          margin_percent: normalizedMargin,
+          margin_floor_percent: marginFloor,
+          proximity: Number((normalizedMargin - marginFloor).toFixed(4)),
+        },
+      });
+    }
+
+    const overrides = part.overrides;
+    let manualOverrideApplied = false;
+    let manualOverridePercent: number | undefined;
+    let leadTimeOverrideDays: number | undefined;
+    if (overrides && (typeof overrides.unit_price === 'number' || typeof overrides.margin_percent === 'number')) {
+      manualOverrideApplied = true;
+      if (typeof overrides.margin_percent === 'number') {
+        manualOverridePercent = Number(overrides.margin_percent.toFixed(4));
+      } else if (
+        typeof overrides.unit_price === 'number' &&
+        normalizedUnitPriceBeforeDiscount > 0
+      ) {
+        manualOverridePercent = Number(
+          ((overrides.unit_price - normalizedUnitPriceBeforeDiscount) / normalizedUnitPriceBeforeDiscount).toFixed(4),
+        );
+      }
+
+      alerts.push({
+        code: 'manual_override_applied',
+        severity: 'warning',
+        message: `Manual override present for quantity ${quantity}`,
+        metadata: {
+          unit_override: overrides.unit_price ?? null,
+          margin_override: overrides.margin_percent ?? null,
+        },
+      });
+    }
+
+    if (overrides && typeof overrides.lead_time_days === 'number') {
+      leadTimeOverrideDays = overrides.lead_time_days;
+      if (!manualOverrideApplied) {
+        manualOverrideApplied = true;
+      }
+      alerts.push({
+        code: 'lead_time_override',
+        severity: 'critical',
+        message: `Manual lead time override set to ${overrides.lead_time_days} days`,
+        metadata: {
+          lead_time_override_days: overrides.lead_time_days,
+          selected_quantity: part.selected_quantity,
+        },
+      });
+    }
+
+    if (normalizedDiscount > 0 && normalizedDiscount >= this.discountAlertThreshold) {
+      alerts.push({
+        code: 'manual_discount_high',
+        severity: 'warning',
+        message: `Quantity discount ${toPercent(normalizedDiscount)} exceeds guardrail ${toPercent(this.discountAlertThreshold)}`,
+        metadata: {
+          quantity,
+          threshold: this.discountAlertThreshold,
+        },
+      });
+    }
+
+    const surcharges: QuoteComplianceSurchargeV1[] = [];
+    if (typeof riskUpliftAmount === 'number' && riskUpliftAmount > 0) {
+      surcharges.push({
+        code: 'risk_uplift',
+        label: 'DFM risk uplift',
+        amount: this.toMoney(riskUpliftAmount),
+        metadata: normalizedRiskUpliftPercent !== undefined ? { percent: normalizedRiskUpliftPercent } : undefined,
+      });
+    }
+
+    if (normalizedRiskUpliftPercent !== undefined && normalizedRiskUpliftPercent > 0) {
+      const riskSeverity = riskSnapshot?.severity ?? null;
+      const severity: QuoteComplianceAlertV1['severity'] = riskSeverity === 'CRITICAL'
+        ? 'critical'
+        : riskSeverity === 'HIGH'
+        ? 'warning'
+        : 'info';
+      alerts.push({
+        code: 'risk_markup_applied',
+        severity,
+        message: `Applied ${toPercent(normalizedRiskUpliftPercent)} risk uplift${riskSeverity ? ` (${riskSeverity})` : ''}`,
+        metadata: {
+          risk_severity: riskSeverity,
+          risk_score: riskSnapshot?.score ?? null,
+        },
+      });
+    }
+
+    const dfmSeverity = this.resolveDfmSeverity(part, riskSnapshot);
+    if (dfmSeverity === 'HIGH' || dfmSeverity === 'CRITICAL') {
+      alerts.push({
+        code: 'dfm_high_risk',
+        severity: dfmSeverity === 'CRITICAL' ? 'critical' : 'warning',
+        message: `DFM risk flagged at ${dfmSeverity} severity`,
+      });
+    }
+
+    if (expedited && leadTimes.expedited <= this.expediteLeadTimeGuardrail) {
+      alerts.push({
+        code: 'lead_time_capacity_risk',
+        severity: leadTimes.expedited <= 1 ? 'critical' : 'warning',
+        message: `Expedited lead time ${leadTimes.expedited} days meets capacity guardrail (${this.expediteLeadTimeGuardrail} days)`,
+        metadata: {
+          standard_days: leadTimes.standard,
+          expedited_days: leadTimes.expedited,
+        },
+      });
+    }
+
+    const dfmIssueTags = new Set<string>();
+    for (const tag of riskSnapshot?.tags ?? []) {
+      if (tag?.code) {
+        dfmIssueTags.add(tag.code);
+      }
+    }
+    for (const issue of part.dfm?.issues ?? []) {
+      if (issue?.category) {
+        dfmIssueTags.add(issue.category);
+      }
+    }
+    const dfmIssueTagList = dfmIssueTags.size > 0 ? Array.from(dfmIssueTags).sort() : undefined;
+
+    const metadata: Record<string, unknown> = {
+      process_type: part.process_type,
+      part_id: part.id,
+      quote_id: part.quote_id,
+      selected_quantity: part.selected_quantity,
+      orchestrator_version: this.orchestratorVersion,
+      lead_time_option: expedited ? 'expedited' : 'standard',
+    };
+    if (leadTimeOverrideDays !== undefined) {
+      metadata.lead_time_override_days = leadTimeOverrideDays;
+    }
+    if (pricingConfigStatus?.version) {
+      metadata.pricing_config_version = pricingConfigStatus.version;
+    }
+    if (pricingConfigStatus?.status) {
+      metadata.pricing_config_status = pricingConfigStatus.status;
+    }
+    if (riskSnapshot) {
+      metadata.risk_score = riskSnapshot.score;
+      metadata.risk_severity = riskSnapshot.severity;
+    }
+
+    return {
+      quantity,
+      currency,
+      unit_price: normalizedUnitPrice,
+      price_before_discounts: normalizedUnitPriceBeforeDiscount,
+      total_price: normalizedTotalPrice,
+      margin_percent: normalizedMargin,
+      margin_floor_percent: marginFloor,
+      discount_percent: normalizedDiscount > 0 ? normalizedDiscount : undefined,
+      manual_override_applied: manualOverrideApplied || undefined,
+      manual_override_percent:
+        manualOverrideApplied && manualOverridePercent !== undefined
+          ? Number(manualOverridePercent.toFixed(4))
+          : undefined,
+      lead_time_override_days: leadTimeOverrideDays,
+      risk_uplift_percent:
+        normalizedRiskUpliftPercent !== undefined ? Number(normalizedRiskUpliftPercent.toFixed(4)) : undefined,
+      lead_time_option: expedited ? 'expedited' : 'standard',
+      expedited,
+      lead_time_standard_days: leadTimes.standard,
+      lead_time_expedited_days: leadTimes.expedited,
+      dfm_risk_severity: dfmSeverity ?? undefined,
+      dfm_issue_tags: dfmIssueTagList,
+      surcharges: surcharges.length > 0 ? surcharges : undefined,
+      alerts,
+      metadata,
+    };
+  }
+
+  private resolveDfmSeverity(
+    part: ContractsV1.PartConfigV1,
+    riskSnapshot: PricingRiskSnapshot | null,
+  ): RiskSeverity | null {
+    let severity: RiskSeverity | null = riskSnapshot?.severity ?? null;
+    const escalate = (candidate: RiskSeverity) => {
+      if (!severity) {
+        severity = candidate;
+        return;
+      }
+      const order = PricingEngineV2Service.RISK_SEVERITY_ORDER;
+      const currentIndex = order.indexOf(severity as RiskSeverity);
+      const candidateIndex = order.indexOf(candidate);
+      if (candidateIndex > currentIndex) {
+        severity = candidate;
+      }
+    };
+
+    for (const issue of part.dfm?.issues ?? []) {
+      if (issue?.severity === 'critical') {
+        escalate('CRITICAL');
+      } else if (issue?.severity === 'warn') {
+        escalate('MEDIUM');
+      } else if (issue?.severity === 'info') {
+        escalate('LOW');
+      }
+    }
+
+    return severity;
   }
 
   private deriveRiskVector(geometry: GeometryMetrics | undefined, toleranceSummary?: PricingToleranceSummary) {
@@ -1140,6 +1556,8 @@ export class PricingEngineV2Service {
       timeMinutes: result.timeMinutes,
       factorKeys: result.breakdown.map((line) => line.key),
       orchestratorVersion: this.orchestratorVersion,
+      pricingConfigVersion: this.activeConfigStatus?.version ?? 'unknown',
+      pricingConfigStatus: this.activeConfigStatus?.status ?? 'unknown',
     };
 
     this.logger.debug(`pricing.orchestrator ${JSON.stringify(payload)}`);

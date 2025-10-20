@@ -8,6 +8,8 @@
 import fetch from 'node-fetch';
 
 const API_URL = process.env.API_URL || 'http://localhost:3001';
+const WORKER_URL = process.env.WORKER_URL || 'http://localhost:3001';
+const WORKER_SECRET = process.env.WORKER_SECRET || 'dev-secret';
 
 async function checkPricing() {
   console.log('💰 Checking Pricing Engine...\n');
@@ -48,6 +50,23 @@ async function checkPricing() {
       console.log(`    ❌ Pricing config failed (${configResponse.status})`);
       return false;
     }
+
+      console.log('  → Triggering compliance analytics rollup job');
+      const rollupResponse = await fetch(`${WORKER_URL}/tasks/compliance-rollup`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-worker-secret': WORKER_SECRET,
+        },
+        body: JSON.stringify({ windowHours: 24 }),
+      });
+
+      if (rollupResponse.ok) {
+        console.log('    ✅ Compliance rollup job enqueued');
+      } else {
+        console.log(`    ❌ Compliance rollup enqueue failed (${rollupResponse.status})`);
+        return false;
+      }
 
     console.log('\n✅ Pricing Engine check PASSED');
     return true;

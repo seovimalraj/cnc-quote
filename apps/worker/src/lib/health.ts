@@ -7,9 +7,10 @@ import express from 'express';
 import { config } from '../config.js';
 import { logger } from '../lib/logger.js';
 import { checkRedisHealth } from '../lib/redis.js';
-import { getQueueHealth } from '../queues/index.js';
+import { enqueueComplianceAnalyticsRun, getQueueHealth } from '../queues/index.js';
 
 const app = express();
+app.use(express.json());
 
 /**
  * Health check endpoint
@@ -34,6 +35,24 @@ app.get('/health', async (req: express.Request, res: express.Response) => {
       error: error.message,
       timestamp: new Date().toISOString(),
     });
+  }
+});
+
+app.post('/tasks/compliance-rollup', async (req: express.Request, res: express.Response) => {
+  const secretHeader = req.headers['x-worker-secret'];
+  const workerSecret = process.env.WORKER_SECRET || 'dev-secret';
+
+  if (secretHeader !== workerSecret) {
+    return res.status(401).json({ status: 'unauthorized' });
+  }
+
+  try {
+    const windowHours = typeof req.body?.windowHours === 'number' ? req.body.windowHours : 24;
+    await enqueueComplianceAnalyticsRun({ windowHours });
+    res.status(202).json({ status: 'scheduled', windowHours });
+  } catch (error: any) {
+    logger.error({ error }, 'Failed to enqueue compliance rollup from health server');
+    res.status(500).json({ status: 'error', message: error.message });
   }
 });
 

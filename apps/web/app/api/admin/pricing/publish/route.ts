@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 
-import { resolveApiUrl } from '@/app/api/_lib/backend';
+import { buildProxyResponse, resolveApiUrl } from '@/app/api/_lib/backend';
 import { proxyFetch } from '@/app/api/_lib/proxyFetch';
 
 export async function POST(request: NextRequest) {
@@ -17,5 +17,5 @@ export async function POST(request: NextRequest) {
     headers,
   });
 
-  return upstream;
+  return buildProxyResponse(upstream);
 }

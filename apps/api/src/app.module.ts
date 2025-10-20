@@ -31,6 +31,13 @@ import { SchedulerModule } from './scheduler/scheduler.module';
 import { RevisionsModule } from './revisions/revisions.module';
 import { AIModule } from './modules/ai/ai.module';
 import { ReviewModule } from './modules/review/review.module';
+import { AdminModule } from './modules/admin/admin.module';
+import { AdminUsersModule } from './modules/admin-users/admin-users.module';
+import { AdminOrgsModule } from './modules/admin-orgs/admin-orgs.module';
+import { AdminFeatureFlagsModule } from './modules/admin-feature-flags/admin-feature-flags.module';
+import { AdminSettingsModule } from './modules/admin-settings/admin-settings.module';
+import { AdminPricingModule } from './modules/admin-pricing/admin-pricing.module';
+import { AdminContentModule } from './modules/admin-content/admin-content.module';
 
 @Module({
   imports: [
@@ -58,24 +65,31 @@ import { ReviewModule } from './modules/review/review.module';
     CacheModule,
     QueueModule,
     DfmModule,
-  PaymentsModule,
-  MetricsModule,
-  QueueMonitorModule,
-  OrgsModule,
-  InvitesModule,
-  AuditModule,
-  RbacModule,
-  RoutingModule,
-  LeadtimeModule,
-  OutcomesModule,
-  MarginsModule,
-  ExportModule,
-  LookupsModule,
-  QuoteRevisionsModule,
-  SchedulerModule,
-  RevisionsModule,
-  AIModule,
-  ReviewModule,
+    PaymentsModule,
+    MetricsModule,
+    QueueMonitorModule,
+    OrgsModule,
+    InvitesModule,
+    AuditModule,
+    RbacModule,
+    RoutingModule,
+    LeadtimeModule,
+    OutcomesModule,
+    MarginsModule,
+    ExportModule,
+    LookupsModule,
+    QuoteRevisionsModule,
+    SchedulerModule,
+    RevisionsModule,
+    AIModule,
+    ReviewModule,
+    AdminModule,
+    AdminUsersModule,
+    AdminOrgsModule,
+    AdminFeatureFlagsModule,
+    AdminSettingsModule,
+    AdminPricingModule,
+    AdminContentModule,
   ],
 })
 export class AppModule {}

@@ -4,6 +4,7 @@ import type {
   ToleranceFeatureType,
   ToleranceUnit,
 } from '../repositories/tolerance-cost-book.repo';
+import type { AdminPricingConfig } from '@cnc-quote/shared';
 
 export type ProcessType = 'cnc_milling' | 'turning' | 'sheet';
 
@@ -53,6 +54,7 @@ export interface PricingContext {
   breakdown: PricingBreakdownLine[];
   logs: string[];
   flags: Record<string, boolean>;
+  config?: AdminPricingConfig;
 }
 
 export interface PricingFactor {

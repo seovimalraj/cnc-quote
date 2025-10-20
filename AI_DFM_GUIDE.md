@@ -15,6 +15,7 @@
 7. [Quick Start](#quick-start)
 8. [Performance & Metrics](#performance--metrics)
 9. [Business Value](#business-value)
+10. [ML Assist Layer (Post-Compute)](#ml-assist-layer-post-compute)
 
 ---
 
@@ -623,6 +624,45 @@ curl -X POST http://localhost:3001/api/dfm/analyze-advanced \
 - **Operational Efficiency**: Automated analysis saves engineering time
 - **Knowledge Capture**: AI learns from each analysis
 - **Scalability**: Handle more quotes without additional staff
+
+
+## ML Assist Layer (Post-Compute)
+
+### Purpose
+- Generate reviewer-ready rationale and remediation suggestions without impacting the deterministic pricing flow.
+- Complement compliance alerts by contextualizing why a quote failed a guardrail and what corrective action is recommended.
+
+### Execution Flow
+1. Deterministic compliance pass persists pricing, cost breakdown, and compliance events.
+2. If the feature flag `pricing_compliance_ml_assist` is enabled *and* a critical alert exists, enqueue a BullMQ job on `pricing-compliance-ml-assist` with the immutable quote snapshot and alert payload.
+3. The worker processor pulls the job, emits an OpenTelemetry span (`pricing.ml_assist.generate`), and calls the Ollama-backed LLaMA 3.1 8B model asynchronously.
+4. Generated rationale plus remediation suggestions are validated against the shared contract (`packages/shared/src/contracts/v1/pricing-compliance.ts`) and stored in `quote_compliance_ml_insights`.
+5. The API surfaces the insights to the reviewer UI; pricing totals remain untouched.
+
+### Data Contract
+- **Input**: Quote metadata (id, revision, geometry hash), pricing snapshot, compliance alerts array, traceId.
+- **Output**: `{ rationale: string; remediation: string[]; modelVersion: string; generatedAt: string; }` persisted with foreign key to the quote revision.
+- Validation enforces maximum token limits and rejects responses lacking actionable remediation items.
+
+### Feature Flag Controls
+- Default disabled; managed via Admin Feature Flags (`pricing_compliance_ml_assist`).
+- Toggle is environment-specific to allow shadow deployments and phased rollouts.
+- API and worker honor the flag at runtime; disable immediately stops new jobs without code changes.
+
+### Safeguards
+- Never mutate `quote_prices` or downstream cost artifacts within the processor.
+- Retries use exponential backoff (max 3) to avoid hot-looping on LLM failures.
+- Processor short-circuits if Ollama is unavailable, logging structured errors and leaving prior deterministic results intact.
+
+### Observability & Monitoring
+- Emit BullMQ lifecycle events (queued → processing → completed/failed) with traceId continuity.
+- Capture latency and success metrics in Prometheus (`pricing_ml_assist_duration_seconds`, `pricing_ml_assist_failures_total`).
+- Log structured payload summaries via Pino, omitting raw geometry data to respect data minimization.
+
+### QA & Testing
+- Unit tests cover flag gating and job payload construction (`pricing-compliance-ml-assist.service.spec.ts`).
+- Integration tests assert persistence of insights and absence of price mutations when the flag toggles.
+- `scripts/check-pricing.js` optionally triggers a shadow ML assist run when `--enable-ml-assist` is supplied.
 
 ---
 

@@ -35,3 +35,26 @@ export interface NotificationMessage {
   recipientEmail?: string;
   slackChannel?: string;
 }
+
+export interface ComplianceAlertEvent {
+  id: string;
+  code: string;
+  message: string;
+  quantity: number;
+  partId: string | null;
+}
+
+export interface ComplianceAlertNotification {
+  quoteId: string;
+  quoteItemId: string;
+  orgId: string | null;
+  traceId: string;
+  eventIds: string[];
+  events: ComplianceAlertEvent[];
+  quoteStatus: string | null;
+  partId: string | null;
+  triggeredAt: string;
+  dedupeKey: string;
+  recipientEmail?: string;
+  slackChannel?: string;
+}

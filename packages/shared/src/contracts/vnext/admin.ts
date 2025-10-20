@@ -234,6 +234,34 @@ export const AdminDbLatencySnapshotVNextSchema = z.object({
   missing_metrics: z.array(z.string()).optional(),
 });
 
+export const AdminDashboardKpiDeltaVNextSchema = z
+  .object({
+    absolute: z.number(),
+    relative: z.number().nullable().optional(),
+    direction: z.enum(['increase', 'decrease', 'flat']),
+    comparedTo: z.string().optional(),
+  })
+  .passthrough();
+
+export const AdminDashboardKpiVNextSchema = z
+  .object({
+    id: z.string(),
+    label: z.string(),
+    value: z.number(),
+    unit: z.enum(['count', 'currency', 'percentage']).default('count'),
+    currency: z.string().optional(),
+    delta: AdminDashboardKpiDeltaVNextSchema.optional(),
+  })
+  .passthrough();
+
+export const AdminDashboardStatsResponseVNextSchema = z
+  .object({
+    fetchedAt: z.string().datetime(),
+    period: z.string().min(1),
+    kpis: z.array(AdminDashboardKpiVNextSchema),
+  })
+  .passthrough();
+
 export type AbandonedQuoteVNext = z.infer<typeof AbandonedQuoteVNextSchema>;
 export type AbandonedQuotesListVNext = z.infer<typeof AbandonedQuotesListVNextSchema>;
 export type QuoteTimelineEventVNext = z.infer<typeof QuoteTimelineEventVNextSchema>;
@@ -253,3 +281,6 @@ export type AdminSloSampleVNext = z.infer<typeof AdminSloSampleVNextSchema>;
 export type AdminSloSnapshotVNext = z.infer<typeof AdminSloSnapshotVNextSchema>;
 export type AdminDbLatencySampleVNext = z.infer<typeof AdminDbLatencySampleVNextSchema>;
 export type AdminDbLatencySnapshotVNext = z.infer<typeof AdminDbLatencySnapshotVNextSchema>;
+export type AdminDashboardKpiDeltaVNext = z.infer<typeof AdminDashboardKpiDeltaVNextSchema>;
+export type AdminDashboardKpiVNext = z.infer<typeof AdminDashboardKpiVNextSchema>;
+export type AdminDashboardStatsResponseVNext = z.infer<typeof AdminDashboardStatsResponseVNextSchema>;

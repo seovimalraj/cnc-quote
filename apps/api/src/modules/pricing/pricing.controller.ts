@@ -1,4 +1,4 @@
-import { Controller, Post, Body, UseGuards, Req, Query, Res, BadRequestException, Logger } from "@nestjs/common";
+import { Controller, Post, Body, UseGuards, Req, Query, Res, BadRequestException, Logger, Get, Param, NotFoundException } from "@nestjs/common";
 import { Response } from "express";
 import { ConfigService } from "@nestjs/config";
 import { PricingService } from "./pricing.service";
@@ -22,6 +22,7 @@ import {
   InjectionMoldingPricingRequest
 } from "./price-request.types";
 import { ProcessRecommendationService } from "./process-recommendation/process-recommendation.service";
+import { PricingRationaleSummaryService } from "./pricing-rationale-summary.service";
 
 // Type alias to reduce union repetition per lint suggestion
 type LegacyPricingRequest = CncPricingRequest | SheetMetalPricingRequest | InjectionMoldingPricingRequest;
@@ -75,6 +76,7 @@ export class PricingController {
     private readonly pricingPersistence: PricingPersistenceService,
     private readonly pricingCache: PricingCacheService,
     private readonly processRecommendation: ProcessRecommendationService,
+    private readonly pricingRationaleSummary: PricingRationaleSummaryService,
     private readonly configService: ConfigService,
   ) {
     this.catalogVersion = this.configService.get<string>("CATALOG_VERSION") ?? "unversioned";
@@ -151,6 +153,32 @@ export class PricingController {
   }
 
   // === Real-time pricing endpoints ===
+
+  @Get('quotes/:quoteId/rationale')
+  @ApiOperation({
+    summary: 'Retrieve pricing rationale summary',
+    description: 'Returns the advisory pricing rationale summary and deterministic cost sheet snapshot if available',
+  })
+  @ApiResponse({ status: 200, description: 'Rationale summary ready' })
+  @ApiResponse({ status: 404, description: 'Rationale summary not available' })
+  @Policies({ action: 'view', resource: 'pricing' })
+  async getQuoteRationale(@Req() req: any, @Param('quoteId') quoteId: string) {
+    const orgId = req.rbac?.orgId;
+    if (!orgId) {
+      throw new BadRequestException('Missing organization context for pricing rationale request');
+    }
+
+    const payload = await this.pricingRationaleSummary.getSummary({ quoteId, orgId });
+    if (!payload) {
+      throw new NotFoundException('Pricing rationale not available');
+    }
+
+    return {
+      quoteId,
+      advisory: payload.summary,
+      costSheet: payload.costSheet,
+    };
+  }
 
   @Post('v2/calculate')
   @ApiOperation({
@@ -862,7 +890,9 @@ export class PricingController {
         await this.pricingPersistence.persistMatrixAndTotals({
           quote_id: body.quote_id,
           quote_item_id: item.id,
-          matrix: newMatrix as any
+          matrix: newMatrix as any,
+          partConfig: item.config,
+          traceId: `pricing-recalc:${body.quote_id}:${item.id}:${Date.now()}`,
         });
   const prevMatrix: any[] = item.matrix as any[];
   const patches = diffPricingMatrix(prevMatrix, newMatrix as any);

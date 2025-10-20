@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { ContractsV1 } from '@cnc-quote/shared';
+import { usePricingStore } from '../store/pricingStore';
 
 interface QuoteItemPricingState {
   quote_item_id: string;
@@ -13,6 +14,7 @@ interface QuoteItemPricingState {
     breakdown?: any;
     status?: string;
     optimistic?: boolean;
+    compliance?: ContractsV1.QuoteComplianceSnapshotV1 | null;
   }>;
   last_updated?: string;
   latency_ms?: number;
@@ -51,6 +53,7 @@ function applyPatches(existing: QuoteItemPricingState['rows'], patches: Contract
       if (p.lead_time_days !== undefined) target.lead_time_days = p.lead_time_days;
       if (p.breakdown !== undefined) target.breakdown = p.breakdown;
       if (p.status) target.status = p.status;
+      if (p.compliance !== undefined) target.compliance = p.compliance ?? null;
       target.optimistic = optimistic || p.status === 'optimistic';
     } else {
       byQty.set(p.quantity, {
@@ -60,7 +63,8 @@ function applyPatches(existing: QuoteItemPricingState['rows'], patches: Contract
         lead_time_days: p.lead_time_days,
         breakdown: p.breakdown,
         status: p.status,
-        optimistic: optimistic || p.status === 'optimistic'
+        optimistic: optimistic || p.status === 'optimistic',
+        compliance: p.compliance ?? null,
       });
     }
   }
@@ -160,9 +164,17 @@ export function useRealtimePricing(options: UseRealtimePricingOptions = {}): Use
   const isReconcilingRef = useRef(false);
   const itemsRef = useRef(items);
   const quoteIdRef = useRef<string | undefined>(quoteId);
+  const applyPricingEvent = usePricingStore(state => state.applyPricingEvent);
+  const setStoreQuoteId = usePricingStore(state => state.setQuoteId);
+  const resetPricingStore = usePricingStore(state => state.reset);
 
   useEffect(() => { itemsRef.current = items; }, [items]);
   useEffect(() => { quoteIdRef.current = quoteId; }, [quoteId]);
+  useEffect(() => {
+    if (quoteId) {
+      setStoreQuoteId(quoteId);
+    }
+  }, [quoteId, setStoreQuoteId]);
 
   async function reconcileAll(qid: string) {
     if (isReconcilingRef.current) return;
@@ -232,6 +244,7 @@ export function useRealtimePricing(options: UseRealtimePricingOptions = {}): Use
         correlationMap,
         lastSubtotalDeltaRef,
       });
+      applyPricingEvent(evt);
     });
     // Geometry & DFM event streams
     sock.on('geometry_event', (evt: GeometryEvent) => {
@@ -241,7 +254,7 @@ export function useRealtimePricing(options: UseRealtimePricingOptions = {}): Use
       setDfm((prev: DfmEvent | undefined) => ({ ...(prev || {}), ...evt }));
     });
     return sock;
-  }, [authToken, baseUrl, onDrift, onLatencySample]);
+  }, [authToken, baseUrl, onDrift, onLatencySample, applyPricingEvent, autoReconcileOnDrift]);
 
   // Auto-connect
   useEffect(() => {
@@ -256,7 +269,8 @@ export function useRealtimePricing(options: UseRealtimePricingOptions = {}): Use
     if (!s.connected) s.connect();
     s.emit('join_quote', { quote_id: qid });
     setQuoteId(qid);
-  }, [ensureSocket]);
+    setStoreQuoteId(qid);
+  }, [ensureSocket, setStoreQuoteId]);
 
   const recalcItem = useCallback((qid: string, quoteItemId: string, config?: ContractsV1.PartConfigV1) => {
     const s = ensureSocket();
@@ -269,7 +283,8 @@ export function useRealtimePricing(options: UseRealtimePricingOptions = {}): Use
     setQuoteId(undefined);
     correlationMap.current.clear();
     lastSubtotalDeltaRef.current = undefined;
-  }, []);
+    resetPricingStore();
+  }, [resetPricingStore]);
 
   return {
     connected,

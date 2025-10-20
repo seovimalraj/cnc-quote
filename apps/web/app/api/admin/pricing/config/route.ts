@@ -1,13 +1,13 @@
 import { NextRequest } from 'next/server';
 
-import { resolveApiUrl } from '@/app/api/_lib/backend';
+import { buildProxyResponse, resolveApiUrl } from '@/app/api/_lib/backend';
 import { proxyFetch } from '@/app/api/_lib/proxyFetch';
 
 export async function GET(request: NextRequest) {
   const upstream = await proxyFetch(request, resolveApiUrl('/admin/pricing/config'), {
     method: 'GET',
   });
-  return upstream;
+  return buildProxyResponse(upstream);
 }
 
 export async function PUT(request: NextRequest) {
@@ -24,5 +24,5 @@ export async function PUT(request: NextRequest) {
     headers,
   });
 
-  return upstream;
+  return buildProxyResponse(upstream);
 }

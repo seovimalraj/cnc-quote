@@ -22,8 +22,13 @@ import {
   AdminErrorEventVNextSchema,
   AdminFailedJobEventVNextSchema,
   AdminErrorSnapshotVNextSchema,
+  AdminDashboardKpiDeltaVNextSchema,
+  AdminDashboardKpiVNextSchema,
+  AdminDashboardStatsResponseVNextSchema,
 } from './admin';
 import {
+  AdminReviewLaneVNextSchema,
+  AdminReviewPriorityVNextSchema,
   AdminReviewItemVNextSchema,
   AdminReviewListResponseVNextSchema,
   AdminReviewDetailResponseVNextSchema,
@@ -87,8 +92,13 @@ export {
   AdminErrorEventVNextSchema,
   AdminFailedJobEventVNextSchema,
   AdminErrorSnapshotVNextSchema,
+  AdminDashboardKpiDeltaVNextSchema,
+  AdminDashboardKpiVNextSchema,
+  AdminDashboardStatsResponseVNextSchema,
 };
 export {
+  AdminReviewLaneVNextSchema,
+  AdminReviewPriorityVNextSchema,
   AdminReviewItemVNextSchema,
   AdminReviewListResponseVNextSchema,
   AdminReviewDetailResponseVNextSchema,
@@ -154,11 +164,16 @@ export type AdminWebhookStatusSnapshotVNext = z.infer<typeof AdminWebhookStatusS
 export type AdminErrorEventVNext = z.infer<typeof AdminErrorEventVNextSchema>;
 export type AdminFailedJobEventVNext = z.infer<typeof AdminFailedJobEventVNextSchema>;
 export type AdminErrorSnapshotVNext = z.infer<typeof AdminErrorSnapshotVNextSchema>;
+export type AdminDashboardKpiDeltaVNext = z.infer<typeof AdminDashboardKpiDeltaVNextSchema>;
+export type AdminDashboardKpiVNext = z.infer<typeof AdminDashboardKpiVNextSchema>;
+export type AdminDashboardStatsResponseVNext = z.infer<typeof AdminDashboardStatsResponseVNextSchema>;
 
 export type AdminReviewItemVNext = z.infer<typeof AdminReviewItemVNextSchema>;
 export type AdminReviewWorkspaceVNext = z.infer<typeof AdminReviewWorkspaceVNextSchema>;
 export type AdminReviewListResponseVNext = z.infer<typeof AdminReviewListResponseVNextSchema>;
 export type AdminReviewDetailResponseVNext = z.infer<typeof AdminReviewDetailResponseVNextSchema>;
+export type AdminReviewLaneVNext = z.infer<typeof AdminReviewLaneVNextSchema>;
+export type AdminReviewPriorityVNext = z.infer<typeof AdminReviewPriorityVNextSchema>;
 export type AdminSloSampleVNext = z.infer<typeof AdminSloSampleVNextSchema>;
 export type AdminSloSnapshotVNext = z.infer<typeof AdminSloSnapshotVNextSchema>;
 export type AdminDbLatencySampleVNext = z.infer<typeof AdminDbLatencySampleVNextSchema>;

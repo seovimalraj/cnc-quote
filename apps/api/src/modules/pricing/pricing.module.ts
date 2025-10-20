@@ -18,9 +18,19 @@ import { TaxModule } from "../../tax/tax.module";
 import { MaterialComparisonService } from "./material-comparison.service";
 import { MaterialComparisonController } from "./material-comparison.controller";
 import { CatalogModule } from "../catalog/catalog.module";
+import { AdminPricingModule } from "../admin-pricing/admin-pricing.module";
+import { NotifyModule } from "../notify/notify.module";
+import { PricingConfigService } from "./pricing-config.service";
+import { PricingComplianceService } from "./pricing-compliance.service";
+import { QueueModule } from "../../queues";
+import { AdminFeatureFlagsModule } from "../admin-feature-flags/admin-feature-flags.module";
+import { AIModule } from "../ai/ai.module";
+import { PricingComplianceMlAssistService } from "./pricing-compliance-ml-assist.service";
+import { PricingComplianceMlAssistProcessor } from "./pricing-compliance-ml-assist.processor";
+import { PricingRationaleSummaryService } from "./pricing-rationale-summary.service";
 
 @Module({
-  imports: [SupabaseModule, CacheModule, ManualReviewModule, GeometryModule, TaxModule, CatalogModule],
+  imports: [SupabaseModule, CacheModule, ManualReviewModule, GeometryModule, TaxModule, CatalogModule, AdminPricingModule, QueueModule, NotifyModule, AdminFeatureFlagsModule, AIModule],
   controllers: [PricingController, ProcessRecommendationController, MaterialComparisonController],
   providers: [
     PricingService,
@@ -28,21 +38,30 @@ import { CatalogModule } from "../catalog/catalog.module";
     PricingGateway,
     ValidationService,
     PricingPersistenceService,
+    PricingComplianceService,
+    PricingComplianceMlAssistService,
+    PricingComplianceMlAssistProcessor,
+    PricingRationaleSummaryService,
     PricingCacheService,
     PricingCacheRepository,
     ToleranceCostBookRepository,
     ProcessRecommendationService,
     MaterialComparisonService,
+    PricingConfigService,
   ],
   exports: [
     PricingService,
     PricingEngineV2Service,
     ValidationService,
     PricingPersistenceService,
+    PricingComplianceService,
+    PricingComplianceMlAssistService,
+    PricingRationaleSummaryService,
     PricingCacheService,
     PricingCacheRepository,
     ToleranceCostBookRepository,
     ProcessRecommendationService,
+    PricingConfigService,
   ],
 })
 export class PricingModule {}

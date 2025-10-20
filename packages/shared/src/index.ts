@@ -1,4 +1,5 @@
 export * from './admin-types'; // AdminUser, AdminOrg, Paginated
+export * from './admin-pricing.types';
 // Re-export everything from types.core.ts
 export * from './types.core';
 
@@ -31,7 +32,13 @@ export * from './orders/order-status';
 export * from './marketplace';
 
 // Versioned contract exports
-export { ContractsV1, ContractsVNext, computeQuoteDiffSummaryV1 } from './contracts';
+export {
+	ContractsV1,
+	ContractsVNext,
+	computeQuoteDiffSummaryV1,
+	QUOTE_RATIONALE_CACHE_PREFIX_V1,
+	buildQuoteRationaleCacheKeyV1,
+} from './contracts';
 export {
 	toQuoteSummaryV1,
 	toQuoteSummaryVNext,

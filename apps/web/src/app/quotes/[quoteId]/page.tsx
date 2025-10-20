@@ -3,6 +3,7 @@ import React, { useEffect } from 'react';
 import { useRealtimePricing } from '../../../hooks/useRealtimePricing';
 import { QuotePricingTable } from '../../../components/QuotePricingTable';
 import { usePricingStore } from '../../../store/pricingStore';
+import { QuoteRationaleAdvisory } from '../../../components/QuoteRationaleAdvisory';
 
 interface PageProps {
   params: { quoteId: string };
@@ -39,6 +40,7 @@ const QuoteDetailPage: React.FC<PageProps> = ({ params }) => {
   return (
     <div className="p-4 space-y-6">
       <h2 className="text-lg font-semibold">Quote {quoteId}</h2>
+      <QuoteRationaleAdvisory quoteId={quoteId} />
       <div className="grid md:grid-cols-2 gap-6">
         {itemIds.length === 0 && (
           <div className="text-sm text-gray-500">Waiting for pricing events...</div>

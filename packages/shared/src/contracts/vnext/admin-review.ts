@@ -84,6 +84,8 @@ export const AdminReviewDetailResponseVNextSchema = z.object({
   workspace: AdminReviewWorkspaceVNextSchema,
 });
 
+export type AdminReviewLaneVNext = z.infer<typeof AdminReviewLaneVNextSchema>;
+export type AdminReviewPriorityVNext = z.infer<typeof AdminReviewPriorityVNextSchema>;
 export type AdminReviewItemVNext = z.infer<typeof AdminReviewItemVNextSchema>;
 export type AdminReviewWorkspaceVNext = z.infer<typeof AdminReviewWorkspaceVNextSchema>;
 export type AdminReviewListResponseVNext = z.infer<typeof AdminReviewListResponseVNextSchema>;

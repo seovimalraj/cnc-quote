@@ -8,6 +8,7 @@ import {
   OrderDetails,
   ReviewDetails,
   NotificationTemplate,
+  ComplianceAlertNotification,
 } from "./notify.types";
 
 // Narrow order notification shape for internal events
@@ -139,6 +140,65 @@ export class NotifyService {
     }
   }
 
+  async notifyCriticalComplianceAlert(notification: ComplianceAlertNotification): Promise<void> {
+    if (!notification.events || notification.events.length === 0) {
+      return;
+    }
+
+    const recipientEmail = notification.recipientEmail
+      || this.configService.get("COMPLIANCE_ALERT_EMAIL")
+      || this.configService.get("ADMIN_EMAIL")
+      || this.senderEmail;
+    const slackChannel = notification.slackChannel
+      || this.configService.get("SLACK_COMPLIANCE_CHANNEL")
+      || this.configService.get("SLACK_QUOTES_CHANNEL");
+
+  const subject = `Critical compliance alert - Quote ${notification.quoteId}`;
+    const itemLine = `Quote item: ${notification.quoteItemId}${notification.partId ? ` (part ${notification.partId})` : ''}`;
+    const metaLine = `Org: ${notification.orgId ?? 'n/a'} | Status: ${notification.quoteStatus ?? 'unknown'}`;
+    const eventLines = notification.events
+      .map((event) => `- [${event.code}] qty ${event.quantity} - ${event.message}`)
+      .join('\n');
+    const traceLine = `Trace: ${notification.traceId}`;
+    const idsLine = `Event IDs: ${notification.eventIds.join(', ')}`;
+    const triggeredLine = `Triggered: ${notification.triggeredAt}`;
+    const dedupeLine = `Dedupe: ${notification.dedupeKey}`;
+
+    const textBody = [subject, itemLine, metaLine, '', eventLines, '', traceLine, idsLine, triggeredLine, dedupeLine]
+      .filter(Boolean)
+      .join('\n');
+
+    const htmlEvents = `<ul>${notification.events
+      .map((event) => `<li>[${event.code}] qty ${event.quantity} - ${escapeHtml(event.message)}</li>`)
+      .join('')}</ul>`;
+    const htmlBody = [
+      `<p>${escapeHtml(subject)}</p>`,
+      `<p>${escapeHtml(itemLine)}</p>`,
+      `<p>${escapeHtml(metaLine)}</p>`,
+      htmlEvents,
+      `<p>${escapeHtml(traceLine)}</p>`,
+      `<p>${escapeHtml(idsLine)}</p>`,
+      `<p>${escapeHtml(triggeredLine)}</p>`,
+      `<p>${escapeHtml(dedupeLine)}</p>`,
+    ].join('');
+
+    if (recipientEmail) {
+      await this.sendEmail({
+        to: recipientEmail,
+        subject,
+        text: textBody,
+        html: htmlBody,
+      });
+    }
+
+    if (slackChannel) {
+      await this.slack.chat.postMessage({
+        channel: slackChannel,
+        text: textBody,
+      });
+    }
+  }
+
   private async sendOrderEmail(orderId: string, template: NotificationTemplate): Promise<void> {
     try {
       await this.transporter.sendMail({
@@ -201,4 +261,13 @@ export class NotifyService {
     // eslint-disable-next-line no-console
     console.info(`Order notification: ${subject} - ${body}`);
   }
+}
+
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
 }

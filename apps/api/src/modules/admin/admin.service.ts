@@ -1,12 +1,15 @@
 import { BadRequestException, Injectable } from "@nestjs/common";
 import { SupabaseService } from "../../lib/supabase/supabase.service";
 import { AdminMetricsService } from '../admin-metrics/admin-metrics.service';
+import { ContractsV1 } from '@cnc-quote/shared';
+import { AdminRiskComplianceService } from './admin-risk-compliance.service';
 
 @Injectable()
 export class AdminService {
   constructor(
     private readonly adminMetrics: AdminMetricsService,
     private readonly supabase: SupabaseService,
+    private readonly riskCompliance: AdminRiskComplianceService,
   ) {}
 
   async listUsers(page = 1, pageSize = 25, q?: string) {
@@ -395,6 +398,194 @@ export class AdminService {
   async getSLOMetrics(window: string = '1h') {
     const snapshot = await this.adminMetrics.getSloSnapshot(window);
     return snapshot;
+  }
+
+  async getRecentEvents(limit?: number): Promise<ContractsV1.AdminRecentEventsResponseV1> {
+    const requested = typeof limit === 'number' && Number.isFinite(limit) ? Math.floor(limit) : 10;
+    const safeLimit = Math.max(1, Math.min(50, requested));
+
+    type ActivityRow = {
+      id: string;
+      occurred_at: string;
+      area?: string | null;
+      action?: string | null;
+      notes?: string | null;
+      ip?: string | null;
+      actor_role?: string | null;
+      actor_id?: string | null;
+      actor_user_id?: string | null;
+      target_type?: string | null;
+      target_id?: string | null;
+      target_org_id?: string | null;
+      org_id?: string | null;
+      diff?: { before?: unknown; after?: unknown } | null;
+      before?: unknown;
+      after?: unknown;
+      actor?: {
+        name?: string | null;
+        email?: string | null;
+      } | null;
+    };
+
+    const rows = await this.fetchActivityRows<ActivityRow>(safeLimit);
+
+    const events: ContractsV1.AdminRecentEventV1[] = rows.map((row) => {
+      const actorCandidate = {
+        id: row.actor_id ?? row.actor_user_id ?? null,
+        role: row.actor_role ?? null,
+        name: row.actor?.name ?? null,
+        email: row.actor?.email ?? null,
+      };
+
+      const actor = actorCandidate.id || actorCandidate.role || actorCandidate.name || actorCandidate.email ? actorCandidate : null;
+
+      const targetCandidate = {
+        type: row.target_type ?? null,
+        id: row.target_id ?? null,
+        org_id: row.target_org_id ?? row.org_id ?? null,
+      };
+
+      const target = targetCandidate.type || targetCandidate.id || targetCandidate.org_id ? targetCandidate : null;
+
+      const diffPayload = this.normalizeDiff(row);
+      const alerts = this.riskCompliance.evaluate(
+        {
+          area: row.area,
+          action: row.action,
+          notes: row.notes,
+          target_type: row.target_type,
+          target_id: row.target_id,
+        },
+        diffPayload,
+      );
+
+      return {
+        id: row.id,
+        occurred_at: row.occurred_at,
+        area: row.area ?? row.target_type ?? 'general',
+        action: row.action ?? 'unknown',
+        notes: row.notes ?? null,
+        ip: row.ip ?? null,
+        actor,
+        target,
+        diff: diffPayload,
+        alerts: alerts.length ? alerts : null,
+      } satisfies ContractsV1.AdminRecentEventV1;
+    });
+
+    return {
+      fetched_at: new Date().toISOString(),
+      limit: safeLimit,
+      events,
+    };
+  }
+
+  private async fetchActivityRows<TActivity extends Record<string, any>>(limit: number): Promise<TActivity[]> {
+    const selectClause = `
+      id,
+      occurred_at,
+      area,
+      action,
+      notes,
+      ip,
+      actor_id,
+      actor_role,
+      target_type,
+      target_id,
+      target_org_id,
+      diff,
+      actor:users!admin_activity_events_actor_id_fkey(name,email)
+    `;
+
+    const { data, error } = await this.supabase.client
+      .from<TActivity>('admin_activity_events')
+      .select(selectClause)
+      .order('occurred_at', { ascending: false })
+      .limit(limit);
+
+    if (!error) {
+      return data ?? [];
+    }
+
+    // Backward compatibility: fall back to legacy audit_events when the new projection is unavailable.
+    if (error.code === '42P01' || error.code === '42703') {
+      return this.fetchActivityRowsFromAudit<TActivity>(limit);
+    }
+
+    throw error;
+  }
+
+  private normalizeDiff(row: {
+    diff?: { before?: unknown; after?: unknown } | null;
+    before?: unknown;
+    after?: unknown;
+  }): ContractsV1.AdminRecentEventDiffV1 | null {
+    if (row.diff && typeof row.diff === 'object') {
+      const before = 'before' in row.diff ? row.diff.before ?? null : null;
+      const after = 'after' in row.diff ? row.diff.after ?? null : null;
+      if (before !== null || after !== null) {
+        return { before, after };
+      }
+    }
+
+    if (row.before !== undefined || row.after !== undefined) {
+      return {
+        before: row.before ?? null,
+        after: row.after ?? null,
+      };
+    }
+
+    return null;
+  }
+
+  private async fetchActivityRowsFromAudit<TActivity extends Record<string, any>>(limit: number): Promise<TActivity[]> {
+    const { data, error } = await this.supabase.client
+      .from<TActivity>('audit_events')
+      .select(`
+        id,
+        ts,
+        area,
+        action,
+        notes,
+        ip,
+        actor_ip,
+        actor_user_id,
+        actor_role,
+        target_type,
+        target_id,
+        org_id,
+        before,
+        after,
+        actor:users!audit_events_actor_user_id_fkey(name,email)
+      `)
+      .order('ts', { ascending: false })
+      .limit(limit);
+
+    if (error) {
+      throw error;
+    }
+
+    return (data ?? []).map((row: any) => ({
+      id: row.id,
+      occurred_at: row.ts,
+      area: row.area,
+      action: row.action,
+      notes: row.notes,
+      ip: row.ip ?? row.actor_ip ?? null,
+      actor_role: row.actor_role,
+      actor_id: row.actor_user_id,
+      actor_user_id: row.actor_user_id,
+      target_type: row.target_type,
+      target_id: row.target_id,
+      target_org_id: row.org_id,
+      org_id: row.org_id,
+      before: row.before,
+      after: row.after,
+      diff: row.diff ?? (row.before !== undefined || row.after !== undefined
+        ? { before: row.before ?? null, after: row.after ?? null }
+        : null),
+      actor: row.actor,
+    })) as TActivity[];
   }
 
   async getErrors(window: string = '1h') {

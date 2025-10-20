@@ -11,7 +11,7 @@ import { Roles } from '../../auth/roles.decorator';
 
 @Controller('admin/settings')
 @UseGuards(AuthGuard, RolesGuard)
-@Roles('admin')
+@Roles('admin', 'auditor')
 export class AdminSettingsController {
   constructor(private readonly adminSettingsService: AdminSettingsService) {}
 

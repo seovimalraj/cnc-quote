@@ -26,7 +26,7 @@ async function bootstrap(): Promise<void> {
     logger.info('✅ Redis connected');
 
     // Register all workers
-    registerAllWorkers();
+  await registerAllWorkers();
     logger.info('✅ Workers registered');
 
     // Start health check server

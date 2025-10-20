@@ -1,476 +1,448 @@
-"use client";
+'use client';
+/**
+ * @module AdminReviewDetailPage
+ * @ownership web/admin
+ * @purpose Present the manual review workspace with live contract-backed data and actionable controls for analysts.
+ */
 
-import React, { useState, useEffect } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
+import { AlertTriangle, ArrowLeft, Loader2, RefreshCw } from 'lucide-react';
+
+import { RequireAnyRole } from '@/components/auth/RequireAnyRole';
 import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Textarea } from '@/components/ui/textarea';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { AlertTriangle, CheckCircle, Clock, User, ArrowLeft, Send, MessageSquare, Eye, FileText, Settings } from 'lucide-react';
+import { Separator } from '@/components/ui/separator';
+import { useToast } from '@/components/ui/use-toast';
+import { useAdminReviewDetail } from '@/hooks/useAdminReviewDetail';
+import {
+  acknowledgeReviewDfmFinding,
+  assignReviewTicket,
+  moveReviewTicket,
+} from '@/lib/admin/api';
+import type { AdminReviewItem } from '@/lib/admin/types';
 
-interface DfmFinding {
-  id: string;
-  check_id: string;
-  severity: 'info' | 'warning' | 'blocker';
-  message: string;
-  metrics: any;
-  face_ids: number[];
-  edge_ids: number[];
-  ack: boolean;
-  note: string | null;
-}
+const laneOptions: Array<{ value: AdminReviewItem['lane']; label: string }> = [
+  { value: 'NEW', label: 'Needs triage' },
+  { value: 'IN_REVIEW', label: 'In review' },
+  { value: 'APPROVED', label: 'Approved' },
+  { value: 'REJECTED', label: 'Blocked' },
+];
 
-interface ReviewWorkspace {
-  quote: {
-    id: string;
-    org_name: string;
-    status: string;
-    value_estimate: number;
-  };
-  lines: Array<{
-    id: string;
-    part_name: string;
-    quantity: number;
-    process: string;
-    material: string;
-    finish: string;
-    dfm_status: string;
-    unit_price: number;
-    total_price: number;
-  }>;
-  dfm_results: {
-    summary: {
-      passed: number;
-      total: number;
-      warnings: number;
-      blockers: number;
-    };
-    findings: DfmFinding[];
-  };
-  pricing: {
-    subtotal: number;
-    taxes: number;
-    shipping: number;
-    total: number;
-  };
-}
+const priorityBadgeClasses: Record<AdminReviewItem['priority'], string> = {
+  LOW: 'bg-muted text-foreground',
+  MED: 'bg-blue-100 text-blue-800',
+  HIGH: 'bg-amber-100 text-amber-800',
+  EXPEDITE: 'bg-red-100 text-red-700',
+};
 
-export default function ReviewerWorkspace() {
-  const params = useParams();
-  const quoteId = params?.quoteId as string;
+const severityBadgeClasses: Record<'LOW' | 'MED' | 'HIGH', string> = {
+  LOW: 'bg-muted text-foreground',
+  MED: 'bg-amber-100 text-amber-800',
+  HIGH: 'bg-red-100 text-red-700',
+};
 
-  const [workspace, setWorkspace] = useState<ReviewWorkspace | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('parts_pricing');
-  const [selectedFinding, setSelectedFinding] = useState<DfmFinding | null>(null);
-  const [priceOverrides, setPriceOverrides] = useState<any>({});
-  const [simulatedPrice, setSimulatedPrice] = useState<any>(null);
-  const [showRequestChanges, setShowRequestChanges] = useState(false);
+export default function AdminReviewDetailPage() {
+  const params = useParams<{ quoteId: string }>();
+  const quoteId = params?.quoteId ?? '';
+  const { toast } = useToast();
+  const { detail, isLoading, isFetching, isError, error, refetch } = useAdminReviewDetail(quoteId);
+
+  const item = detail?.item;
+  const workspace = detail?.workspace;
+  const [assigneeInput, setAssigneeInput] = useState('');
+  const [laneValue, setLaneValue] = useState<AdminReviewItem['lane']>('NEW');
+  const [assigning, setAssigning] = useState(false);
+  const [updatingLane, setUpdatingLane] = useState(false);
+  const [acknowledgingId, setAcknowledgingId] = useState<string | null>(null);
 
   useEffect(() => {
-    loadWorkspace();
-  }, [quoteId]);
+    setAssigneeInput(item?.assignee ?? '');
+    setLaneValue(item?.lane ?? 'NEW');
+  }, [item?.assignee, item?.lane]);
 
-  const loadWorkspace = async () => {
+  const quoteNumber = item ? item.quoteNumber ?? item.quoteNo ?? item.quoteId : quoteId;
+  const currency = workspace?.pricingSummary.currency ?? item?.currency ?? 'USD';
+
+  const dfmStats = useMemo(() => {
+    if (!workspace) {
+      return { high: 0, med: 0, low: 0 } as const;
+    }
+    return workspace.dfm.reduce(
+      (acc, issue) => {
+        if (issue.severity === 'HIGH') acc.high += 1;
+        else if (issue.severity === 'MED') acc.med += 1;
+        else acc.low += 1;
+        return acc;
+      },
+      { high: 0, med: 0, low: 0 },
+    ) as const;
+  }, [workspace]);
+
+  const handleAssign = useCallback(async () => {
+    if (!item) {
+      return;
+    }
+    const assignee = assigneeInput.trim();
+    if (!assignee) {
+      toast({
+        title: 'Assignment requires a user',
+        description: 'Provide a user identifier before assigning the ticket.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setAssigning(true);
     try {
-      const response = await fetch(`/api/admin/review/${quoteId}`);
-      const data = await response.json();
-      setWorkspace(data);
-    } catch (error) {
-      console.error('Failed to load workspace:', error);
+      await assignReviewTicket(item.id, assignee);
+      toast({ title: 'Ticket assigned', description: `Assigned to ${assignee}.` });
+      refetch();
+    } catch (assignError) {
+      const message = assignError instanceof Error ? assignError.message : 'Unable to assign ticket';
+      toast({ title: 'Assignment failed', description: message, variant: 'destructive' });
     } finally {
-      setLoading(false);
+      setAssigning(false);
     }
-  };
+  }, [assigneeInput, item, refetch, toast]);
 
-  const handleSimulatePrice = async () => {
-    try {
-      const response = await fetch(`/api/admin/review/${quoteId}/simulate`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(priceOverrides)
-      });
-      const data = await response.json();
-      setSimulatedPrice(data);
-    } catch (error) {
-      console.error('Failed to simulate price:', error);
-    }
-  };
+  const handleLaneChange = useCallback(
+    async (nextLane: AdminReviewItem['lane']) => {
+      if (!item || nextLane === item.lane) {
+        setLaneValue(item?.lane ?? 'NEW');
+        return;
+      }
 
-  const handleApplyOverrides = async (reason: any) => {
-    try {
-      await fetch(`/api/admin/review/${quoteId}/override`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ overrides: priceOverrides, reason })
-      });
-      loadWorkspace();
-      setSimulatedPrice(null);
-      setPriceOverrides({});
-    } catch (error) {
-      console.error('Failed to apply overrides:', error);
-    }
-  };
+      setUpdatingLane(true);
+      try {
+        await moveReviewTicket(item.id, nextLane);
+        setLaneValue(nextLane);
+        toast({ title: 'Lane updated', description: `Ticket moved to ${nextLane.replace('_', ' ').toLowerCase()}.` });
+        refetch();
+      } catch (moveError) {
+        const message = moveError instanceof Error ? moveError.message : 'Unable to move ticket';
+        toast({ title: 'Lane change failed', description: message, variant: 'destructive' });
+        setLaneValue(item.lane);
+      } finally {
+        setUpdatingLane(false);
+      }
+    },
+    [item, refetch, toast],
+  );
 
-  const handleAcknowledgeFinding = async (findingId: string, note?: string) => {
-    try {
-      await fetch(`/api/admin/review/${quoteId}/dfm/${findingId}/ack`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ note })
-      });
-      loadWorkspace();
-    } catch (error) {
-      console.error('Failed to acknowledge finding:', error);
-    }
-  };
+  const handleAcknowledge = useCallback(
+    async (findingId: string) => {
+      if (!item) {
+        return;
+      }
 
-  const handleRequestChanges = async (request: any) => {
-    try {
-      await fetch(`/api/admin/review/${quoteId}/request-changes`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(request)
-      });
-      setShowRequestChanges(false);
-    } catch (error) {
-      console.error('Failed to request changes:', error);
-    }
-  };
+      setAcknowledgingId(findingId);
+      try {
+        await acknowledgeReviewDfmFinding(item.quoteId, findingId);
+        toast({ title: 'Finding acknowledged', description: 'Marked as reviewed.' });
+        refetch();
+      } catch (ackError) {
+        const message = ackError instanceof Error ? ackError.message : 'Unable to acknowledge finding';
+        toast({ title: 'Action failed', description: message, variant: 'destructive' });
+      } finally {
+        setAcknowledgingId(null);
+      }
+    },
+    [item, refetch, toast],
+  );
 
-  const getSeverityIcon = (severity: string) => {
-    switch (severity) {
-      case 'blocker': return <AlertTriangle className="h-4 w-4 text-red-500" />;
-      case 'warning': return <Clock className="h-4 w-4 text-yellow-500" />;
-      case 'info': return <CheckCircle className="h-4 w-4 text-blue-500" />;
-      default: return null;
-    }
-  };
+  if (!quoteId) {
+    return <div className="p-6 text-sm text-destructive">Quote identifier is required.</div>;
+  }
 
-  const getSeverityColor = (severity: string) => {
-    switch (severity) {
-      case 'blocker': return 'bg-red-100 text-red-800';
-      case 'warning': return 'bg-yellow-100 text-yellow-800';
-      case 'info': return 'bg-blue-100 text-blue-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
-  };
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD'
-    }).format(amount);
-  };
-
-  if (loading) {
+  if (isLoading) {
     return (
-      <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      <div className="flex h-64 items-center justify-center text-muted-foreground">
+        <Loader2 className="mr-2 h-5 w-5 animate-spin" aria-hidden="true" />
+        Loading review workspace…
       </div>
     );
   }
 
-  if (!workspace) {
-    return <div>Failed to load workspace</div>;
+  if (isError || !item || !workspace) {
+    return (
+      <div className="p-6">
+        <Card className="border-destructive/40 bg-destructive/10">
+          <CardHeader className="flex flex-row items-start gap-3">
+            <AlertTriangle className="h-5 w-5 text-destructive" aria-hidden="true" />
+            <div>
+              <CardTitle className="text-base">Unable to load review detail</CardTitle>
+              <p className="text-xs text-destructive/80">{error?.message ?? 'Please try again.'}</p>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <Button type="button" variant="outline" onClick={() => refetch()}>
+              Retry
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Top Bar */}
-      <div className="bg-white border-b px-6 py-4">
-        <div className="flex justify-between items-center">
-          <div className="flex items-center gap-4">
-            <Button variant="ghost" size="sm">
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Queue
+    <RequireAnyRole
+      roles={['admin', 'org_admin', 'reviewer', 'finance']}
+      fallback={<div className="p-6 text-sm text-destructive">Access denied</div>}
+    >
+      <div className="space-y-6 p-6">
+        <header className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex items-center gap-3 text-sm text-muted-foreground">
+            <Button asChild variant="ghost" size="sm" className="px-2">
+              <Link href="/admin/review" className="inline-flex items-center gap-1">
+                <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+                Back to queue
+              </Link>
             </Button>
-            <div>
-              <h1 className="text-xl font-semibold">{workspace.quote.id}</h1>
-              <p className="text-sm text-gray-600">{workspace.quote.org_name}</p>
-            </div>
-            <Badge variant="outline">{workspace.quote.status}</Badge>
+            <span className="text-xs uppercase tracking-wide">Quote</span>
+            <span className="font-medium text-foreground">{quoteNumber}</span>
           </div>
           <div className="flex items-center gap-2">
-            <Select>
-              <SelectTrigger className="w-32">
-                <User className="h-4 w-4 mr-2" />
-                <SelectValue placeholder="Assign" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="user_jane">Jane</SelectItem>
-                <SelectItem value="user_john">John</SelectItem>
-              </SelectContent>
-            </Select>
-            <Button variant="outline" onClick={() => setShowRequestChanges(true)}>
-              Request Changes
-            </Button>
-            <Button>
-              <Send className="h-4 w-4 mr-2" />
-              Approve & Send
+            <Badge variant="outline" className="uppercase">
+              {item.lane.replace('_', ' ')}
+            </Badge>
+            <Badge className={priorityBadgeClasses[item.priority]}>{item.priority}</Badge>
+            <Button type="button" variant="outline" size="sm" onClick={() => refetch()} disabled={isFetching}>
+              <RefreshCw className="mr-2 h-4 w-4" aria-hidden="true" />
+              Refresh
             </Button>
           </div>
-        </div>
-      </div>
+        </header>
 
-      {/* Main Content */}
-      <div className="flex h-[calc(100vh-80px)]">
-        {/* Left Pane */}
-        <div className="flex-1 bg-white border-r">
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full">
-            <div className="border-b px-6 py-2">
-              <TabsList>
-                <TabsTrigger value="parts_pricing">Parts & Pricing</TabsTrigger>
-                <TabsTrigger value="dfm">DFM ({workspace.dfm_results.summary.blockers} blockers)</TabsTrigger>
-                <TabsTrigger value="activity">Activity</TabsTrigger>
-              </TabsList>
-            </div>
-
-            <TabsContent value="parts_pricing" className="p-6 h-full overflow-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Part</TableHead>
-                    <TableHead>Qty</TableHead>
-                    <TableHead>Process</TableHead>
-                    <TableHead>Material</TableHead>
-                    <TableHead>Finish</TableHead>
-                    <TableHead>DFM</TableHead>
-                    <TableHead>Unit Price</TableHead>
-                    <TableHead>Total</TableHead>
-                    <TableHead>Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {workspace.lines.map((line) => (
-                    <TableRow key={line.id}>
-                      <TableCell>{line.part_name}</TableCell>
-                      <TableCell>{line.quantity}</TableCell>
-                      <TableCell>{line.process}</TableCell>
-                      <TableCell>{line.material}</TableCell>
-                      <TableCell>{line.finish}</TableCell>
-                      <TableCell>
-                        <Badge className={line.dfm_status === 'blocker' ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}>
-                          {line.dfm_status}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>{formatCurrency(line.unit_price)}</TableCell>
-                      <TableCell>{formatCurrency(line.total_price)}</TableCell>
-                      <TableCell>
-                        <Button variant="ghost" size="sm">
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </TabsContent>
-
-            <TabsContent value="dfm" className="p-6 h-full overflow-auto">
-              <div className="grid grid-cols-3 gap-6 h-full">
-                {/* DFM Panel */}
-                <div className="space-y-4">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="text-sm">
-                        {workspace.dfm_results.summary.passed}/{workspace.dfm_results.summary.total} passed
-                        • {workspace.dfm_results.summary.warnings} warnings
-                        • {workspace.dfm_results.summary.blockers} blockers
-                      </CardTitle>
-                    </CardHeader>
-                  </Card>
-
-                  <div className="space-y-2">
-                    {workspace.dfm_results.findings.map((finding) => (
-                      <Card
-                        key={finding.id}
-                        className={`cursor-pointer transition-colors ${
-                          selectedFinding?.id === finding.id ? 'ring-2 ring-blue-500' : ''
-                        }`}
-                        onClick={() => setSelectedFinding(finding)}
-                      >
-                        <CardContent className="p-3">
-                          <div className="flex items-start gap-2">
-                            {getSeverityIcon(finding.severity)}
-                            <div className="flex-1">
-                              <div className="flex items-center gap-2 mb-1">
-                                <Badge className={getSeverityColor(finding.severity)}>
-                                  {finding.severity}
-                                </Badge>
-                                <span className="text-xs text-gray-500">{finding.check_id}</span>
-                              </div>
-                              <p className="text-sm">{finding.message}</p>
-                              {!finding.ack && (
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  className="mt-2"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleAcknowledgeFinding(finding.id);
-                                  }}
-                                >
-                                  Acknowledge
-                                </Button>
-                              )}
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-                </div>
-
-                {/* 3D Viewer */}
-                <div className="col-span-2">
-                  <Card className="h-full">
-                    <CardContent className="p-4 h-full flex items-center justify-center">
-                      <div className="text-center text-gray-500">
-                        <FileText className="h-16 w-16 mx-auto mb-4 opacity-50" />
-                        <p>3D Viewer</p>
-                        <p className="text-sm">Model would load here</p>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
-              </div>
-            </TabsContent>
-
-            <TabsContent value="activity" className="p-6">
-              <div className="space-y-4">
-                {/* Activity timeline would go here */}
-                <p className="text-gray-500">Activity timeline coming soon...</p>
-              </div>
-            </TabsContent>
-          </Tabs>
-        </div>
-
-        {/* Right Pane */}
-        <div className="w-96 bg-white border-l p-6 space-y-6 overflow-auto">
-          {/* Pricing Overrides */}
+        <section className="grid gap-4 lg:grid-cols-3">
           <Card>
             <CardHeader>
-              <CardTitle className="text-sm">Pricing Overrides</CardTitle>
+              <CardTitle className="text-sm font-semibold">Customer</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label className="text-xs">Machine Rate ($/hr)</Label>
+            <CardContent className="space-y-2 text-sm">
+              <div>
+                <p className="text-base font-semibold text-foreground">{item.customerName ?? '—'}</p>
+                <p className="text-xs text-muted-foreground">{item.company ?? '—'}</p>
+              </div>
+              <Separator />
+              <div className="flex justify-between text-xs text-muted-foreground">
+                <span>Submitted</span>
+                <span>{formatAbsolute(item.createdAt)}</span>
+              </div>
+              <div className="flex justify-between text-xs text-muted-foreground">
+                <span>Last action</span>
+                <span>{formatAbsolute(item.lastActionAt)}</span>
+              </div>
+              <div className="flex justify-between text-xs text-muted-foreground">
+                <span>Assignee</span>
+                <span>{item.assignee ?? 'Unassigned'}</span>
+              </div>
+              <div className="flex justify-between text-xs text-muted-foreground">
+                <span>DFM findings</span>
+                <span>{item.dfmFindingCount ?? 0}</span>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-sm font-semibold">Financial Snapshot</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span>Line items</span>
+                <span>{item.totalItems}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Total value</span>
+                <span className="font-medium text-foreground">
+                  {formatCurrency(item.totalValue ?? 0, item.currency ?? currency)}
+                </span>
+              </div>
+              <Separator />
+              <div className="space-y-1 text-xs text-muted-foreground">
+                <p>Pricing summary</p>
+                <ul className="space-y-0.5 text-foreground">
+                  <li className="flex justify-between">
+                    <span>Material</span>
+                    <span>{formatCurrency(workspace.pricingSummary.materialCost ?? 0, currency)}</span>
+                  </li>
+                  <li className="flex justify-between">
+                    <span>Machining</span>
+                    <span>{formatCurrency(workspace.pricingSummary.machiningCost ?? 0, currency)}</span>
+                  </li>
+                  <li className="flex justify-between">
+                    <span>Finishing</span>
+                    <span>{formatCurrency(workspace.pricingSummary.finishingCost ?? 0, currency)}</span>
+                  </li>
+                  <li className="flex justify-between font-medium">
+                    <span>Total</span>
+                    <span>{formatCurrency(workspace.pricingSummary.total ?? 0, currency)}</span>
+                  </li>
+                </ul>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-sm font-semibold">Analyst Actions</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4 text-sm">
+              <div className="space-y-1">
+                <Label htmlFor="assignee-input" className="text-xs uppercase tracking-wide text-muted-foreground">
+                  Assign to
+                </Label>
+                <div className="flex items-center gap-2">
                   <Input
-                    type="number"
-                    value={priceOverrides.machine_rate_per_hr || ''}
-                    onChange={(e) => setPriceOverrides({
-                      ...priceOverrides,
-                      machine_rate_per_hr: parseFloat(e.target.value)
-                    })}
+                    id="assignee-input"
+                    value={assigneeInput}
+                    onChange={(event) => setAssigneeInput(event.target.value)}
+                    placeholder="User id or email"
                   />
-                </div>
-                <div>
-                  <Label className="text-xs">Setup Time (min)</Label>
-                  <Input
-                    type="number"
-                    value={priceOverrides.machine_setup_min || ''}
-                    onChange={(e) => setPriceOverrides({
-                      ...priceOverrides,
-                      machine_setup_min: parseFloat(e.target.value)
-                    })}
-                  />
+                  <Button type="button" onClick={handleAssign} disabled={assigning}>
+                    {assigning ? 'Assigning…' : 'Assign'}
+                  </Button>
                 </div>
               </div>
-
-              <div className="flex gap-2">
-                <Button size="sm" variant="outline" onClick={handleSimulatePrice}>
-                  Simulate
-                </Button>
-                <Button size="sm" disabled={!simulatedPrice}>
-                  Apply Overrides
-                </Button>
+              <div className="space-y-1">
+                <Label className="text-xs uppercase tracking-wide text-muted-foreground">Lane</Label>
+                <Select value={laneValue} onValueChange={(value) => handleLaneChange(value as AdminReviewItem['lane'])}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select lane" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {laneOptions.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {updatingLane ? <p className="text-xs text-muted-foreground">Updating lane…</p> : null}
               </div>
+            </CardContent>
+          </Card>
+        </section>
 
-              {simulatedPrice && (
-                <div className="text-xs space-y-1">
-                  <div className="flex justify-between">
-                    <span>Original:</span>
-                    <span>{formatCurrency(simulatedPrice.original.unit_price)}</span>
+        <section className="grid gap-4 lg:grid-cols-2">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle className="text-base font-semibold">DFM Findings</CardTitle>
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <Badge className={severityBadgeClasses.HIGH}>High {dfmStats.high}</Badge>
+                <Badge className={severityBadgeClasses.MED}>Med {dfmStats.med}</Badge>
+                <Badge className={severityBadgeClasses.LOW}>Low {dfmStats.low}</Badge>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-3 text-sm">
+              {workspace.dfm.length === 0 ? (
+                <p className="text-muted-foreground">No outstanding DFM issues for this quote.</p>
+              ) : (
+                workspace.dfm.map((issue) => (
+                  <div key={issue.id} className="rounded border bg-muted/20 p-3">
+                    <div className="flex items-center justify-between">
+                      <Badge className={severityBadgeClasses[issue.severity ?? 'LOW']}>{issue.severity ?? 'LOW'}</Badge>
+                      <span className="text-xs text-muted-foreground">{issue.rule ?? '—'}</span>
+                    </div>
+                    <p className="mt-2 text-sm text-foreground">{issue.message}</p>
+                    <div className="mt-2 flex items-center justify-between text-xs text-muted-foreground">
+                      <span>{issue.partId ? `Part ${issue.partId}` : 'Unmapped part'}</span>
+                      <span>{formatAbsolute(issue.createdAt)}</span>
+                    </div>
+                    <div className="mt-3 text-right">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleAcknowledge(issue.id)}
+                        disabled={acknowledgingId === issue.id}
+                      >
+                        {acknowledgingId === issue.id ? 'Acknowledging…' : 'Mark resolved'}
+                      </Button>
+                    </div>
                   </div>
-                  <div className="flex justify-between font-medium">
-                    <span>Simulated:</span>
-                    <span>{formatCurrency(simulatedPrice.simulated.unit_price)}</span>
-                  </div>
-                  <div className="flex justify-between text-green-600">
-                    <span>Δ:</span>
-                    <span>{formatCurrency(simulatedPrice.diff.unit_price)}</span>
-                  </div>
-                </div>
+                ))
               )}
             </CardContent>
           </Card>
 
-          {/* Totals */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-sm">Totals</CardTitle>
+              <CardTitle className="text-base font-semibold">Activity</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-2 text-sm">
-              <div className="flex justify-between">
-                <span>Subtotal</span>
-                <span>{formatCurrency(workspace.pricing.subtotal)}</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Taxes (est.)</span>
-                <span>{formatCurrency(workspace.pricing.taxes)}</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Shipping (est.)</span>
-                <span>{formatCurrency(workspace.pricing.shipping)}</span>
-              </div>
-              <div className="flex justify-between font-medium border-t pt-2">
-                <span>Grand Total</span>
-                <span>{formatCurrency(workspace.pricing.total)}</span>
-              </div>
+            <CardContent className="space-y-3 text-sm">
+              {workspace.activity.length === 0 ? (
+                <p className="text-muted-foreground">No activity recorded yet.</p>
+              ) : (
+                workspace.activity.map((event) => (
+                  <div key={event.id} className="rounded border bg-muted/20 p-3">
+                    <div className="flex items-center justify-between text-xs text-muted-foreground">
+                      <span>{event.actor ?? 'System'}</span>
+                      <span>{formatAbsolute(event.at)}</span>
+                    </div>
+                    <p className="mt-1 font-medium text-foreground">{event.action.replace('_', ' ')}</p>
+                    {event.meta ? (
+                      <pre className="mt-2 overflow-x-auto rounded bg-background p-2 text-[11px] text-muted-foreground">
+                        {JSON.stringify(event.meta, null, 2)}
+                      </pre>
+                    ) : null}
+                  </div>
+                ))
+              )}
             </CardContent>
           </Card>
-        </div>
-      </div>
+        </section>
 
-      {/* Request Changes Modal */}
-      <Dialog open={showRequestChanges} onOpenChange={setShowRequestChanges}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Request Changes</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label>To</Label>
-              <Select>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select recipient" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="customer">Customer</SelectItem>
-                  <SelectItem value="org_admin">Org Admin</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label>Message</Label>
-              <Textarea placeholder="Describe the required changes..." />
-            </div>
-            <div className="flex gap-2">
-              <Button onClick={() => handleRequestChanges({})}>
-                Send Request
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-    </div>
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base font-semibold">Notes</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3 text-sm">
+            {workspace.notes.length === 0 ? (
+              <p className="text-muted-foreground">No analyst notes captured for this ticket.</p>
+            ) : (
+              workspace.notes.map((note) => (
+                <div key={note.id} className="rounded border bg-muted/10 p-3">
+                  <div className="flex items-center justify-between text-xs text-muted-foreground">
+                    <span>{note.author ?? 'Analyst'}</span>
+                    <span>{formatAbsolute(note.at)}</span>
+                  </div>
+                  <p className="mt-1 text-sm text-foreground">{note.text ?? '—'}</p>
+                </div>
+              ))
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    </RequireAnyRole>
   );
+}
+
+function formatCurrency(value: number, currencyCode: string): string {
+  try {
+    return new Intl.NumberFormat(undefined, {
+      style: 'currency',
+      currency: currencyCode,
+      maximumFractionDigits: 2,
+    }).format(value);
+  } catch {
+    return value.toFixed(2);
+  }
+}
+
+function formatAbsolute(value: string | null | undefined): string {
+  if (!value) {
+    return '—';
+  }
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+  return date.toLocaleString();
 }

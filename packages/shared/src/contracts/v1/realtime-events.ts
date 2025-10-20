@@ -1,5 +1,6 @@
 // Realtime websocket event contracts (v1)
 // These events power live updates for pricing, geometry, and DFM.
+import type { QuoteComplianceSnapshotV1 } from './pricing-compliance';
 
 export type RealtimeEventKindV1 =
   | 'pricing:update'
@@ -60,6 +61,7 @@ export interface PricingMatrixRowPatchV1 {
   }>;
   status?: 'pending' | 'ready' | 'error' | 'optimistic';
   error_message?: string;
+  compliance?: QuoteComplianceSnapshotV1 | null;
 }
 
 export interface PricingUpdatePayloadV1 {

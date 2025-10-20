@@ -21,87 +21,22 @@ import {
   CubeIcon,
   PaintBrushIcon
 } from '@heroicons/react/24/outline';
+import type { AdminPricingConfig as PricingConfig } from '@cnc-quote/shared';
 
-interface PricingConfig {
-  version: string;
-  machines: Record<string, MachineConfig>;
-  materials: Record<string, MaterialConfig>;
-  finishes: Record<string, FinishConfig>;
-  tolerance_packs: Record<string, TolerancePackConfig>;
-  inspection: InspectionConfig;
-  speed_region: Record<string, Record<string, SpeedRegionConfig>>;
-  risk_matrix: Record<string, RiskConfig>;
-  overhead_margin: OverheadMarginConfig;
-}
-
-interface MachineConfig {
-  axes: number;
-  envelope: { x: number; y: number; z: number };
-  hourly_rate: number;
-  setup_rate: number;
-  min_setup_min: number;
-  feed_rate_map: Record<string, number>;
-  rapid_rate: number;
-  toolchange_s: number;
-  region: string;
-  capacity: number;
-}
-
-interface MaterialConfig {
-  grade: string;
-  density_kg_m3: number;
-  buy_price: number;
-  stock_forms: string[];
-  waste_factor_percent: number;
-  finish_compat: string[];
-  min_wall_mm: number;
-  min_hole_mm: number;
-  machinability: number;
-}
-
-interface FinishConfig {
-  model: 'per_area' | 'per_part' | 'tiered';
-  rate: number;
-  min_lot: number;
-  capacity_dims: { max_area: number };
-  leadtime_add: number;
-  region_allowed: string[];
-}
-
-interface TolerancePackConfig {
-  cycle_time_multiplier: number;
-  surface_default: number;
-  inspection_requirements: string;
-}
-
-interface InspectionConfig {
-  base_usd: number;
-  per_dim_usd: number;
-  program_min: number;
-}
-
-interface SpeedRegionConfig {
-  multiplier: number;
-  leadtime_days: number;
-}
-
-interface RiskConfig {
-  time_multiplier: number;
-  risk_percent?: number;
-  risk_flat?: number;
-}
-
-interface OverheadMarginConfig {
-  overhead_percent: number;
-  target_margin_percent: number;
-}
+type PricingConfigMeta = {
+  status: 'draft' | 'published' | 'default';
+  updated_at?: string;
+  published_at?: string;
+};
 
 export default function AdminPricingPage() {
   const [config, setConfig] = useState<PricingConfig | null>(null);
+  const [meta, setMeta] = useState<PricingConfigMeta | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
     loadPricingConfig();
@@ -110,80 +45,34 @@ export default function AdminPricingPage() {
   const loadPricingConfig = async () => {
     try {
       setIsLoading(true);
+      setLoadError(null);
       const response = await fetch('/api/admin/pricing/config');
-      if (response.ok) {
-        const data = await response.json();
-        setConfig(data);
+      if (!response.ok) {
+        throw new Error(`Failed to load pricing config (${response.status})`);
+      }
+
+      const payload = await response.json();
+      const nextConfig: PricingConfig = payload?.config ?? payload;
+      setConfig(nextConfig);
+
+      const nextMeta: PricingConfigMeta = {
+        status: payload?.status ?? payload?.meta?.status ?? 'draft',
+        updated_at: payload?.updated_at ?? payload?.meta?.updated_at,
+        published_at: payload?.published_at ?? payload?.meta?.published_at,
+      };
+      setMeta(nextMeta);
+      setHasChanges(false);
+      if (nextMeta.updated_at) {
+        setLastSaved(new Date(nextMeta.updated_at));
       } else {
-        // Use mock data if API doesn't exist yet
-        setConfig({
-          version: 'v1.2.3',
-          machines: {
-            '3-axis-milling': {
-              axes: 3,
-              envelope: { x: 1200, y: 800, z: 600 },
-              hourly_rate: 75,
-              setup_rate: 85,
-              min_setup_min: 30,
-              feed_rate_map: { aluminum: 800, steel: 400, plastic: 1200 },
-              rapid_rate: 2000,
-              toolchange_s: 15,
-              region: 'USA',
-              capacity: 0.85
-            }
-          },
-          materials: {
-            'Aluminum 6061': {
-              grade: '6061',
-              density_kg_m3: 2700,
-              buy_price: 2.50,
-              stock_forms: ['plate', 'bar', 'extrusion'],
-              waste_factor_percent: 15,
-              finish_compat: ['anodize', 'powder_coat', 'polish'],
-              min_wall_mm: 1.5,
-              min_hole_mm: 3.0,
-              machinability: 0.8
-            }
-          },
-          finishes: {
-            'Anodized Clear': {
-              model: 'per_area',
-              rate: 0.15,
-              min_lot: 10,
-              capacity_dims: { max_area: 10000 },
-              leadtime_add: 2,
-              region_allowed: ['USA', 'International']
-            }
-          },
-          tolerance_packs: {
-            'Std': { cycle_time_multiplier: 1.0, surface_default: 125, inspection_requirements: 'basic' },
-            'Tight': { cycle_time_multiplier: 1.3, surface_default: 63, inspection_requirements: 'formal' },
-            'Critical': { cycle_time_multiplier: 1.8, surface_default: 32, inspection_requirements: 'cmm' }
-          },
-          inspection: {
-            base_usd: 25,
-            per_dim_usd: 5,
-            program_min: 30
-          },
-          speed_region: {
-            'USA': {
-              'Economy': { multiplier: 0.7, leadtime_days: 7 },
-              'Standard': { multiplier: 1.0, leadtime_days: 4 },
-              'Expedite': { multiplier: 1.4, leadtime_days: 3 }
-            }
-          },
-          risk_matrix: {
-            'thin_wall': { time_multiplier: 1.2, risk_percent: 5 },
-            'undercut': { time_multiplier: 1.5, risk_flat: 50 }
-          },
-          overhead_margin: {
-            overhead_percent: 25,
-            target_margin_percent: 35
-          }
-        });
+        setLastSaved(null);
       }
     } catch (error) {
       console.error('Failed to load pricing config:', error);
+      setLoadError((error as Error).message);
+      setConfig(null);
+      setMeta(null);
+      setLastSaved(null);
     } finally {
       setIsLoading(false);
     }
@@ -200,8 +89,24 @@ export default function AdminPricingPage() {
         body: JSON.stringify(config)
       });
 
-      if (response.ok) {
-        setHasChanges(false);
+      if (!response.ok) {
+        throw new Error(`Failed to save pricing config (${response.status})`);
+      }
+
+      const payload = await response.json();
+      const nextConfig: PricingConfig = payload?.config ?? config;
+      const nextMeta: PricingConfigMeta = {
+        status: payload?.status ?? payload?.meta?.status ?? meta?.status ?? 'draft',
+        updated_at: payload?.updated_at ?? payload?.meta?.updated_at,
+        published_at: payload?.published_at ?? payload?.meta?.published_at ?? meta?.published_at,
+      };
+
+      setConfig(nextConfig);
+      setMeta(nextMeta);
+      setHasChanges(false);
+      if (nextMeta.updated_at) {
+        setLastSaved(new Date(nextMeta.updated_at));
+      } else {
         setLastSaved(new Date());
       }
     } catch (error) {
@@ -222,10 +127,24 @@ export default function AdminPricingPage() {
         body: JSON.stringify({ config })
       });
 
-      if (response.ok) {
-        const result = await response.json();
-        setConfig(prev => prev ? { ...prev, version: result.newVersion } : null);
-        setHasChanges(false);
+      if (!response.ok) {
+        throw new Error(`Failed to publish pricing config (${response.status})`);
+      }
+
+      const payload = await response.json();
+      const nextConfig: PricingConfig = payload?.config ?? config;
+      const nextMeta: PricingConfigMeta = {
+        status: payload?.status ?? payload?.meta?.status ?? 'published',
+        updated_at: payload?.updated_at ?? payload?.meta?.updated_at,
+        published_at: payload?.published_at ?? payload?.meta?.published_at,
+      };
+
+      setConfig(nextConfig);
+      setMeta(nextMeta);
+      setHasChanges(false);
+      if (nextMeta.updated_at || nextMeta.published_at) {
+        setLastSaved(new Date(nextMeta.updated_at ?? nextMeta.published_at!));
+      } else {
         setLastSaved(new Date());
       }
     } catch (error) {
@@ -251,6 +170,16 @@ export default function AdminPricingPage() {
       return newConfig;
     });
     setHasChanges(true);
+    setMeta(prev => {
+      if (!prev) {
+        return { status: 'draft' };
+      }
+      if (prev.status === 'draft') {
+        return { ...prev, updated_at: undefined };
+      }
+      return { status: 'draft', published_at: prev.published_at };
+    });
+    setLastSaved(null);
   };
 
   if (isLoading) {
@@ -264,7 +193,22 @@ export default function AdminPricingPage() {
     );
   }
 
-  if (!config) return null;
+  if (!config) {
+    return (
+      <RequireAnyRole roles={['admin','org_admin','finance']} fallback={<div className="p-6 text-sm text-red-600">Access denied</div>}>
+        <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+          <div className="text-center space-y-4">
+            <CogIcon className="w-8 h-8 text-gray-400 mx-auto" />
+            <p className="text-gray-600">Unable to load pricing configuration.</p>
+            {loadError && <p className="text-sm text-red-600">{loadError}</p>}
+            <Button onClick={loadPricingConfig} variant="outline">
+              Retry
+            </Button>
+          </div>
+        </div>
+      </RequireAnyRole>
+    );
+  }
 
   return (
     <RequireAnyRole roles={['admin','org_admin','finance']} fallback={<div className="p-6 text-sm text-red-600">Access denied</div>}>
@@ -281,6 +225,21 @@ export default function AdminPricingPage() {
               </div>
             </div>
             <div className="flex items-center space-x-4">
+              {meta && (
+                <Badge
+                  variant={meta.status === 'published' ? 'default' : 'outline'}
+                  className={meta.status === 'published' ? 'bg-green-600 text-white' : ''}
+                >
+                  {meta.status === 'default'
+                    ? 'System Default'
+                    : `${meta.status.charAt(0).toUpperCase()}${meta.status.slice(1)}`}
+                </Badge>
+              )}
+              {meta?.published_at && meta.status === 'published' && (
+                <span className="text-xs text-gray-500">
+                  Published {new Date(meta.published_at).toLocaleString()}
+                </span>
+              )}
               {lastSaved && (
                 <span className="text-sm text-gray-500">
                   Last saved: {lastSaved.toLocaleTimeString()}

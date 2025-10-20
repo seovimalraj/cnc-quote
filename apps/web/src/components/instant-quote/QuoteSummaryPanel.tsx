@@ -2,6 +2,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { usePricingStore } from '../../store/pricingStore';
 import { useQuotePreview } from '../../hooks/useQuotePreview';
+import { ComplianceBadge } from './ComplianceBadge';
+import { collectComplianceAlerts } from '../../lib/compliance';
 
 interface PreviewablePart { id: string; config_json?: any; file_id?: string }
 interface QuoteSummaryPanelProps { parts: PreviewablePart[] }
@@ -11,6 +13,30 @@ export function QuoteSummaryPanel({ parts }: Readonly<QuoteSummaryPanelProps>) {
   const { preview, loading: previewLoading, error: previewError, trigger } = useQuotePreview({ debounceMs: 500, enabled: true });
   const [previewMode, setPreviewMode] = useState(false);
   const [selectedTierByPart, setSelectedTierByPart] = useState<Record<string, 'standard' | 'expedited'>>({});
+  const partLabelById = useMemo(() => {
+    const map: Record<string, string> = {};
+    for (const part of parts) {
+      map[part.id] = part.file_id || part.id;
+    }
+    return map;
+  }, [parts]);
+  type CollectedAlert = ReturnType<typeof collectComplianceAlerts>[number];
+  const complianceAlerts = useMemo(() => {
+    const aggregated: CollectedAlert[] = [];
+    for (const part of parts) {
+      const pricing = pricingItems[part.id];
+      if (!pricing) continue;
+      aggregated.push(
+        ...collectComplianceAlerts({
+          partId: part.id,
+          rows: pricing.rows.map(row => ({ quantity: row.quantity, compliance: row.compliance })),
+        }),
+      );
+    }
+    return aggregated.sort((a, b) => b.rank - a.rank);
+  }, [parts, pricingItems]);
+  const criticalCount = useMemo(() => complianceAlerts.filter(a => a.alert.severity === 'critical').length, [complianceAlerts]);
+  const warningCount = useMemo(() => complianceAlerts.filter(a => a.alert.severity === 'warning').length, [complianceAlerts]);
 
   const subtotal = useMemo(() => {
     return parts.reduce((acc, part) => {
@@ -78,6 +104,28 @@ export function QuoteSummaryPanel({ parts }: Readonly<QuoteSummaryPanelProps>) {
         <h2 className="text-xs font-semibold tracking-wide text-gray-500 mb-3">QUOTE SUMMARY</h2>
         <div className="flex justify-between text-xs mb-1"><span>Parts</span><span>{parts.length}</span></div>
         <div className="flex justify-between text-xs mb-1" data-test="subtotal"><span>Subtotal</span><span>{subtotal > 0 ? subtotal.toLocaleString(undefined, { style: 'currency', currency: 'USD' }) : '$--.--'}</span></div>
+        {complianceAlerts.length > 0 && (
+          <div className="mt-2 rounded border border-amber-200 bg-amber-50 p-3 text-[11px] text-amber-900 dark:border-amber-700 dark:bg-amber-900/20 dark:text-amber-100" data-test="compliance-summary">
+            <div className="flex items-start justify-between gap-2">
+              <span className="font-semibold uppercase tracking-wide">Compliance Alerts</span>
+              <span className="text-[10px] font-medium">{criticalCount} critical / {warningCount} warning</span>
+            </div>
+            <ul className="mt-2 space-y-1">
+              {complianceAlerts.slice(0, 4).map((entry, idx) => (
+                <li key={`${entry.partId}-${entry.quantity}-${entry.alert.code}-${idx}`} className="rounded border border-amber-200/70 bg-white/60 p-2 text-[10px] dark:border-amber-800/60 dark:bg-amber-900/10">
+                  <div className="flex items-center justify-between gap-2">
+                    <ComplianceBadge alert={entry.alert} size="xs" />
+                    <span className="text-[9px] text-amber-800 dark:text-amber-200">{partLabelById[entry.partId] || entry.partId} - qty {entry.quantity}</span>
+                  </div>
+                  <p className="mt-1 text-[10px] leading-tight text-amber-900 dark:text-amber-100">{entry.alert.message}</p>
+                </li>
+              ))}
+            </ul>
+            {complianceAlerts.length > 4 && (
+              <div className="mt-1 text-[9px] text-amber-800/80 dark:text-amber-200/80">{complianceAlerts.length - 4} additional alerts not shown.</div>
+            )}
+          </div>
+        )}
         {previewMode && (
           <div className="flex justify-between text-[10px] mb-1 text-blue-600 transition-opacity duration-300" data-test="preview-subtotal" style={{opacity: previewLoading ? 0.6 : 1}}>
             <span className="flex items-center gap-1">Preview {previewLoading && <span className="inline-block h-2 w-2 rounded-full bg-blue-500 animate-pulse" aria-label="loading" />}</span>

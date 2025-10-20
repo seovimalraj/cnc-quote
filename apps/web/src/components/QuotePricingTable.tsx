@@ -2,6 +2,7 @@
 import React, { useEffect, useMemo, useRef } from 'react';
 import { usePricingStore } from '../store/pricingStore';
 import clsx from 'clsx';
+import { ComplianceBadge } from './instant-quote/ComplianceBadge';
 
 interface Props {
   quoteItemId: string;
@@ -84,7 +85,14 @@ export const QuotePricingTable: React.FC<Props> = ({ quoteItemId, currency = 'US
                 <td className="p-2 text-right tabular-nums">{r.unit_price !== undefined ? formatMoney(r.unit_price, currency) : '—'}</td>
                 <td className="p-2 text-right tabular-nums">{r.total_price !== undefined ? formatMoney(r.total_price, currency) : '—'}</td>
                 <td className="p-2 text-right">{r.lead_time_days ?? '—'}</td>
-                <td className="p-2">{optimistic ? 'optimistic' : (r.status || 'ready')}</td>
+                <td className="p-2">
+                  <div className="flex items-center gap-2">
+                    <span>{optimistic ? 'optimistic' : (r.status || 'ready')}</span>
+                    {r.compliance?.alerts?.length ? (
+                      <ComplianceBadge snapshot={r.compliance} size="xs" />
+                    ) : null}
+                  </div>
+                </td>
               </tr>
             );
           })}

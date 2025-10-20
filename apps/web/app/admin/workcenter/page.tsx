@@ -127,6 +127,11 @@ export default function WorkcenterDashboardPage() {
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [lastRefresh, setLastRefresh] = useState(new Date());
+  const [aiInsight, setAiInsight] = useState('');
+  const [aiSuggestions, setAiSuggestions] = useState<string[]>([]);
+  const [aiGeneratedAt, setAiGeneratedAt] = useState<Date | null>(null);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
 
   const {
     data: reviewSummary,
@@ -285,6 +290,38 @@ export default function WorkcenterDashboardPage() {
       .filter((value): value is number => value !== null && Number.isFinite(value));
   }, [dbLatencySnapshot]);
 
+  const aiPayload = useMemo(() => {
+    return {
+      window: timeRange,
+      review: {
+        count: openReviews.count,
+        new_count: openReviews.new_count,
+        aging_count: openReviews.aging_count,
+        breached_count: openReviews.breached_count,
+      },
+      queues: {
+        queues: (queueSnapshot.queues ?? []).slice(0, 5),
+      },
+      webhooks: {
+        items: (webhookSnapshot.items ?? []).slice(0, 5),
+      },
+      slo: {
+        first_price_p95_ms: sloSnapshot.first_price_p95_ms,
+        cad_p95_ms: sloSnapshot.cad_p95_ms,
+        oldest_job_age_sec: sloSnapshot.oldest_job_age_sec,
+      },
+      db: {
+        read_p95_ms: dbLatencySnapshot.read_p95_ms,
+        write_p95_ms: dbLatencySnapshot.write_p95_ms,
+        error_rate_pct: dbLatencySnapshot.error_rate_pct,
+      },
+      errors: {
+        failed_jobs: (errors.failed_jobs ?? []).slice(0, 5),
+        sentry: (errors.sentry ?? []).slice(0, 5),
+      },
+    };
+  }, [timeRange, openReviews, queueSnapshot, webhookSnapshot, sloSnapshot, dbLatencySnapshot, errors]);
+
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);
     trackEvent('workcenter_refresh');
@@ -382,6 +419,40 @@ export default function WorkcenterDashboardPage() {
       });
     }
   }, [mutateErrorSnapshot, mutateQueueStatus]);
+
+  const handleGenerateInsights = useCallback(async () => {
+    setAiLoading(true);
+    setAiError(null);
+    setAiSuggestions([]);
+    trackEvent('workcenter_ai_insight_request', { window: timeRange });
+
+    try {
+      const response = await fetch('/api/admin/ai/operations-insight', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(aiPayload),
+      });
+
+      if (!response.ok) {
+        throw new Error(`AI insight request failed (${response.status})`);
+      }
+
+      const json = await response.json();
+      const insight = json?.data?.response ?? json?.response ?? '';
+      const suggestions = Array.isArray(json?.data?.suggestions) ? json.data.suggestions : [];
+
+      setAiInsight(insight);
+      setAiSuggestions(suggestions);
+      setAiGeneratedAt(new Date());
+      trackEvent('workcenter_ai_insight_success', { window: timeRange });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'unknown error';
+      setAiError(message);
+      trackEvent('workcenter_ai_insight_error', { window: timeRange, message });
+    } finally {
+      setAiLoading(false);
+    }
+  }, [aiPayload, timeRange]);
 
   useEffect(() => {
     const timestamps = [
@@ -496,6 +567,57 @@ export default function WorkcenterDashboardPage() {
             </AlertDescription>
           </Alert>
         )}
+
+        <Card className="mb-6">
+          <CardHeader className="pb-3 flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+            <div>
+              <CardTitle className="text-lg flex items-center gap-2">
+                AI Operations Insight
+                <Badge variant="outline" className="uppercase tracking-wide text-[10px]">llama</Badge>
+              </CardTitle>
+              <p className="text-sm text-gray-600">Summarize current queues, SLOs, and errors with LLaMA to surface fast actions.</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button onClick={handleGenerateInsights} disabled={aiLoading} size="sm">
+                {aiLoading ? (
+                  <ArrowPathIcon className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  <PlayIcon className="w-4 h-4 mr-2" />
+                )}
+                {aiLoading ? 'Generating' : 'Generate Insight'}
+              </Button>
+              {aiGeneratedAt ? (
+                <span className="text-xs text-gray-500">Last generated {aiGeneratedAt.toLocaleTimeString()}</span>
+              ) : null}
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-3 text-sm">
+            {aiError ? (
+              <div className="rounded border border-red-200 bg-red-50 p-3 text-red-700">
+                Failed to retrieve insight: {aiError}
+              </div>
+            ) : null}
+            {aiInsight ? (
+              <div className="prose prose-sm max-w-none text-gray-800 dark:text-gray-200">
+                {aiInsight.split('\n').map((line, idx) => (
+                  <p key={idx} className="whitespace-pre-wrap last:mb-0">{line}</p>
+                ))}
+              </div>
+            ) : (
+              <p className="text-gray-500">Trigger an insight run to get prioritized remediation guidance for the current window.</p>
+            )}
+            {aiSuggestions.length ? (
+              <div className="border rounded-md p-3 bg-slate-50">
+                <p className="text-xs uppercase text-gray-500 font-semibold mb-2">Suggested follow-ups</p>
+                <ul className="list-disc ml-5 space-y-1 text-gray-700">
+                  {aiSuggestions.map((item) => (
+                    <li key={item}>{item}</li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+          </CardContent>
+        </Card>
 
         {/* Row 1: Open Reviews, Queue Depth, DB Latency, Webhook Status */}
         <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-4 gap-6 mb-6">

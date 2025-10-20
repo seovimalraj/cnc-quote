@@ -7,9 +7,14 @@ import { ToleranceMultiplierFactor } from './factors/post_cost/tolerance-multipl
 import { OverheadFactor } from './factors/post_cost/overhead';
 import { RiskMarkupFactor } from './factors/post_cost/risk-markup';
 import { MarginFactor } from './factors/price/margin';
+import type { AdminPricingConfig } from '@cnc-quote/shared';
 
-export function buildDefaultOrchestrator() {
-  const orchestrator = new PricingOrchestrator();
+export interface BuildOrchestratorOptions {
+  config?: AdminPricingConfig;
+}
+
+export function buildDefaultOrchestrator(options: BuildOrchestratorOptions = {}) {
+  const orchestrator = new PricingOrchestrator(undefined, options.config);
   orchestrator.register(SetupTimeFactor);
   orchestrator.register(MachineTimeFactor);
   orchestrator.register(MaterialCostFactor);

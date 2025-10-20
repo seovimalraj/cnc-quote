@@ -1,31 +1,19 @@
 'use client'
 
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react'
+import { ContractsVNext } from '@cnc-quote/shared'
 
-interface AbandonedQuote {
-  id: string
-  organization_id: string
-  buyer_name: string
-  buyer_email: string
-  last_activity: string
-  stage: 'Before Upload' | 'After Upload' | 'After CAD' | 'After First Price' | 'After Lead Select' | 'Checkout Abandon'
-  subtotal: number
-  files_count: number
-  dfm_blockers_count: number
-  promo_tried: boolean
-  assignee_id: string | null
-  created_at: string
-}
+import {
+  assignAbandonedQuote,
+  fetchAbandonedQuotes,
+  fetchAbandonedTimeline,
+  sendAbandonedQuoteReminder,
+  updateQuoteLifecycleStatus,
+  type AbandonedQuoteFilters,
+} from '@/lib/admin/api'
 
-interface ActivityEvent {
-  id: string
-  quote_id: string
-  user_id: string
-  actor_role: 'buyer' | 'org_admin' | 'guest'
-  name: string
-  ts: string
-  props: Record<string, any>
-}
+type AbandonedQuote = ContractsVNext.AbandonedQuoteVNext
+type ActivityEvent = ContractsVNext.QuoteTimelineEventVNext
 
 interface AbandonedQuotesContextType {
   quotes: AbandonedQuote[]
@@ -66,19 +54,15 @@ export function AbandonedQuotesProvider({ children }: AbandonedQuotesProviderPro
       setIsLoading(true)
       setError(null)
 
-      const queryParams = new URLSearchParams()
-      if (filters.age) queryParams.set('age', filters.age)
-      if (filters.value_band) queryParams.set('value_band', filters.value_band)
-      if (filters.dropoff_stage) queryParams.set('stage', filters.dropoff_stage)
-      if (filters.search) queryParams.set('search', filters.search)
-
-      const response = await fetch(`/api/admin/abandoned?${queryParams}`)
-      if (!response.ok) {
-        throw new Error('Failed to fetch abandoned quotes')
+      const requestFilters: AbandonedQuoteFilters = {
+        age: filters.age,
+        value_band: filters.value_band,
+        stage: filters.dropoff_stage,
+        search: filters.search,
       }
 
-      const data = await response.json()
-      setQuotes(data.quotes || [])
+      const payload = await fetchAbandonedQuotes(requestFilters)
+      setQuotes(payload.quotes ?? [])
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred')
     } finally {
@@ -88,13 +72,8 @@ export function AbandonedQuotesProvider({ children }: AbandonedQuotesProviderPro
 
   const fetchTimeline = async (quoteId: string) => {
     try {
-      const response = await fetch(`/api/admin/abandoned/${quoteId}/timeline`)
-      if (!response.ok) {
-        throw new Error('Failed to fetch timeline')
-      }
-
-      const data = await response.json()
-      setTimeline(data.events || [])
+      const payload = await fetchAbandonedTimeline(quoteId)
+      setTimeline(payload.events ?? [])
     } catch (err) {
       console.error('Error fetching timeline:', err)
     }
@@ -114,69 +93,18 @@ export function AbandonedQuotesProvider({ children }: AbandonedQuotesProviderPro
   }
 
   const sendReminder = async (quoteId: string) => {
-    try {
-      const response = await fetch(`/api/admin/abandoned/${quoteId}/remind`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          template: 'resume_quote',
-          channel: 'email'
-        }),
-      })
-
-      if (!response.ok) {
-        throw new Error('Failed to send reminder')
-      }
-
-      // Refresh quotes to update the list
-      await fetchQuotes()
-    } catch (err) {
-      throw err
-    }
+    await sendAbandonedQuoteReminder(quoteId)
+    await fetchQuotes()
   }
 
   const assignQuote = async (quoteId: string, userId: string) => {
-    try {
-      const response = await fetch(`/api/admin/abandoned/${quoteId}/assign`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ user_id: userId }),
-      })
-
-      if (!response.ok) {
-        throw new Error('Failed to assign quote')
-      }
-
-      // Refresh quotes to update the list
-      await fetchQuotes()
-    } catch (err) {
-      throw err
-    }
+    await assignAbandonedQuote(quoteId, userId)
+    await fetchQuotes()
   }
 
   const convertToManualReview = async (quoteId: string) => {
-    try {
-      const response = await fetch(`/api/quotes/${quoteId}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ status: 'Needs_Review' }),
-      })
-
-      if (!response.ok) {
-        throw new Error('Failed to convert to manual review')
-      }
-
-      // Refresh quotes to update the list
-      await fetchQuotes()
-    } catch (err) {
-      throw err
-    }
+    await updateQuoteLifecycleStatus(quoteId, 'Needs_Review')
+    await fetchQuotes()
   }
 
   const refreshQuotes = async () => {

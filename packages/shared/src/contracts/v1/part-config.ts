@@ -1,5 +1,6 @@
 // Versioned contract: PartConfig (v1)
 // This file defines the canonical shape for a configurable quote part used in instant quoting.
+import type { QuoteComplianceSnapshotV1 } from './pricing-compliance';
 
 export type ProcessType =
   | 'cnc_milling'
@@ -74,6 +75,7 @@ export interface QuantityPricePointV1 {
   lead_time_days: number;
   breakdown: PricingBreakdownV1;
   status?: 'ready' | 'pending' | 'review_required';
+  compliance?: QuoteComplianceSnapshotV1;
 }
 
 export interface DfmIssueV1 {

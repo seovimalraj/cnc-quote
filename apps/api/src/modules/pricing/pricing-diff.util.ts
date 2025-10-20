@@ -6,6 +6,7 @@ export interface PricingRowLike {
   total_price: number;
   lead_time_days: number;
   breakdown?: any;
+  compliance?: ContractsV1.QuoteComplianceSnapshotV1 | null;
 }
 
 /**
@@ -25,7 +26,8 @@ export function diffPricingMatrix(prev: PricingRowLike[], next: PricingRowLike[]
         total_price: row.total_price,
         lead_time_days: row.lead_time_days,
         breakdown: row.breakdown,
-        status: 'ready'
+        status: 'ready',
+        compliance: row.compliance ?? null,
       });
       continue;
     }
@@ -33,7 +35,8 @@ export function diffPricingMatrix(prev: PricingRowLike[], next: PricingRowLike[]
       old.unit_price !== row.unit_price ||
       old.total_price !== row.total_price ||
       old.lead_time_days !== row.lead_time_days ||
-      JSON.stringify(old.breakdown) !== JSON.stringify(row.breakdown)
+      JSON.stringify(old.breakdown) !== JSON.stringify(row.breakdown) ||
+      JSON.stringify(old.compliance) !== JSON.stringify(row.compliance)
     ) {
       patches.push({
         quantity: row.quantity,
@@ -41,7 +44,8 @@ export function diffPricingMatrix(prev: PricingRowLike[], next: PricingRowLike[]
         total_price: row.total_price,
         lead_time_days: row.lead_time_days,
         breakdown: row.breakdown,
-        status: 'ready'
+        status: 'ready',
+        compliance: row.compliance ?? null,
       });
     }
   }

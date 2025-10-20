@@ -26,14 +26,14 @@ const columns: Array<{
   readonly sortable?: boolean;
   readonly align?: "left" | "right";
 }> = [
-  { id: "quoteNo", label: "Quote #", sortable: true },
+  { id: "quoteNumber", label: "Quote #" },
   { id: "customer", label: "Customer" },
   { id: "createdAt", label: "Submitted", sortable: true },
   { id: "lane", label: "Lane" },
-  { id: "priority", label: "Priority" },
+  { id: "priority", label: "Priority", sortable: true },
   { id: "totalValue", label: "Total", sortable: true, align: "right" },
   { id: "assignee", label: "Assignee" },
-  { id: "dfmFindingCount", label: "DFM Findings", align: "right" }
+  { id: "dfmFindingCount", label: "DFM Findings", align: "right", sortable: true }
 ];
 
 function classes(...values: Array<string | false | null | undefined>) {
@@ -50,7 +50,7 @@ export default function AdminReviewTable({
   className,
   ...rest
 }: Props) {
-  const hasMore = Boolean(meta?.nextCursor);
+  const hasMore = Boolean(meta?.nextCursor && onLoadMore);
 
   const sortState = useMemo(() => ({
     column: currentSort?.sort,
@@ -109,8 +109,8 @@ export default function AdminReviewTable({
           {rows.map((row) => (
             <tr key={row.id} className="border-t bg-background">
               <td className="px-4 py-3 font-medium">
-                <Link href={`/admin/review/${row.quoteNo}`} className="underline-offset-2 hover:underline">
-                  {row.quoteNo}
+                <Link href={`/admin/review/${row.quoteId}`} className="underline-offset-2 hover:underline">
+                  {row.quoteNumber ?? row.quoteNo ?? row.quoteId}
                 </Link>
               </td>
               <td className="px-4 py-3">
@@ -125,10 +125,13 @@ export default function AdminReviewTable({
               <td className="px-4 py-3">{row.lane}</td>
               <td className="px-4 py-3">{row.priority}</td>
               <td className="px-4 py-3 text-right">
-                {Intl.NumberFormat(undefined, { style: "currency", currency: row.currency }).format(row.totalValue)}
+                {Intl.NumberFormat(undefined, {
+                  style: "currency",
+                  currency: row.currency ?? "USD",
+                }).format(row.totalValue ?? 0)}
               </td>
               <td className="px-4 py-3">{row.assignee ?? "Unassigned"}</td>
-              <td className="px-4 py-3 text-right">{row.dfmFindingCount}</td>
+              <td className="px-4 py-3 text-right">{row.dfmFindingCount ?? 0}</td>
             </tr>
           ))}
         </tbody>

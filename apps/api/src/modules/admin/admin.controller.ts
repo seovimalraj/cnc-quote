@@ -46,6 +46,12 @@ export class AdminController {
     return this.adminService.getErrors(window);
   }
 
+  @Get('events/recent')
+  async getRecentEvents(@Query('limit') limit?: string) {
+    const parsedLimit = limit ? Number.parseInt(limit, 10) : undefined;
+    return this.adminService.getRecentEvents(parsedLimit);
+  }
+
   @Get('users')
   async listUsers(
     @Query('page') page = '1',

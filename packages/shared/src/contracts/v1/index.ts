@@ -13,6 +13,31 @@ export {
 } from './part-config';
 
 export { CostFactorsV1, PricingComputationInputV1, PricingBreakdownDetailedV1 } from './pricing';
+export {
+	QuoteComplianceAlertV1,
+	QuoteComplianceAlertCodeV1,
+	QuoteComplianceAlertSeverityV1,
+	QuoteComplianceSnapshotV1,
+	QuoteComplianceSurchargeV1,
+} from './pricing-compliance';
+
+export {
+	AdminRecentEventDiffV1,
+	AdminRecentEventAlertV1,
+	AdminRecentEventAlertSeverityV1,
+	AdminRecentEventActorV1,
+	AdminRecentEventTargetV1,
+	AdminRecentEventV1,
+	AdminRecentEventsResponseV1,
+} from './admin-events';
+
+export {
+	AdminCmsStatusV1,
+	AdminCmsPageV1,
+	AdminCmsDocumentV1,
+	AdminCmsPagesResponseV1,
+	AdminCmsDocumentsResponseV1,
+} from './admin-content';
 
 // Full DFM taxonomy exports (distinct issue type definition)
 export { 
@@ -34,6 +59,20 @@ export {
   QuoteRevisionApplyResultV1,
   computeQuoteDiffSummaryV1,
 } from './quote';
+
+export {
+	QuoteRationaleHighlightCategoryV1,
+	QuoteRationaleBreakdownHighlightV1,
+	QuoteRationaleSummaryV1,
+	QuoteRationaleCostSheetItemV1,
+	QuoteRationaleCostSheetV1,
+	QuoteRationaleCachePayloadV1,
+	PricingRationaleSummaryJobV1,
+	QUOTE_RATIONALE_CACHE_PREFIX_V1,
+	QUOTE_RATIONALE_CACHE_TTL_SECONDS,
+	buildQuoteRationaleCacheKeyV1,
+	buildQuoteRationaleRevisionCacheKeyV1,
+} from './pricing-rationale';
 
 // Realtime events: import then re-export to avoid resolution glitches & name collisions
 import * as Realtime from './realtime-events';

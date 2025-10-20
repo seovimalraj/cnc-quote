@@ -3,16 +3,20 @@
  * Register BullMQ workers for each queue type
  */
 
-import { Worker, Queue, QueueEvents } from 'bullmq';
+import { Worker, Queue, QueueScheduler } from 'bullmq';
 import { getRedisClient } from '../lib/redis.js';
 import { config } from '../config.js';
 import { logger } from '../lib/logger.js';
 import { processUploadParse, UploadParsePayload } from '../processors/upload-parse.js';
 import { processMeshDecimate, MeshDecimatePayload } from '../processors/mesh-decimate.js';
 import { processPriceBatch, PriceBatchPayload } from '../processors/price-batch.js';
+import { processComplianceAnalytics, ComplianceAnalyticsPayload } from '../processors/compliance-analytics.js';
+import { processPricingRationale, PricingRationalePayload } from '../processors/pricing-rationale.js';
 
 const workers: Worker[] = [];
-const queueEvents: QueueEvents[] = [];
+const schedulers: QueueScheduler[] = [];
+const queues: Queue[] = [];
+let complianceAnalyticsQueue: Queue<ComplianceAnalyticsPayload> | null = null;
 
 /**
  * Create worker configuration
@@ -32,6 +36,36 @@ function createWorkerOptions(concurrency: number, attempts: number) {
       },
     },
   };
+}
+
+export function registerPricingRationaleWorker(): Worker {
+  const worker = new Worker<PricingRationalePayload>(
+    'pricing-rationale',
+    async (job: any) => {
+      logger.info({ jobId: job.id, queue: 'pricing-rationale', quoteId: job.data?.quoteId }, 'Job started');
+      return processPricingRationale(job);
+    },
+    {
+      ...createWorkerOptions(1, config.workerMaxAttempts),
+      autorun: true,
+    },
+  );
+
+  worker.on('completed', (job: any) => {
+    logger.info({ jobId: job.id, queue: 'pricing-rationale' }, 'Job completed');
+  });
+
+  worker.on('failed', (job: any, err: Error) => {
+    logger.error({ jobId: job?.id, queue: 'pricing-rationale', error: err.message }, 'Job failed');
+  });
+
+  worker.on('error', (err: Error) => {
+    logger.error({ queue: 'pricing-rationale', error: err }, 'Worker error');
+  });
+
+  workers.push(worker);
+  logger.info('✅ Registered pricing-rationale worker');
+  return worker;
 }
 
 /**
@@ -165,13 +199,91 @@ export function registerPriceBatchWorker(): Worker {
   return worker;
 }
 
+function ensureComplianceAnalyticsQueue(): Queue<ComplianceAnalyticsPayload> {
+  if (!complianceAnalyticsQueue) {
+    complianceAnalyticsQueue = new Queue<ComplianceAnalyticsPayload>('compliance-analytics', {
+      connection: getRedisClient(),
+    });
+    queues.push(complianceAnalyticsQueue);
+  }
+  return complianceAnalyticsQueue;
+}
+
+async function scheduleComplianceAnalyticsJob(queue: Queue<ComplianceAnalyticsPayload>): Promise<void> {
+  try {
+    await queue.add(
+      'compliance-analytics-nightly',
+      { windowHours: 24 },
+      {
+        jobId: 'compliance-analytics:nightly',
+        repeat: {
+          pattern: config.complianceRollupCron,
+          tz: 'UTC',
+        },
+        removeOnComplete: true,
+        removeOnFail: 100,
+      },
+    );
+    logger.info({ cron: config.complianceRollupCron }, 'Scheduled nightly compliance analytics rollup');
+  } catch (error: any) {
+    if (!String(error?.message || '').includes('already exists')) {
+      logger.warn({ error }, 'Failed to schedule compliance analytics rollup');
+    }
+  }
+}
+
+export async function registerComplianceAnalyticsWorker(): Promise<Worker> {
+  const worker = new Worker<ComplianceAnalyticsPayload>(
+    'compliance-analytics',
+    async (job: any) => {
+      logger.info({ jobId: job.id, queue: 'compliance-analytics' }, 'Job started');
+      return processComplianceAnalytics(job);
+    },
+    {
+      ...createWorkerOptions(1, config.workerMaxAttempts),
+      autorun: true,
+    },
+  );
+
+  worker.on('completed', (job: any) => {
+    logger.info({ jobId: job.id, queue: 'compliance-analytics' }, 'Job completed');
+  });
+
+  worker.on('failed', (job: any, err: Error) => {
+    logger.error(
+      { jobId: job?.id, queue: 'compliance-analytics', error: err.message },
+      'Job failed',
+    );
+  });
+
+  worker.on('error', (err: Error) => {
+    logger.error({ queue: 'compliance-analytics', error: err }, 'Worker error');
+  });
+
+  const scheduler = new QueueScheduler('compliance-analytics', {
+    connection: getRedisClient(),
+  });
+  await scheduler.waitUntilReady();
+  schedulers.push(scheduler);
+
+  const queue = ensureComplianceAnalyticsQueue();
+  await queue.waitUntilReady();
+  await scheduleComplianceAnalyticsJob(queue);
+
+  workers.push(worker);
+  logger.info('✅ Registered compliance-analytics worker');
+  return worker;
+}
+
 /**
  * Register all workers
  */
-export function registerAllWorkers(): void {
+export async function registerAllWorkers(): Promise<void> {
   registerUploadParseWorker();
   registerMeshDecimateWorker();
   registerPriceBatchWorker();
+  registerPricingRationaleWorker();
+  await registerComplianceAnalyticsWorker();
   logger.info('✅ All workers registered');
 }
 
@@ -182,6 +294,8 @@ export async function closeAllWorkers(): Promise<void> {
   logger.info('⏳ Closing workers...');
   await Promise.all([
     ...workers.map((w) => w.close()),
+    ...schedulers.map((s) => s.close()),
+    ...queues.map((q) => q.close()),
   ]);
   logger.info('✅ All workers closed');
 }
@@ -195,6 +309,7 @@ export async function getQueueHealth() {
   const uploadQueue = new Queue('upload-parse', { connection: redis });
   const meshQueue = new Queue('mesh-decimate', { connection: redis });
   const priceQueue = new Queue('price-batch', { connection: redis });
+  const rationaleQueue = new Queue('pricing-rationale', { connection: redis });
 
   const [uploadWaiting, uploadActive, uploadCompleted, uploadFailed] =
     await Promise.all([
@@ -220,6 +335,23 @@ export async function getQueueHealth() {
       priceQueue.getFailedCount(),
     ]);
 
+  const [rationaleWaiting, rationaleActive, rationaleCompleted, rationaleFailed] =
+    await Promise.all([
+      rationaleQueue.getWaitingCount(),
+      rationaleQueue.getActiveCount(),
+      rationaleQueue.getCompletedCount(),
+      rationaleQueue.getFailedCount(),
+    ]);
+
+  const complianceQueue = ensureComplianceAnalyticsQueue();
+  const [complianceWaiting, complianceActive, complianceCompleted, complianceFailed] =
+    await Promise.all([
+      complianceQueue.getWaitingCount(),
+      complianceQueue.getActiveCount(),
+      complianceQueue.getCompletedCount(),
+      complianceQueue.getFailedCount(),
+    ]);
+
   return {
     'upload-parse': {
       waiting: uploadWaiting,
@@ -239,5 +371,29 @@ export async function getQueueHealth() {
       completed: priceCompleted,
       failed: priceFailed,
     },
+    'pricing-rationale': {
+      waiting: rationaleWaiting,
+      active: rationaleActive,
+      completed: rationaleCompleted,
+      failed: rationaleFailed,
+    },
+    'compliance-analytics': {
+      waiting: complianceWaiting,
+      active: complianceActive,
+      completed: complianceCompleted,
+      failed: complianceFailed,
+    },
   };
+}
+
+export async function enqueueComplianceAnalyticsRun(
+  payload: ComplianceAnalyticsPayload = {},
+): Promise<void> {
+  const queue = ensureComplianceAnalyticsQueue();
+  await queue.add('compliance-analytics-on-demand', payload, {
+    jobId: `compliance-analytics:on-demand:${Date.now()}`,
+    removeOnComplete: true,
+    removeOnFail: 10,
+  });
+  logger.info('Enqueued on-demand compliance analytics rollup');
 }
