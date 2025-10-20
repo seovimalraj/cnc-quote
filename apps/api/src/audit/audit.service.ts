@@ -1,49 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { toJsonWithLimit } from '@cnc-quote/shared';
 import { SupabaseService } from '../lib/supabase/supabase.service';
 import { AuditRecord } from './audit.types';
-
-const JSON_BYTE_LIMIT = 200_000;
-const SENSITIVE_KEY_REGEX = /(token|secret|password|key|credential|email)/i;
-
-function maskValue(value: unknown): unknown {
-  if (value === null || value === undefined) return value;
-  if (typeof value === 'string') {
-    if (value.length > 128) {
-      return `${value.slice(0, 64)}…[truncated]`;
-    }
-    return value;
-  }
-  return value;
-}
-
-export function redactSensitive(input: unknown): unknown {
-  if (Array.isArray(input)) {
-    return input.map(redactSensitive);
-  }
-  if (input && typeof input === 'object') {
-    const entries = Object.entries(input as Record<string, unknown>).map(([key, value]) => {
-      if (SENSITIVE_KEY_REGEX.test(key)) {
-        return [key, '[redacted]'] as const;
-      }
-      return [key, redactSensitive(value)] as const;
-    });
-    return Object.fromEntries(entries);
-  }
-  return maskValue(input);
-}
-
-export function toJsonWithLimit(value: unknown): unknown {
-  const sanitized = redactSensitive(value);
-  try {
-    const serialized = JSON.stringify(sanitized ?? null);
-    if (Buffer.byteLength(serialized, 'utf8') > JSON_BYTE_LIMIT) {
-      return { truncated: true };
-    }
-    return JSON.parse(serialized);
-  } catch {
-    return { serializationError: true };
-  }
-}
 
 @Injectable()
 export class AuditService {

@@ -34,6 +34,12 @@ export interface FeatureFlagEvaluation {
 export class AdminFeatureFlagsService {
   private readonly logger = new Logger(AdminFeatureFlagsService.name);
 
+  private readonly tenantScopedFlags = new Set<string>([
+    'admin_pricing_revision_assistant',
+    'pricing_compliance_ml_assist',
+    'pricing_quote_rationale',
+  ]);
+
   // Default feature flags
   private readonly defaultFlags: Omit<FeatureFlag, 'id' | 'created_at' | 'updated_at' | 'created_by' | 'updated_by'>[] = [
     {
@@ -96,6 +102,14 @@ export class AdminFeatureFlagsService {
       name: 'Pricing Quote Rationale Summaries',
       key: 'pricing_quote_rationale',
       description: 'Translate deterministic cost sheets into advisory explanations for customers',
+      enabled: false,
+      rollout_percentage: 0,
+      conditions: {},
+    },
+    {
+      name: 'Admin Pricing Revision Assistant',
+      key: 'admin_pricing_revision_assistant',
+      description: 'Generate AI-assisted drafts for pricing configuration revisions with approval workflow separation',
       enabled: false,
       rollout_percentage: 0,
       conditions: {},
@@ -232,6 +246,19 @@ export class AdminFeatureFlagsService {
         };
       }
 
+      const isTenantScoped = this.tenantScopedFlags.has(flagKey);
+
+      if (isTenantScoped && !context.organization_id) {
+        return {
+          flag_key: flagKey,
+          enabled: false,
+          rollout_percentage: flag.rollout_percentage,
+          user_in_rollout: false,
+          conditions_met: false,
+          reason: 'Tenant context required',
+        };
+      }
+
       // Check if flag is globally disabled
       if (!flag.enabled) {
         return {
@@ -245,7 +272,7 @@ export class AdminFeatureFlagsService {
       }
 
       // Check conditions
-      const conditionsMet = this.checkConditions(flag.conditions, context);
+      const conditionsMet = this.checkConditions(flag.conditions, context, isTenantScoped);
 
       if (!conditionsMet) {
         return {
@@ -361,6 +388,7 @@ export class AdminFeatureFlagsService {
       organization_id?: string;
       environment?: string;
     },
+    tenantScoped: boolean,
   ): boolean {
     // Check user roles
     if (conditions.user_roles && conditions.user_roles.length > 0) {
@@ -381,6 +409,9 @@ export class AdminFeatureFlagsService {
       if (!context.organization_id || !conditions.organizations.includes(context.organization_id)) {
         return false;
       }
+    } else if (tenantScoped) {
+      // Tenant-scoped flags must explicitly enumerate allowed organizations
+      return false;
     }
 
     // Check environments

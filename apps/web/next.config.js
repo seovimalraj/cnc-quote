@@ -1,3 +1,7 @@
+/**
+ * @ownership web-platform
+ * @raci docs/governance/raci-matrix.yaml
+ */
 const { withSentryConfig } = require("@sentry/nextjs");
 
 const nextConfig = {

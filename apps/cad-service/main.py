@@ -1,3 +1,7 @@
+"""
+@ownership cad-platform
+@raci docs/governance/raci-matrix.yaml
+"""
 from fastapi import FastAPI, HTTPException, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel

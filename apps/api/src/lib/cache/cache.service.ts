@@ -46,4 +46,19 @@ export class CacheService implements OnModuleDestroy {
     }
     throw new Error("Cache store is not initialized");
   }
+
+  async increment(key: string, ttlSeconds = 60): Promise<number> {
+    const client = this.redisCache?.store?.client;
+    if (!client || typeof client.incr !== "function") {
+      throw new Error("Increment operation not supported by cache store");
+    }
+
+    const value = await client.incr(key);
+
+    if (ttlSeconds > 0) {
+      await client.expire(key, ttlSeconds);
+    }
+
+    return typeof value === "number" ? value : Number(value);
+  }
 }

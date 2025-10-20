@@ -58,7 +58,12 @@ export class AdminPricingController {
     }
 
     try {
-      return await this.adminPricingService.publishConfig(parsed.data, user?.userId ?? undefined);
+      const assistantRunId = typeof body?.assistantRunId === 'string' ? body.assistantRunId : undefined;
+      const orgId = user?.orgId ?? user?.organizationId ?? user?.organization_id ?? null;
+      return await this.adminPricingService.publishConfig(parsed.data, user?.userId ?? undefined, {
+        assistantRunId: assistantRunId ?? null,
+        orgId,
+      });
     } catch (error) {
       throw new HttpException(
         { error: 'Failed to publish pricing config', details: (error as Error).message },

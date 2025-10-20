@@ -74,6 +74,34 @@ export {
 	buildQuoteRationaleRevisionCacheKeyV1,
 } from './pricing-rationale';
 
+export {
+  AdminPricingRevisionAssistantRequestSchemaV1,
+  AdminPricingRevisionAssistantRequestV1,
+  AdminPricingRevisionAssistantAdjustmentSchemaV1,
+  AdminPricingRevisionAssistantAdjustmentV1,
+  AdminPricingRevisionAssistantLLMResponseSchemaV1,
+  AdminPricingRevisionAssistantLLMResponseV1,
+  AdminPricingRevisionAssistantStatusSchemaV1,
+  AdminPricingRevisionAssistantStatusV1,
+	AdminPricingRevisionAssistantApprovalDecisionSchemaV1,
+	AdminPricingRevisionAssistantApprovalDecisionV1,
+	AdminPricingRevisionDualControlStateSchemaV1,
+	AdminPricingRevisionDualControlStateV1,
+	AdminPricingRevisionAssistantApprovalSchemaV1,
+	AdminPricingRevisionAssistantApprovalV1,
+	AdminPricingRevisionAssistantApprovalRequestSchemaV1,
+	AdminPricingRevisionAssistantApprovalRequestV1,
+  AdminPricingRevisionAssistantRunSchemaV1,
+  AdminPricingRevisionAssistantRunV1,
+} from './admin-pricing-assistant';
+
+export {
+	AIModelRunStatusV1,
+	AIModelRunV1,
+	AIModelReviewStatusV1,
+	AIModelBiasReviewV1,
+} from './ai-model';
+
 // Realtime events: import then re-export to avoid resolution glitches & name collisions
 import * as Realtime from './realtime-events';
 export type RealtimeEventKindV1 = Realtime.RealtimeEventKindV1;

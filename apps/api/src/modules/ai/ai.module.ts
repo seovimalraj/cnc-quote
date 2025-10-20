@@ -6,9 +6,11 @@ import { MLPredictionsService } from './ml-predictions.service';
 import { AIOrchestrator } from './ai-orchestrator.service';
 import { AdvancedDfmService } from './advanced-dfm.service';
 import { AIController } from './ai.controller';
+import { AIModelLifecycleService } from './model-lifecycle.service';
+import { QueueModule } from '../../queues';
 
 @Module({
-  imports: [ConfigModule],
+  imports: [ConfigModule, QueueModule],
   controllers: [AIController],
   providers: [
     OllamaService,
@@ -16,6 +18,7 @@ import { AIController } from './ai.controller';
     MLPredictionsService,
     AIOrchestrator,
     AdvancedDfmService,
+    AIModelLifecycleService,
   ],
   exports: [
     OllamaService,
@@ -23,6 +26,7 @@ import { AIController } from './ai.controller';
     MLPredictionsService,
     AIOrchestrator,
     AdvancedDfmService,
+    AIModelLifecycleService,
   ],
 })
 export class AIModule {}

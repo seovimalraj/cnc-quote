@@ -26,7 +26,13 @@
     "qa:check-slos": "node scripts/check-slos.js",
     "qa:check-observability": "node scripts/check-observability.js",
     "qa:test-storage-signed-url": "node scripts/test-storage-signed-url.js",
-    "qa:bomb-leads": "node scripts/bomb-leads.js"
+    "qa:bomb-leads": "node scripts/bomb-leads.js",
+    "qa:ai-regression": "ts-node --esm scripts/qa-ai-regression.ts",
+    "qa:seed-ollama-chaos": "ts-node --esm scripts/seed-ollama-chaos.ts",
+    "qa:canary-shadow": "ts-node --esm scripts/canary-shadow-compare.ts",
+    "ai:train": "ts-node --esm scripts/ai/model-lifecycle.ts train",
+    "ai:rollback": "ts-node --esm scripts/ai/model-lifecycle.ts rollback",
+    "ai:bias-review": "ts-node --esm scripts/ai/model-lifecycle.ts bias-review"
   },
   "dependencies": {
     "@nestjs/axios": "^4.0.1",

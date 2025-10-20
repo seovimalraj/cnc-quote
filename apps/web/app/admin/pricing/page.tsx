@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { RequireAnyRole } from '@/components/auth/RequireAnyRole';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -22,6 +22,7 @@ import {
   PaintBrushIcon
 } from '@heroicons/react/24/outline';
 import type { AdminPricingConfig as PricingConfig } from '@cnc-quote/shared';
+import { RevisionAssistantPanel } from '@/components/admin/pricing/RevisionAssistantPanel';
 
 type PricingConfigMeta = {
   status: 'draft' | 'published' | 'default';
@@ -37,6 +38,7 @@ export default function AdminPricingPage() {
   const [hasChanges, setHasChanges] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [assistantRunId, setAssistantRunId] = useState<string | null>(null);
 
   useEffect(() => {
     loadPricingConfig();
@@ -54,6 +56,7 @@ export default function AdminPricingPage() {
       const payload = await response.json();
       const nextConfig: PricingConfig = payload?.config ?? payload;
       setConfig(nextConfig);
+  setAssistantRunId(null);
 
       const nextMeta: PricingConfigMeta = {
         status: payload?.status ?? payload?.meta?.status ?? 'draft',
@@ -121,10 +124,15 @@ export default function AdminPricingPage() {
 
     try {
       setIsSaving(true);
+      const payloadToSend: Record<string, unknown> = { config };
+      if (assistantRunId) {
+        payloadToSend.assistantRunId = assistantRunId;
+      }
+
       const response = await fetch('/api/admin/pricing/publish', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ config })
+        body: JSON.stringify(payloadToSend)
       });
 
       if (!response.ok) {
@@ -147,6 +155,7 @@ export default function AdminPricingPage() {
       } else {
         setLastSaved(new Date());
       }
+      setAssistantRunId(null);
     } catch (error) {
       console.error('Failed to publish pricing config:', error);
     } finally {
@@ -170,6 +179,7 @@ export default function AdminPricingPage() {
       return newConfig;
     });
     setHasChanges(true);
+    setAssistantRunId(null);
     setMeta(prev => {
       if (!prev) {
         return { status: 'draft' };
@@ -181,6 +191,14 @@ export default function AdminPricingPage() {
     });
     setLastSaved(null);
   };
+
+  const handleApplyProposal = useCallback((proposal: PricingConfig, context: { runId: string }) => {
+    setConfig(proposal);
+    setHasChanges(true);
+    setMeta(prev => ({ status: 'draft', updated_at: undefined, published_at: prev?.published_at }));
+    setLastSaved(null);
+    setAssistantRunId(context.runId);
+  }, []);
 
   if (isLoading) {
     return (
@@ -277,6 +295,9 @@ export default function AdminPricingPage() {
 
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="grid gap-6 mb-8">
+          <RevisionAssistantPanel currentConfig={config} onApplyProposal={handleApplyProposal} />
+        </div>
         <Tabs defaultValue="machines" className="space-y-6">
           <TabsList className="grid w-full grid-cols-8">
             <TabsTrigger value="machines">Machines</TabsTrigger>

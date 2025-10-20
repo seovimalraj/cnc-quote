@@ -4,6 +4,7 @@ import { CacheService } from '../../lib/cache/cache.service';
 import {
   AdminPricingConfig,
   AdminPricingConfigSchema,
+  computeAdminPricingProposalDigest,
 } from '@cnc-quote/shared';
 import fallbackConfig from './default-config.json';
 import {
@@ -23,6 +24,16 @@ interface PricingConfigRecord {
   published_at?: string;
   published_by?: string;
 }
+
+interface RevisionAssistantApprovalGate {
+  id: string;
+  org_id?: string | null;
+  approval_state?: string | null;
+  approval_required?: boolean | null;
+  proposal_digest?: string | null;
+}
+
+const DUAL_CONTROL_APPROVAL_TARGET = 2;
 
 export interface ConfigWithMetadata {
   config: AdminPricingConfig;
@@ -156,8 +167,18 @@ export class AdminPricingService {
     });
   }
 
-  async publishConfig(config: AdminPricingConfig, userId?: string): Promise<ConfigWithMetadata> {
+  async publishConfig(
+    config: AdminPricingConfig,
+    userId?: string,
+    options?: { assistantRunId?: string | null; orgId?: string | null },
+  ): Promise<ConfigWithMetadata> {
     const parsed = this.ensureValidConfig(config);
+    await this.enforceDualControl(parsed, {
+      assistantRunId: options?.assistantRunId ?? null,
+      orgId: options?.orgId ?? null,
+      userId: userId ?? null,
+    });
+
     const latestPublished = await this.fetchLatestByStatus('published');
     const nextVersion = this.bumpVersion(latestPublished?.version ?? parsed.version);
     const timestamp = new Date().toISOString();
@@ -230,6 +251,91 @@ export class AdminPricingService {
       throw new Error('Invalid pricing config payload');
     }
     return result.data;
+  }
+
+  private async enforceDualControl(
+    config: AdminPricingConfig,
+    context: { assistantRunId?: string | null; orgId?: string | null; userId?: string | null },
+  ): Promise<void> {
+    const digest = computeAdminPricingProposalDigest(config);
+    const orgId = context.orgId ?? null;
+
+    if (!orgId) {
+      this.logger.warn('Skipping dual-control enforcement due to missing org context');
+      return;
+    }
+
+    let gate: RevisionAssistantApprovalGate | null = null;
+
+    try {
+      if (context.assistantRunId) {
+        const { data, error } = await this.supabase.client
+          .from('admin_pricing_revision_runs')
+          .select('id, org_id, approval_state, approval_required, proposal_digest, status')
+          .eq('id', context.assistantRunId)
+          .maybeSingle();
+
+        if (error) {
+          throw error;
+        }
+
+        gate = (data as RevisionAssistantApprovalGate & { status?: string | null }) ?? null;
+        if (gate && gate.proposal_digest && gate.proposal_digest !== digest) {
+          throw new Error('Assistant run digest mismatch for publish attempt');
+        }
+      } else {
+        const { data, error } = await this.supabase.client
+          .from('admin_pricing_revision_runs')
+          .select('id, org_id, approval_state, approval_required, proposal_digest, status')
+          .eq('org_id', orgId)
+          .eq('proposal_digest', digest)
+          .eq('status', 'succeeded')
+          .order('updated_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (error && error.code !== 'PGRST116') {
+          throw error;
+        }
+
+        gate = (data as RevisionAssistantApprovalGate & { status?: string | null }) ?? null;
+      }
+    } catch (error) {
+      this.logger.error('Failed to load revision assistant context for dual-control enforcement', error as Error);
+      throw new Error('Unable to verify dual-control approvals for publish');
+    }
+
+    if (!gate) {
+      return;
+    }
+
+    const gateStatus = (gate as { status?: string | null }).status;
+    if (gateStatus && gateStatus !== 'succeeded') {
+      throw new Error('Assistant proposal has not completed successfully');
+    }
+
+    if (gate.org_id && gate.org_id !== orgId) {
+      throw new Error('Assistant run belongs to a different organization');
+    }
+
+    if ((gate.approval_required ?? true) && (gate.approval_state ?? 'pending') !== 'approved') {
+      throw new Error('Dual-control approvals are pending for the assistant proposal');
+    }
+
+    const { count, error: approvalsError } = await this.supabase.client
+      .from('admin_pricing_revision_approvals')
+      .select('*', { head: true, count: 'exact' })
+      .eq('run_id', gate.id)
+      .eq('decision', 'approved');
+
+    if (approvalsError) {
+      this.logger.error('Failed to count approval decisions for assistant proposal', approvalsError);
+      throw new Error('Unable to verify dual-control approvals for publish');
+    }
+
+    if ((count ?? 0) < DUAL_CONTROL_APPROVAL_TARGET) {
+      throw new Error('Dual-control approvals incomplete for assistant proposal');
+    }
   }
 
   private async fetchLatestByStatus(status: 'draft' | 'published' | 'archived') {

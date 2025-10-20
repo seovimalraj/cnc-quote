@@ -140,7 +140,10 @@
     { "name": "CAD pipeline", "tool": "script", "cmd": "pnpm check-cad", "expect": { "exit_code": 0 }, "fail_code": "CAD_PIPELINE_FAIL" },
     { "name": "Payment flow", "tool": "script", "cmd": "pnpm check-payment", "expect": { "exit_code": 0 }, "fail_code": "PAYMENT_FAIL" },
     { "name": "Performance SLOs", "tool": "script", "cmd": "pnpm check-slos", "expect": { "exit_code": 0 }, "fail_code": "SLO_FAIL" },
-    { "name": "Observability wiring", "tool": "script", "cmd": "pnpm check-observability", "expect": { "exit_code": 0 }, "fail_code": "OBSERVABILITY_FAIL" }
+    { "name": "Observability wiring", "tool": "script", "cmd": "pnpm check-observability", "expect": { "exit_code": 0 }, "fail_code": "OBSERVABILITY_FAIL" },
+    { "name": "AI regression fixtures", "tool": "script", "cmd": "pnpm qa:ai-regression", "expect": { "exit_code": 0 }, "fail_code": "AI_REGRESSION_DRIFT" },
+    { "name": "Ollama chaos readiness", "tool": "script", "cmd": "pnpm qa:seed-ollama-chaos", "expect": { "exit_code": 0 }, "fail_code": "AI_CHAOS_FAIL" },
+    { "name": "Canary shadow comparisons", "tool": "script", "cmd": "pnpm qa:canary-shadow", "expect": { "exit_code": 0 }, "fail_code": "AI_CANARY_DRIFT" }
   ],
   "ui_audit": {
     "routes": ["/instant-quote", "/quote/:id", "/quote/:id/configure/:line_id", "/checkout/:quote_id", "/dfm-analysis", "/dfm-analysis/:id"],
@@ -181,7 +184,10 @@
       { "when.fail_code": "RLS_FAIL", "severity": "blocker", "title": "RLS policies failing", "autofix": ["RUN_PNPM_CHECK_RLS", "REVIEW_POLICIES"], "owner": "db" },
       { "when.fail_code": "SLO_FAIL", "severity": "major", "title": "Performance SLOs unmet", "autofix": ["ENABLE_PRICE_CACHE", "BATCH_CAD_TASKS", "PROFILE_HOT_PATHS"], "owner": "platform" },
       { "when.fail_code": "SEC_HEADERS_MISSING", "severity": "major", "title": "Security headers missing", "autofix": ["ADD_CSP_HSTS_XFO", "VERIFY_REVERSE_PROXY_CFG"], "owner": "web" },
-      { "when.fail_code": "FILES_PUBLICLY_ACCESSIBLE", "severity": "critical", "title": "Files exposed publicly", "autofix": ["DISABLE_PUBLIC_BUCKETS", "FORCE_SIGNED_URLS"], "owner": "storage" }
+      { "when.fail_code": "FILES_PUBLICLY_ACCESSIBLE", "severity": "critical", "title": "Files exposed publicly", "autofix": ["DISABLE_PUBLIC_BUCKETS", "FORCE_SIGNED_URLS"], "owner": "storage" },
+      { "when.fail_code": "AI_REGRESSION_DRIFT", "severity": "blocker", "title": "AI regression baseline drift", "autofix": ["REVIEW_AI_REGRESSIONS", "ROLLBACK_AI_CANARY"], "owner": "ai" },
+      { "when.fail_code": "AI_CHAOS_FAIL", "severity": "major", "title": "Ollama chaos endpoint unavailable", "autofix": ["RESET_OLLAMA_CLUSTER"], "owner": "ai" },
+      { "when.fail_code": "AI_CANARY_DRIFT", "severity": "blocker", "title": "Canary pricing drift detected", "autofix": ["ROLLBACK_AI_CANARY"], "owner": "ai" }
     ]
   },
   "autofix_recipes": {
@@ -206,7 +212,10 @@
     "PROFILE_HOT_PATHS": { "tool": "script", "cmd": "node scripts/profile-pricing.js" },
     "ADD_CSP_HSTS_XFO": { "tool": "code", "file": "apps/web/src/middleware.ts", "patch_hint": "Add CSP default-src 'self'; connect-src API/CAD; HSTS max-age=31536000; X-Frame-Options DENY" },
     "DISABLE_PUBLIC_BUCKETS": { "tool": "doc", "steps": ["Supabase storage: set bucket private", "Serve only via signed URLs"] },
-    "FORCE_SIGNED_URLS": { "tool": "code", "file": "apps/api/src/modules/files/controller.ts", "patch_hint": "Reject requests without signed token" }
+    "FORCE_SIGNED_URLS": { "tool": "code", "file": "apps/api/src/modules/files/controller.ts", "patch_hint": "Reject requests without signed token" },
+    "REVIEW_AI_REGRESSIONS": { "tool": "doc", "steps": ["Inspect artifacts/ai-regression/fixtures/ for updated baselines", "Re-run pnpm qa:ai-regression locally", "Open diff in pricing-compute module if recalibration is expected"] },
+    "RESET_OLLAMA_CLUSTER": { "tool": "doc", "steps": ["Drain non-production Ollama deployment via kubectl cordon", "Restart pods with updated model weights", "Re-run pnpm qa:seed-ollama-chaos"] },
+    "ROLLBACK_AI_CANARY": { "tool": "doc", "steps": ["Promote previous stable pricing config", "Disable canary flag in feature flags", "Invalidate cache + rerun pnpm qa:canary-shadow"] }
   },
   "ui_issue_catalog": [
     { "code": "A11Y_CONTRAST", "detect": "axe color-contrast", "remediation": "Increase Tailwind text/base/primary colors to meet 4.5:1; update tokens" },

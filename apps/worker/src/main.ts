@@ -1,6 +1,8 @@
 /**
  * Step 18: Worker Service Main Entry Point
  * Bootstrap worker service with graceful shutdown
+ * @ownership platform-ops
+ * @raci docs/governance/raci-matrix.yaml
  */
 
 import { initOtel, shutdownOtel } from './lib/otel.js';

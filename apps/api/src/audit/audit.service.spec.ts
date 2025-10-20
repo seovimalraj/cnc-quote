@@ -1,4 +1,4 @@
-import { redactSensitive, toJsonWithLimit } from './audit.service';
+import { redactSensitive, toJsonWithLimit } from '@cnc-quote/shared';
 
 describe('AuditService helpers', () => {
   it('redacts sensitive keys recursively', () => {

@@ -57,6 +57,13 @@ export namespace ContractsV1 {
   export type QuoteRationaleCostSheetV1 = V1.QuoteRationaleCostSheetV1;
   export type QuoteRationaleCachePayloadV1 = V1.QuoteRationaleCachePayloadV1;
   export type PricingRationaleSummaryJobV1 = V1.PricingRationaleSummaryJobV1;
+  export const QUOTE_RATIONALE_CACHE_TTL_SECONDS = V1.QUOTE_RATIONALE_CACHE_TTL_SECONDS;
+  export const buildQuoteRationaleCacheKeyV1 = V1.buildQuoteRationaleCacheKeyV1;
+  export const buildQuoteRationaleRevisionCacheKeyV1 = V1.buildQuoteRationaleRevisionCacheKeyV1;
+  export type AIModelRunStatusV1 = V1.AIModelRunStatusV1;
+  export type AIModelRunV1 = V1.AIModelRunV1;
+  export type AIModelReviewStatusV1 = V1.AIModelReviewStatusV1;
+  export type AIModelBiasReviewV1 = V1.AIModelBiasReviewV1;
 
   // Realtime Events
   export type PricingUpdateEventV1 = V1.PricingUpdateEventV1;

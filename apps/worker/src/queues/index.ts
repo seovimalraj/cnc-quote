@@ -12,11 +12,15 @@ import { processMeshDecimate, MeshDecimatePayload } from '../processors/mesh-dec
 import { processPriceBatch, PriceBatchPayload } from '../processors/price-batch.js';
 import { processComplianceAnalytics, ComplianceAnalyticsPayload } from '../processors/compliance-analytics.js';
 import { processPricingRationale, PricingRationalePayload } from '../processors/pricing-rationale.js';
+import { processAdminPricingRevision, AdminPricingRevisionPayload } from '../processors/admin-pricing-revision.js';
+import { processModelLifecycle, ModelLifecyclePayload } from '../processors/model-lifecycle.js';
+import { listModelConfigs, MODEL_LIFECYCLE_QUEUE } from '@cnc-quote/shared';
 
 const workers: Worker[] = [];
 const schedulers: QueueScheduler[] = [];
 const queues: Queue[] = [];
 let complianceAnalyticsQueue: Queue<ComplianceAnalyticsPayload> | null = null;
+let aiModelLifecycleQueue: Queue<ModelLifecyclePayload> | null = null;
 
 /**
  * Create worker configuration
@@ -65,6 +69,37 @@ export function registerPricingRationaleWorker(): Worker {
 
   workers.push(worker);
   logger.info('✅ Registered pricing-rationale worker');
+  return worker;
+}
+
+export function registerAdminPricingRevisionWorker(): Worker {
+  const queueName = 'admin-pricing-revision-assistant';
+  const worker = new Worker<AdminPricingRevisionPayload>(
+    queueName,
+    async (job: any) => {
+      logger.info({ jobId: job.id, queue: queueName, runId: job.data?.runId }, 'Job started');
+      return processAdminPricingRevision(job);
+    },
+    {
+      ...createWorkerOptions(1, config.workerMaxAttempts),
+      autorun: true,
+    },
+  );
+
+  worker.on('completed', (job: any) => {
+    logger.info({ jobId: job.id, queue: queueName }, 'Job completed');
+  });
+
+  worker.on('failed', (job: any, err: Error) => {
+    logger.error({ jobId: job?.id, queue: queueName, error: err.message }, 'Job failed');
+  });
+
+  worker.on('error', (err: Error) => {
+    logger.error({ queue: queueName, error: err }, 'Worker error');
+  });
+
+  workers.push(worker);
+  logger.info('✅ Registered admin-pricing-revision-assistant worker');
   return worker;
 }
 
@@ -209,6 +244,16 @@ function ensureComplianceAnalyticsQueue(): Queue<ComplianceAnalyticsPayload> {
   return complianceAnalyticsQueue;
 }
 
+function ensureModelLifecycleQueue(): Queue<ModelLifecyclePayload> {
+  if (!aiModelLifecycleQueue) {
+  aiModelLifecycleQueue = new Queue<ModelLifecyclePayload>(MODEL_LIFECYCLE_QUEUE, {
+      connection: getRedisClient(),
+    });
+    queues.push(aiModelLifecycleQueue);
+  }
+  return aiModelLifecycleQueue;
+}
+
 async function scheduleComplianceAnalyticsJob(queue: Queue<ComplianceAnalyticsPayload>): Promise<void> {
   try {
     await queue.add(
@@ -228,6 +273,37 @@ async function scheduleComplianceAnalyticsJob(queue: Queue<ComplianceAnalyticsPa
   } catch (error: any) {
     if (!String(error?.message || '').includes('already exists')) {
       logger.warn({ error }, 'Failed to schedule compliance analytics rollup');
+    }
+  }
+}
+
+async function scheduleModelBiasReviewJobs(queue: Queue<ModelLifecyclePayload>): Promise<void> {
+  const configs = listModelConfigs();
+  for (const model of configs) {
+    try {
+      await queue.add(
+        `model-bias-review-${model.id}`,
+        {
+          version: 1,
+          modelId: model.id,
+          action: 'bias_review',
+          reason: 'scheduled-bias-review',
+        },
+        {
+          jobId: `model-lifecycle:bias-review:${model.id}`,
+          repeat: {
+            pattern: model.biasReviewCron,
+            tz: 'UTC',
+          },
+          removeOnComplete: true,
+          removeOnFail: 25,
+        },
+      );
+      logger.info({ modelId: model.id, cron: model.biasReviewCron }, 'Scheduled model bias review job');
+    } catch (error: any) {
+      if (!String(error?.message ?? '').includes('already exists')) {
+        logger.warn({ modelId: model.id, error }, 'Failed to schedule bias review job');
+      }
     }
   }
 }
@@ -275,6 +351,45 @@ export async function registerComplianceAnalyticsWorker(): Promise<Worker> {
   return worker;
 }
 
+export async function registerModelLifecycleWorker(): Promise<Worker> {
+  const queueName = MODEL_LIFECYCLE_QUEUE;
+  const worker = new Worker<ModelLifecyclePayload>(
+    queueName,
+    async (job: any) => {
+      logger.info({ jobId: job.id, queue: queueName, modelId: job.data?.modelId }, 'Job started');
+      return processModelLifecycle(job);
+    },
+    {
+      ...createWorkerOptions(1, config.workerMaxAttempts),
+      autorun: true,
+    },
+  );
+
+  worker.on('completed', (job: any) => {
+    logger.info({ jobId: job.id, queue: queueName }, 'Job completed');
+  });
+
+  worker.on('failed', (job: any, err: Error) => {
+    logger.error({ jobId: job?.id, queue: queueName, error: err.message }, 'Job failed');
+  });
+
+  worker.on('error', (err: Error) => {
+    logger.error({ queue: queueName, error: err }, 'Worker error');
+  });
+
+  const scheduler = new QueueScheduler(queueName, { connection: getRedisClient() });
+  await scheduler.waitUntilReady();
+  schedulers.push(scheduler);
+
+  const queue = ensureModelLifecycleQueue();
+  await queue.waitUntilReady();
+  await scheduleModelBiasReviewJobs(queue);
+
+  workers.push(worker);
+  logger.info('✅ Registered ai-model-lifecycle worker');
+  return worker;
+}
+
 /**
  * Register all workers
  */
@@ -283,6 +398,8 @@ export async function registerAllWorkers(): Promise<void> {
   registerMeshDecimateWorker();
   registerPriceBatchWorker();
   registerPricingRationaleWorker();
+  registerAdminPricingRevisionWorker();
+  await registerModelLifecycleWorker();
   await registerComplianceAnalyticsWorker();
   logger.info('✅ All workers registered');
 }
@@ -310,6 +427,8 @@ export async function getQueueHealth() {
   const meshQueue = new Queue('mesh-decimate', { connection: redis });
   const priceQueue = new Queue('price-batch', { connection: redis });
   const rationaleQueue = new Queue('pricing-rationale', { connection: redis });
+  const revisionQueue = new Queue('admin-pricing-revision-assistant', { connection: redis });
+  const modelLifecycleQueueRef = new Queue(MODEL_LIFECYCLE_QUEUE, { connection: redis });
 
   const [uploadWaiting, uploadActive, uploadCompleted, uploadFailed] =
     await Promise.all([
@@ -341,6 +460,22 @@ export async function getQueueHealth() {
       rationaleQueue.getActiveCount(),
       rationaleQueue.getCompletedCount(),
       rationaleQueue.getFailedCount(),
+    ]);
+
+  const [revisionWaiting, revisionActive, revisionCompleted, revisionFailed] =
+    await Promise.all([
+      revisionQueue.getWaitingCount(),
+      revisionQueue.getActiveCount(),
+      revisionQueue.getCompletedCount(),
+      revisionQueue.getFailedCount(),
+    ]);
+
+  const [modelLifecycleWaiting, modelLifecycleActive, modelLifecycleCompleted, modelLifecycleFailed] =
+    await Promise.all([
+      modelLifecycleQueueRef.getWaitingCount(),
+      modelLifecycleQueueRef.getActiveCount(),
+      modelLifecycleQueueRef.getCompletedCount(),
+      modelLifecycleQueueRef.getFailedCount(),
     ]);
 
   const complianceQueue = ensureComplianceAnalyticsQueue();
@@ -376,6 +511,18 @@ export async function getQueueHealth() {
       active: rationaleActive,
       completed: rationaleCompleted,
       failed: rationaleFailed,
+    },
+    'admin-pricing-revision-assistant': {
+      waiting: revisionWaiting,
+      active: revisionActive,
+      completed: revisionCompleted,
+      failed: revisionFailed,
+    },
+  [MODEL_LIFECYCLE_QUEUE]: {
+      waiting: modelLifecycleWaiting,
+      active: modelLifecycleActive,
+      completed: modelLifecycleCompleted,
+      failed: modelLifecycleFailed,
     },
     'compliance-analytics': {
       waiting: complianceWaiting,

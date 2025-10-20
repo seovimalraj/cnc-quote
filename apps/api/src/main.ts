@@ -1,3 +1,7 @@
+/**
+ * @ownership backend-platform
+ * @raci docs/governance/raci-matrix.yaml
+ */
 import "reflect-metadata";
 import { NestFactory } from "@nestjs/core";
 import { ValidationPipe, VersioningType } from "@nestjs/common";

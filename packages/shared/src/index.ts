@@ -1,5 +1,11 @@
+/**
+ * @ownership contracts-team
+ * @raci docs/governance/raci-matrix.yaml
+ */
 export * from './admin-types'; // AdminUser, AdminOrg, Paginated
 export * from './admin-pricing.types';
+export * from './admin-pricing.digest';
+export * from './hash.util';
 // Re-export everything from types.core.ts
 export * from './types.core';
 
@@ -24,6 +30,12 @@ export * from './rbac.types';
 export { buildDiff, DiffResult } from './diff.util';
 export * from './process-recommendation.types';
 export * from './leadtime.types';
+export * from './ai/redaction';
+export * from './ai/prompt-registry';
+export * from './ai/model-registry';
+export * from './ai/prompts/pricing-rationale';
+export * from './ai/prompts/admin-pricing-revision';
+export * from './ai/model-lifecycle.types';
 
 // Re-export order lifecycle types
 export * from './orders/order-status';

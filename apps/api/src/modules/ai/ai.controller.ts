@@ -8,11 +8,14 @@ import {
   HttpStatus,
   Logger,
   UseGuards,
+  Param,
 } from '@nestjs/common';
 import { AIOrchestrator } from './ai-orchestrator.service';
 import { OllamaService } from './ollama.service';
 import { EmbeddingsService } from './embeddings.service';
 import { MLPredictionsService } from './ml-predictions.service';
+import { AIModelLifecycleService } from './model-lifecycle.service';
+import type { ModelId } from '@cnc-quote/shared';
 
 @Controller('ai')
 export class AIController {
@@ -22,7 +25,8 @@ export class AIController {
     private aiOrchestrator: AIOrchestrator,
     private ollamaService: OllamaService,
     private embeddingsService: EmbeddingsService,
-    private mlPredictionsService: MLPredictionsService
+    private mlPredictionsService: MLPredictionsService,
+    private modelLifecycle: AIModelLifecycleService,
   ) {}
 
   /**
@@ -41,6 +45,86 @@ export class AIController {
       },
       cache: this.embeddingsService.getCacheStats(),
     };
+  }
+
+  @Post('models/:modelId/retrain')
+  @HttpCode(HttpStatus.ACCEPTED)
+  async retrainModel(
+    @Param('modelId') modelId: string,
+    @Body()
+    body: {
+      targetVersion?: string;
+      gitRef?: string;
+      reason?: string;
+      triggeredBy?: string;
+      traceId?: string;
+    },
+  ) {
+    try {
+      const result = await this.modelLifecycle.scheduleRetrain(modelId as ModelId, {
+        targetVersion: body.targetVersion,
+        gitRef: body.gitRef,
+        reason: body.reason,
+        triggeredBy: body.triggeredBy ?? null,
+        traceId: body.traceId ?? null,
+      });
+      return { success: true, runId: result.runId };
+    } catch (error) {
+      this.logger.error(`Retrain scheduling failed: ${(error as Error).message}`, (error as Error).stack);
+      throw error;
+    }
+  }
+
+  @Post('models/:modelId/rollback')
+  @HttpCode(HttpStatus.ACCEPTED)
+  async rollbackModel(
+    @Param('modelId') modelId: string,
+    @Body()
+    body: {
+      targetVersion: string;
+      gitRef?: string;
+      reason?: string;
+      triggeredBy?: string;
+      traceId?: string;
+    },
+  ) {
+    try {
+      const result = await this.modelLifecycle.scheduleRollback(modelId as ModelId, {
+        targetVersion: body.targetVersion,
+        gitRef: body.gitRef,
+        reason: body.reason,
+        triggeredBy: body.triggeredBy ?? null,
+        traceId: body.traceId ?? null,
+      });
+      return { success: true, runId: result.runId };
+    } catch (error) {
+      this.logger.error(`Rollback scheduling failed: ${(error as Error).message}`, (error as Error).stack);
+      throw error;
+    }
+  }
+
+  @Post('models/:modelId/bias-review')
+  @HttpCode(HttpStatus.ACCEPTED)
+  async triggerBiasReview(
+    @Param('modelId') modelId: string,
+    @Body()
+    body: {
+      reason?: string;
+      triggeredBy?: string;
+      traceId?: string;
+    },
+  ) {
+    try {
+      const result = await this.modelLifecycle.scheduleBiasReview(modelId as ModelId, {
+        reason: body.reason ?? 'manual-bias-review',
+        triggeredBy: body.triggeredBy ?? null,
+        traceId: body.traceId ?? null,
+      });
+      return { success: true, runId: result.runId };
+    } catch (error) {
+      this.logger.error(`Bias review scheduling failed: ${(error as Error).message}`, (error as Error).stack);
+      throw error;
+    }
   }
 
   /**

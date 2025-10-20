@@ -1,9 +1,16 @@
-import axios from 'axios';
 import Redis from 'ioredis';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { z } from 'zod';
-import { ContractsV1, buildQuoteRationaleCacheKeyV1, buildQuoteRationaleRevisionCacheKeyV1, QUOTE_RATIONALE_CACHE_TTL_SECONDS } from '@cnc-quote/shared';
-import { config } from '../config.js';
+import {
+  ContractsV1,
+  buildQuoteRationaleCacheKeyV1,
+  buildQuoteRationaleRevisionCacheKeyV1,
+  getModelConfig,
+  renderPricingRationaleSystemPrompt,
+  renderPricingRationaleUserPrompt,
+  QUOTE_RATIONALE_CACHE_TTL_SECONDS,
+} from '@cnc-quote/shared';
+import { getModelGatewayClient } from '../lib/model-gateway-client.js';
 import { logger } from '../lib/logger.js';
 
 const highlightSchema = z.object({
@@ -83,34 +90,48 @@ export class PricingRationaleService {
   }
 
   private async generateSummary(payload: ContractsV1.PricingRationaleSummaryJobV1): Promise<{ content: string; modelVersion: string }> {
-    const prompt = this.buildPrompt(payload.costSheet);
-    const systemPrompt = this.buildSystemPrompt(payload);
+    const modelConfig = getModelConfig('pricing-rationale');
+    const { prompt: userPrompt, metadata: userMetadata } = renderPricingRationaleUserPrompt(payload.costSheet);
+    const { prompt: systemPrompt, metadata: systemMetadata } = renderPricingRationaleSystemPrompt(payload);
 
-    const response = await axios.post(
-      `${config.ollamaHost}/api/chat`,
+    const gateway = getModelGatewayClient();
+    const response = await gateway.chat<any>(
       {
-        model: config.ollamaModel,
+        model: modelConfig.deployment,
         messages: [
           { role: 'system', content: systemPrompt },
-          { role: 'user', content: prompt },
+          { role: 'user', content: userPrompt },
         ],
         stream: false,
         options: {
           temperature: 0,
           top_p: 0.9,
         },
+        metadata: {
+          systemPromptVersion: systemMetadata.version,
+          userPromptVersion: userMetadata.version,
+        },
       },
-      {
-        timeout: config.ollamaTimeoutMs,
-      },
+      payload.traceId,
     );
 
-    const content = response.data?.message?.content;
+    const content = response?.message?.content;
     if (typeof content !== 'string' || content.trim().length === 0) {
       throw new Error('Model returned empty response for pricing rationale summary');
     }
 
-    return { content: content.trim(), modelVersion: response.data?.model ?? config.ollamaModel };
+    const modelVersion = response?.model ?? modelConfig.deployment;
+    logger.debug(
+      {
+        quoteId: payload.quoteId,
+        modelVersion,
+        systemPromptVersion: systemMetadata.version,
+        userPromptVersion: userMetadata.version,
+      },
+      'Generated pricing rationale summary via model gateway',
+    );
+
+    return { content: content.trim(), modelVersion };
   }
 
   private parseModelResponse(raw: string): z.infer<typeof responseSchema> {
@@ -178,55 +199,6 @@ export class PricingRationaleService {
       const revisionKey = buildQuoteRationaleRevisionCacheKeyV1(summary.quoteRevisionId);
       await this.redis.set(revisionKey, JSON.stringify(cachePayload), 'EX', QUOTE_RATIONALE_CACHE_TTL_SECONDS);
     }
-  }
-
-  private buildPrompt(costSheet: ContractsV1.QuoteRationaleCostSheetV1): string {
-    const lines: string[] = [
-      `Quote ${costSheet.quoteId} priced in ${costSheet.currency}`,
-      `Subtotal: ${this.formatCurrency(costSheet.subtotal)} (pricing version ${costSheet.pricingVersion})`,
-    ];
-
-    costSheet.items.slice(0, 6).forEach((item, index) => {
-      lines.push(
-        [
-          `Item ${index + 1}: quantity ${item.quantity}, unit ${this.formatCurrency(item.unitPrice)}, total ${this.formatCurrency(item.totalPrice)}`,
-          item.leadTimeDays ? `lead time ${this.formatNumber(item.leadTimeDays)} days` : null,
-          item.breakdown
-            ? `breakdown: ${Object.entries(item.breakdown)
-                .map(([key, value]) => `${key}=${this.formatNumber(value)}`)
-                .join(', ')}`
-            : null,
-          item.compliance?.flags?.length
-            ? `compliance alerts: ${item.compliance.flags.map((flag) => `${flag.code}:${flag.severity}`).join(', ')}`
-            : null,
-        ]
-          .filter(Boolean)
-          .join(' | '),
-      );
-    });
-
-    return lines.join('\n');
-  }
-
-  private buildSystemPrompt(payload: ContractsV1.PricingRationaleSummaryJobV1): string {
-  return `You are a deterministic CNC pricing analyst.
-Summarize pricing outcomes for pricing teams.
-Rules:
-- Respond in strict JSON with keys summaryText and breakdownHighlights.
-- Use at most six highlights. Each highlight must include category (material|machining|setup|finish|inspection|overhead|margin|lead_time|logistics|surcharge|discount|other) and a concise description.
-- Provide numeric amountImpact (USD) or null. Provide percentImpact (percentage difference) or null.
-- Emphasize drivers affecting subtotal ${this.formatCurrency(payload.costSheet.subtotal)} in ${payload.costSheet.currency} using deterministic facts only.
-- Never suggest altering totals directly; label opportunities or risks only.`;
-  }
-
-  private formatCurrency(value: unknown): string {
-    const numeric = this.toNullableNumber(value) ?? 0;
-    return numeric.toFixed(2);
-  }
-
-  private formatNumber(value: unknown): string {
-    const numeric = this.toNullableNumber(value);
-    return numeric === null ? 'n/a' : numeric.toString();
   }
 
   private toNullableNumber(value: unknown): number | null {
