@@ -2,6 +2,8 @@ import { headers as nextHeaders } from 'next/headers';
 import type { NextRequest } from 'next/server';
 import { z } from 'zod';
 
+import { SUPPLIER_PORTAL_VERSION, SUPPLIER_PORTAL_VERSION_HEADER } from '@cnc-quote/shared';
+
 import { getAuthContext } from '@/lib/getAuthContext';
 
 export const ORG_HEADER = 'x-org-id' as const;
@@ -10,6 +12,9 @@ const TRACE_HEADERS = ['x-request-id', 'x-trace-id'] as const;
 
 type RuntimeHeaders = Awaited<ReturnType<typeof nextHeaders>>;
 type HeaderSource = HeadersInit | RuntimeHeaders | undefined;
+
+const SUPPLIER_API_PREFIX = '/api/supplier/';
+const SUPPLIER_UPSTREAM_PREFIX = '/supplier/';
 
 const cloneHeaders = (source: HeaderSource): Headers => {
   if (!source) {
@@ -81,6 +86,42 @@ export async function proxyFetch(
   const headerContainer = (req as unknown as { headers?: HeadersInit | RuntimeHeaders })?.headers;
   const incoming = cloneHeaders(headerContainer ?? (await nextHeaders()));
   const out = cloneHeaders(init.headers as HeaderSource);
+
+  const shouldTagSupplierProxy = (() => {
+    const requestPath = (() => {
+      const candidate = req as NextRequest & { nextUrl?: URL };
+      if (candidate?.nextUrl?.pathname) {
+        return candidate.nextUrl.pathname;
+      }
+
+      try {
+        return new URL((req as Request).url).pathname;
+      } catch {
+        return '';
+      }
+    })();
+
+    if (requestPath.startsWith(SUPPLIER_API_PREFIX)) {
+      return true;
+    }
+
+    try {
+      const target = typeof url === 'string' ? new URL(url) : url;
+      if (target.pathname.startsWith(SUPPLIER_UPSTREAM_PREFIX)) {
+        return true;
+      }
+    } catch {
+      if (typeof url === 'string' && url.startsWith(SUPPLIER_UPSTREAM_PREFIX)) {
+        return true;
+      }
+    }
+
+    return false;
+  })();
+
+  if (shouldTagSupplierProxy && !out.has(SUPPLIER_PORTAL_VERSION_HEADER)) {
+    out.set(SUPPLIER_PORTAL_VERSION_HEADER, SUPPLIER_PORTAL_VERSION);
+  }
 
   await ensureAuthHeaders(incoming, out);
   forwardTracingAndCookies(incoming, out);

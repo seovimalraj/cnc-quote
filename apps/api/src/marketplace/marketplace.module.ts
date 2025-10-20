@@ -6,16 +6,25 @@
 import { Module } from '@nestjs/common';
 import { SuppliersController } from './suppliers.controller';
 import { SuppliersService } from './suppliers.service';
+import { SupplierProfileController } from './supplier-profile.controller';
+import { SupplierQuotesController } from './supplier-quotes.controller';
+import { SupplierQuotesService } from './supplier-quotes.service';
 import { RoutingController, OrdersRoutingController } from './routing.controller';
 import { RoutingService } from './routing.service';
-import { SupabaseModule } from '../supabase/supabase.module';
+import { SupabaseModule } from '../lib/supabase/supabase.module';
 import { AuditModule } from '../audit/audit.module';
 import { EventsModule } from '../events/events.module';
 
 @Module({
   imports: [SupabaseModule, AuditModule, EventsModule],
-  controllers: [SuppliersController, RoutingController, OrdersRoutingController],
-  providers: [SuppliersService, RoutingService],
-  exports: [SuppliersService, RoutingService],
+  controllers: [
+    SuppliersController,
+    SupplierProfileController,
+    SupplierQuotesController,
+    RoutingController,
+    OrdersRoutingController,
+  ],
+  providers: [SuppliersService, SupplierQuotesService, RoutingService],
+  exports: [SuppliersService, SupplierQuotesService, RoutingService],
 })
 export class MarketplaceModule {}
