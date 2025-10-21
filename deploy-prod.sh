@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-echo "🚀 Deploying CNC Quote Platform to quote.frigate.ai..."
+echo "🚀 Deploying CNC Quote Platform to app.frigate.ai..."
 echo "======================================================"
 
 # Check if Docker and Docker Compose are available
@@ -60,14 +60,14 @@ echo "🎉 Deployment completed!"
 echo "=========================="
 echo ""
 echo "🌐 Your application is now running at:"
-echo "  - Main App:     https://quote.frigate.ai"
-echo "  - API:          https://quote.frigate.ai/api"
-echo "  - CAD Service:  https://quote.frigate.ai/cad"
-echo "  - Supabase DB:  https://quote.frigate.ai/db"
-echo "  - Redis UI:     https://quote.frigate.ai/redis"
+echo "  - Main App:     https://app.frigate.ai"
+echo "  - API:          https://app.frigate.ai/api"
+echo "  - CAD Service:  https://app.frigate.ai/cad"
+echo "  - Supabase DB:  https://app.frigate.ai/db"
+echo "  - Redis UI:     https://app.frigate.ai/redis"
 echo ""
 echo "📋 Next steps:"
-echo "1. Configure Cloudflare to point quote.frigate.ai to your server IP"
+echo "1. Configure Cloudflare to point app.frigate.ai to your server IP"
 echo "2. Enable SSL in Cloudflare (should be automatic)"
 echo "3. Test all endpoints work correctly"
 echo "4. Update any remaining placeholder credentials (Stripe, email, etc.)"

@@ -60,11 +60,11 @@ export function sanitizeOpenAPI(
   // 6. Rewrite server URLs
   sanitized.servers = [
     {
-      url: process.env.PUBLIC_API_BASE_URL || 'https://quote.frigate.ai',
+  url: process.env.PUBLIC_API_BASE_URL || 'https://app.frigate.ai',
       description: 'Production API',
     },
     {
-      url: 'https://staging.quote.frigate.ai',
+  url: 'https://staging.app.frigate.ai',
       description: 'Staging API',
     },
   ];

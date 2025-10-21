@@ -31,9 +31,19 @@ interface CustomerRouteEntry {
   httpHandlers?: string[];
 }
 
+interface CustomerSurfaceSummary {
+  totalRoutes: number;
+  clientComponents: number;
+  routesWithServerActions: number;
+  totalServerActions: number;
+  totalImportedHandlers: number;
+  httpRouteHandlers: number;
+}
+
 interface CustomerSurfaceReport {
   generatedAt: string;
   customerRoutes: CustomerRouteEntry[];
+  summary: CustomerSurfaceSummary;
   warnings?: string[];
 }
 
@@ -347,9 +357,25 @@ async function main(): Promise<void> {
     warnings.push('No routes discovered under apps/web/app/(customer). Create segment grouping to isolate customer flows.');
   }
 
+  const clientComponents = customerRoutes.filter((route) => route.isClientComponent).length;
+  const routesWithServerActions = customerRoutes.filter((route) => route.exportsServerActions.length > 0).length;
+  const totalServerActions = customerRoutes.reduce((total, route) => total + route.exportsServerActions.length, 0);
+  const totalImportedHandlers = customerRoutes.reduce((total, route) => total + route.importedHandlers.length, 0);
+  const httpRouteHandlers = customerRoutes.reduce((total, route) => total + (route.httpHandlers?.length ?? 0), 0);
+
+  const summary: CustomerSurfaceSummary = {
+    totalRoutes: customerRoutes.length,
+    clientComponents,
+    routesWithServerActions,
+    totalServerActions,
+    totalImportedHandlers,
+    httpRouteHandlers,
+  };
+
   const report: CustomerSurfaceReport = {
     generatedAt: new Date().toISOString(),
     customerRoutes,
+    summary,
     warnings: warnings.length ? warnings : undefined,
   };
 
@@ -361,6 +387,15 @@ async function main(): Promise<void> {
     '# Customer Surface Map',
     '',
     `Generated at: ${report.generatedAt}`,
+    '',
+    '## Summary',
+    '',
+    `- Total Routes: ${summary.totalRoutes}`,
+    `- Client Components: ${summary.clientComponents}`,
+    `- Routes Exporting Server Actions: ${summary.routesWithServerActions}`,
+    `- Total Exported Server Actions: ${summary.totalServerActions}`,
+    `- Imported Handlers Referenced: ${summary.totalImportedHandlers}`,
+    `- HTTP Route Handlers (route.ts): ${summary.httpRouteHandlers}`,
     '',
   ];
 
@@ -380,9 +415,9 @@ async function main(): Promise<void> {
     markdown.push(`## ${routeEntry.route}`);
     markdown.push('');
     markdown.push(`- File: ${routeEntry.file}`);
-    markdown.push(`- Type: ${routeEntry.fileType}`);
+    markdown.push(`- Route Type: ${routeEntry.fileType}`);
     if (routeEntry.componentName) {
-      markdown.push(`- Component: ${routeEntry.componentName}`);
+      markdown.push(`- Primary Component: ${routeEntry.componentName}`);
     }
     markdown.push(`- Client Component: ${routeEntry.isClientComponent ? 'yes' : 'no'}`);
     if (routeEntry.params?.length) {
@@ -395,7 +430,12 @@ async function main(): Promise<void> {
       markdown.push(`- HTTP Handlers: ${routeEntry.httpHandlers.join(', ')}`);
     }
     if (routeEntry.exportsServerActions.length) {
-      markdown.push(`- Server Actions: ${routeEntry.exportsServerActions.map((a) => a.name).join(', ')}`);
+      const actions = routeEntry.exportsServerActions
+        .map((action) => (action.inferredServerAction ? `${action.name} (server)` : action.name))
+        .join(', ');
+      markdown.push(`- Referenced Server Actions: ${actions}`);
+    } else {
+      markdown.push('- Referenced Server Actions: none');
     }
     if (routeEntry.importedHandlers.length) {
       const handlers = routeEntry.importedHandlers.map((handler) => `${handler.name} (${handler.source ?? 'unknown'})`);

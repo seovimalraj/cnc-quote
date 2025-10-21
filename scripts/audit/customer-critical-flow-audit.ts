@@ -22,16 +22,31 @@ interface FlowIssue {
   position?: { line: number; column: number };
 }
 
+interface SegmentSummary {
+  stage: string;
+  label: string;
+  filesInspected: number;
+  issuesByType: Record<FlowIssue['issueType'], number>;
+  severityCounts: Record<FlowIssue['severity'], number>;
+}
+
 interface StageReport {
   stage: string;
   label: string;
   files: string[];
   issues: FlowIssue[];
+  summary: SegmentSummary;
 }
 
 interface CustomerCriticalFlowReport {
   generatedAt: string;
   stages: StageReport[];
+  summary: {
+    totalFiles: number;
+    totalIssues: number;
+    issuesByType: Record<FlowIssue['issueType'], number>;
+    severityCounts: Record<FlowIssue['severity'], number>;
+  };
   warnings?: string[];
 }
 
@@ -392,22 +407,55 @@ async function main(): Promise<void> {
   const routeIndex = buildRouteIndex();
   const stages: StageReport[] = [];
   const warnings: string[] = [];
+  const globalIssuesByType: Record<FlowIssue['issueType'], number> = {
+    missing_handler: 0,
+    dead_link: 0,
+    todo: 0,
+    debug_statement: 0,
+  };
+  const globalSeverityCounts: Record<FlowIssue['severity'], number> = {
+    critical: 0,
+    high: 0,
+    medium: 0,
+    low: 0,
+  };
+  const inspectedFiles = new Set<string>();
 
   for (const segment of FLOW_SEGMENTS) {
     const files = globby.sync(segment.patterns, { cwd: repoRoot });
     const issues: FlowIssue[] = [];
+    const issuesByType: Record<FlowIssue['issueType'], number> = {
+      missing_handler: 0,
+      dead_link: 0,
+      todo: 0,
+      debug_statement: 0,
+    };
+    const severityCounts: Record<FlowIssue['severity'], number> = {
+      critical: 0,
+      high: 0,
+      medium: 0,
+      low: 0,
+    };
     for (const file of files) {
       const sourceFile = project.getSourceFile(toPosix(path.join(repoRoot, file)));
       if (!sourceFile) {
         continue;
       }
+      inspectedFiles.add(file);
       const route = normalizeRoute(file);
-      issues.push(
+      const segmentIssues = [
         ...buildMissingHandlerIssues(sourceFile, route, file, segment.stage),
         ...buildDeadLinkIssues(sourceFile, route, file, segment.stage, routeIndex),
         ...buildTodoIssues(sourceFile, route, file, segment.stage),
         ...buildDebugIssues(sourceFile, route, file, segment.stage),
-      );
+      ];
+      for (const issue of segmentIssues) {
+        issues.push(issue);
+        issuesByType[issue.issueType] += 1;
+        severityCounts[issue.severity] += 1;
+        globalIssuesByType[issue.issueType] += 1;
+        globalSeverityCounts[issue.severity] += 1;
+      }
     }
     if (files.length === 0) {
       warnings.push(`No files matched patterns for stage ${segment.label}.`);
@@ -423,12 +471,25 @@ async function main(): Promise<void> {
       label: segment.label,
       files,
       issues: sortedIssues,
+      summary: {
+        stage: segment.stage,
+        label: segment.label,
+        filesInspected: files.length,
+        issuesByType,
+        severityCounts,
+      },
     });
   }
 
   const report: CustomerCriticalFlowReport = {
     generatedAt: new Date().toISOString(),
     stages,
+    summary: {
+      totalFiles: inspectedFiles.size,
+      totalIssues: Object.values(globalIssuesByType).reduce((total, count) => total + count, 0),
+      issuesByType: globalIssuesByType,
+      severityCounts: globalSeverityCounts,
+    },
     warnings: warnings.length ? warnings : undefined,
   };
 
@@ -440,6 +501,16 @@ async function main(): Promise<void> {
     '# Customer Critical Flow Audit',
     '',
     `Generated at: ${report.generatedAt}`,
+    '',
+    '## Summary',
+    '',
+    `- Files inspected: ${report.summary.totalFiles}`,
+    `- Total issues: ${report.summary.totalIssues}`,
+    `- Severity counts: critical ${report.summary.severityCounts.critical}, high ${report.summary.severityCounts.high}, medium ${report.summary.severityCounts.medium}, low ${report.summary.severityCounts.low}`,
+    `- Missing handlers: ${report.summary.issuesByType.missing_handler}`,
+    `- Dead links: ${report.summary.issuesByType.dead_link}`,
+    `- TODO markers: ${report.summary.issuesByType.todo}`,
+    `- Debug statements: ${report.summary.issuesByType.debug_statement}`,
     '',
   ];
 
@@ -462,6 +533,14 @@ async function main(): Promise<void> {
     for (const file of stage.files) {
       markdown.push(`- ${file}`);
     }
+    markdown.push('');
+    markdown.push('Stage summary:');
+    markdown.push(
+      `- Issues: missing handlers ${stage.summary.issuesByType.missing_handler}, dead links ${stage.summary.issuesByType.dead_link}, TODOs ${stage.summary.issuesByType.todo}, debug statements ${stage.summary.issuesByType.debug_statement}`,
+    );
+    markdown.push(
+      `- Severity: critical ${stage.summary.severityCounts.critical}, high ${stage.summary.severityCounts.high}, medium ${stage.summary.severityCounts.medium}, low ${stage.summary.severityCounts.low}`,
+    );
     markdown.push('');
     if (stage.issues.length === 0) {
       markdown.push('_No issues detected._', '');

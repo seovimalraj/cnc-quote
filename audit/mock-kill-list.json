@@ -973,7 +973,7 @@
         },
         {
           "line": 64,
-          "match": "const mockSignedUrl = `https://quote.frigate.ai/api/files/mock-upload/${fileId}`;"
+          "match": "const mockSignedUrl = `https://app.frigate.ai/api/files/mock-upload/${fileId}`;"
         },
         {
           "line": 66,

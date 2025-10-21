@@ -1,7 +1,7 @@
 import Keycloak from 'keycloak-js';
 
 const keycloakConfig = {
-  url: process.env.NEXT_PUBLIC_KEYCLOAK_URL || 'https://quote.frigate.ai/security',
+  url: process.env.NEXT_PUBLIC_KEYCLOAK_URL || 'https://app.frigate.ai/security',
   realm: process.env.NEXT_PUBLIC_KEYCLOAK_REALM || 'cnc-quote',
   clientId: process.env.NEXT_PUBLIC_KEYCLOAK_CLIENT_ID || 'cnc-quote-web',
 };

@@ -8,7 +8,7 @@ const nextConfig = {
   reactStrictMode: true,
   experimental: {
     serverActions: {
-      allowedOrigins: ['localhost:3000', 'quote.frigate.ai']
+  allowedOrigins: ['localhost:3000', 'app.frigate.ai']
     },
     forceSwcTransforms: true,
   },
@@ -20,7 +20,7 @@ const nextConfig = {
   },
   images: {
     domains: [
-      'quote.frigate.ai'
+  'app.frigate.ai'
     ],
   },
   // Disable static generation completely

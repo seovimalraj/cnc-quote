@@ -15,10 +15,10 @@ services:
       - REDIS_PORT=6379
       - REDIS_PASSWORD=
       - JWT_SECRET=CvLsEGE0l29M+R1s6OcSm8r8We3JI7C9Gyox2fheQ4I=
-      - ALLOWED_ORIGINS=https://quote.frigate.ai,https://quote.frigate.ai/api,https://quote.frigate.ai/cad
-      - SUPABASE_URL=https://quote.frigate.ai/db
+  - ALLOWED_ORIGINS=https://app.frigate.ai,https://app.frigate.ai/api,https://app.frigate.ai/cad
+  - SUPABASE_URL=https://app.frigate.ai/db
       - SUPABASE_SERVICE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU
-      - APP_URL=https://quote.frigate.ai
+  - APP_URL=https://app.frigate.ai
       # Step 19: OpenTelemetry configuration
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
       - OTEL_EXPORTER_OTLP_PROTOCOL=grpc
@@ -76,8 +76,8 @@ services:
       - "3000:3000"
     environment:
       - NODE_ENV=production
-      - NEXT_PUBLIC_API_URL=https://quote.frigate.ai/api
-      - NEXT_PUBLIC_CAD_SERVICE_URL=https://quote.frigate.ai/cad
+  - NEXT_PUBLIC_API_URL=https://app.frigate.ai/api
+  - NEXT_PUBLIC_CAD_SERVICE_URL=https://app.frigate.ai/cad
     depends_on:
       - api
       - cad-service
@@ -244,7 +244,7 @@ services:
       - SENTRY_WEB_PORT=9000
       - SENTRY_EMAIL_HOST=mailhog
       - SENTRY_EMAIL_PORT=1025
-      - SENTRY_SERVER_EMAIL=sentry@quote.frigate.ai
+  - SENTRY_SERVER_EMAIL=sentry@app.frigate.ai
     depends_on:
       - db
       - redis
@@ -269,7 +269,7 @@ services:
       - KC_DB_URL=jdbc:postgresql://db:5432/keycloak
       - KC_DB_USERNAME=keycloak
       - KC_DB_PASSWORD=FyOsLqvPXlo13oLlmEguNRQ4xp3Ji+hW/OZVrnkTmGY=
-      - KC_HOSTNAME=quote.frigate.ai
+  - KC_HOSTNAME=app.frigate.ai
       - KC_HOSTNAME_PATH=/security
     depends_on:
       - db

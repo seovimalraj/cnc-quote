@@ -38,6 +38,7 @@ class QARunner {
       ui_audit: {},
       ui_issues: [],
       security: [],
+      customer_audit: [],
       problems_found: [],
       autofix_applied: [],
       publish_gate: {}
@@ -52,6 +53,10 @@ class QARunner {
       // 1. Preflight checks
       console.log('📋 Running preflight checks...');
       await this.runPreflightChecks();
+
+  // 1b. Customer audit suite
+  console.log('🧭 Running customer audit suite...');
+  await this.runCustomerAuditSuite();
 
       // 2. Smoke tests
       console.log('🔥 Running smoke test suites...');
@@ -240,6 +245,56 @@ class QARunner {
           name: test.name,
           passed: false,
           details: error.message
+        });
+      }
+    }
+  }
+
+  async runCustomerAuditSuite() {
+    const audits = [
+      { name: 'Customer Surface Map', cmd: 'pnpm audit:customer:surface', fail_code: 'CUS_AUDIT_SURFACE' },
+      { name: 'Customer Critical Flow Audit', cmd: 'pnpm audit:customer:flow', fail_code: 'CUS_AUDIT_FLOW' },
+      { name: 'Customer API Trace', cmd: 'pnpm audit:customer:api-trace', fail_code: 'CUS_AUDIT_API_TRACE' },
+      { name: 'Customer Audit Dashboard', cmd: 'pnpm audit:customer:dashboard', fail_code: 'CUS_AUDIT_DASHBOARD' },
+  { name: 'Customer Quote Journey Fixture Validation', cmd: 'pnpm audit:customer:journey-validate', fail_code: 'CUS_AUDIT_JOURNEY' },
+    ];
+
+    for (const audit of audits) {
+      try {
+        console.log(`  → ${audit.name}`);
+        const result = await this.executeScript(audit.cmd);
+        this.results.customer_audit.push({
+          name: audit.name,
+          cmd: audit.cmd,
+          exitCode: result.exitCode,
+          output: result.output,
+        });
+
+        if (result.exitCode !== 0) {
+          this.results.problems_found.push({
+            id: `PRB-${Date.now()}`,
+            suite: 'customer_audit',
+            fail_code: audit.fail_code,
+            severity: 'blocker',
+            summary: `${audit.name} failed`,
+            evidence: [result.output],
+          });
+        }
+      } catch (error) {
+        console.error(`  ❌ ${audit.name}: ${error.message}`);
+        this.results.customer_audit.push({
+          name: audit.name,
+          cmd: audit.cmd,
+          exitCode: 1,
+          output: error.message,
+        });
+        this.results.problems_found.push({
+          id: `PRB-${Date.now()}`,
+          suite: 'customer_audit',
+          fail_code: audit.fail_code,
+          severity: 'blocker',
+          summary: `${audit.name} failed`,
+          evidence: [error.message],
         });
       }
     }

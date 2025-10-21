@@ -15,7 +15,7 @@ apps/web/app/api/admin/quotes/[id]/route.ts:150:    // For now, return mock data
 apps/web/app/api/admin/quotes/[id]/route.ts:182:    // For now, just return the mock data with any updates
 apps/web/app/api/files/upload/route.ts:58:    // For now, use mock file handling since database is not fully configured
 apps/web/app/api/files/upload/route.ts:62:    // For development/demo, create a mock signed URL that will be handled by the frontend
-apps/web/app/api/files/upload/route.ts:64:    const mockSignedUrl = `https://quote.frigate.ai/api/files/mock-upload/${fileId}`;
+apps/web/app/api/files/upload/route.ts:64:    const mockSignedUrl = `https://app.frigate.ai/api/files/mock-upload/${fileId}`;
 apps/web/app/api/files/upload/route.ts:66:    console.log(`Created mock signed URL for ${fileName}: ${mockSignedUrl}`);
 apps/web/app/(auth)/invite/page.tsx:23:    // For now, we'll return mock data
 apps/web/app/instant-quote/page.tsx:307:        console.log('Using mock successful upload response');

@@ -106,12 +106,12 @@ async function bootstrap() {
     next();
   });
 
-  // Enable CORS with quote.frigate.ai domains
+  // Enable CORS with app.frigate.ai domains
   app.enableCors({
     origin: [
-      "https://quote.frigate.ai",
-      "https://quote.frigate.ai/api",
-      "https://quote.frigate.ai/cad",
+      "https://app.frigate.ai",
+      "https://app.frigate.ai/api",
+      "https://app.frigate.ai/cad",
       ...(process.env.ALLOWED_ORIGINS?.split(",") || []),
       ...(process.env.NODE_ENV === "development" ? ["http://localhost:3000"] : []),
     ],

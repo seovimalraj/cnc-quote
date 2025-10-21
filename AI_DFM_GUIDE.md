@@ -766,3 +766,87 @@ The AI-Powered DFM System is a production-ready platform that combines advanced 
 *For questions or support, contact the development team.*
 
 *Last Updated: October 3, 2025*
+
+---
+
+## Appendix A: Ollama / LLaMA Deployment Playbook
+
+### Purpose
+- Guarantee consistent runtime behavior for AI-assisted DFM analysis across developer laptops, staging, and production.
+- Document the supported Ollama models (LLaMA 3.1 8B, Mistral 7B, nomic-embed-text) plus their resource envelopes.
+- Provide operational runbooks for cold-start, scaling, and troubleshooting so ML assist lanes remain deterministic.
+
+### System Requirements
+- **CPU**: 8 vCPU minimum; AVX2-capable for quantized weights.
+- **RAM**: 32 GB recommended (24 GB absolute minimum) to host LLaMA 3.1 8B Q4_0 plus embeddings sidecar.
+- **GPU (optional)**: CUDA-capable GPU with 12 GB VRAM drastically reduces response time; fallback path remains CPU-friendly.
+- **Disk**: 30 GB free SSD space for model artifacts and temp caches.
+
+### Installation Checklist
+1. Install Ollama 0.3.x or later.
+2. Pull required models:
+  ```bash
+  ollama pull llama3.1:8b
+  ollama pull mistral:7b
+  ollama pull nomic-embed-text
+  ```
+3. Copy `apps/api/config/ollama.yaml.sample` to `/etc/ollama/config.yaml` (Linux) or `%PROGRAMDATA%/Ollama/config.yaml` (Windows) and adjust:
+  - `listen` address (`0.0.0.0:11434` inside Docker, `127.0.0.1:11434` for local dev).
+  - `keep_alive` window (recommend `30m` in staging, `4h` prod).
+  - `num_parallel` to expected concurrent requests (prod baseline: `4`).
+4. Restart Ollama service.
+
+### Environment Variables (API / Worker)
+- `OLLAMA_BASE_URL`: defaults to `http://localhost:11434`.
+- `OLLAMA_TIMEOUT_MS`: set to `15000` (15s) prod, `30000` staging.
+- `AI_ASSIST_MODEL_LLAMA`: `llama3.1:8b`.
+- `AI_ASSIST_MODEL_SUMMARY`: `mistral:7b` (fast summarizer fallback).
+- `AI_EMBED_MODEL`: `nomic-embed-text`.
+- Secrets stored via Doppler/Vault; never commit plaintext tokens.
+
+### Scaling Patterns
+- **Vertical**: Increase RAM / VRAM and adjust `num_parallel`.
+- **Horizontal**: Run multiple Ollama instances behind nginx upstream; use least_conn balancer, sticky on `X-Trace-Id`.
+- **Warm Pools**: Preload models with `ollama run <model> "ping"` during deployment to avoid cold-latency spikes.
+
+### Observability Hooks
+- Scrape `/api/metrics` every 15s (enable `metrics` flag in config) for latency histograms.
+- Forward Ollama logs to Loki via Fluent Bit (`scripts/otel/ollama-filter.lua`).
+- Emit custom gauge `ollama_active_sessions` from API when dispatching jobs to detect saturation.
+- Trace context propagated via `X-Trace-Id`; ensure reverse proxies append header if absent.
+
+### Runbook: Cold Model Start
+1. `curl $OLLAMA_BASE_URL/api/tags` until model list responds (max 60s).
+2. `curl -s -X POST $OLLAMA_BASE_URL/api/generate -d '{"model":"llama3.1:8b","prompt":"ping"}'`.
+3. Confirm `status=running` in JSON stream; cancel with `Ctrl+C` after first token.
+4. Update Grafana panel `AI Assist Latency` to ensure warm start <6s p95.
+
+### Runbook: High Latency Alert
+1. Check Prometheus alert `ollama_latency_p95_gt_10s`.
+2. Inspect host metrics: CPU steal >20% indicates noisy neighbor; move workload.
+3. Verify concurrent requests (`ollama_active_sessions` > `num_parallel`) and autoscale if needed.
+4. Fallback to lightweight summary model by toggling feature flag `dfm_ai_summary_use_mistral`.
+
+### Security Hardening
+- Bind Ollama to loopback; expose externally only via mTLS-enabled reverse proxy.
+- Enforce IP allowlist at nginx layer for worker/API subnets.
+- Rotate API callers through short-lived OAuth tokens (15m expiry) stored in Secrets Manager.
+- Enable request body redaction in log sinks (`OLLAMA_LOG_REDact=true`).
+
+### Maintenance Cadence
+- **Weekly**: Run `ollama list` & `ollama upgrades` to detect patched weights; stage first.
+- **Monthly**: Validate prompt outputs against golden fixtures in `scripts/ai/regression-fixtures.json`.
+- **Quarterly**: Benchmark alternative quantizations (Q4_1, Q5_0) and update decision log under `docs/adr/`.
+- **After Incident**: Capture RCA with trace IDs and attach to `docs/runbooks/ollama-outage.md`.
+
+### Troubleshooting Quick Reference
+| Symptom | Likely Cause | Mitigation |
+|---------|--------------|------------|
+| 503 from API when calling AI assist | Ollama offline | Restart service, validate `curl /api/tags` |
+| Responses stream but halt | `keep_alive` too low | Increase to `30m`, warm models |
+| High memory pressure | Multiple models resident | Reduce concurrency or unload unused models (`ollama stop <model>`) |
+| Token drift in summaries | Prompt config mismatch | Sync `apps/api/src/modules/ai/prompts/*.ts` with deployed version |
+
+---
+
+*Appendix maintained by platform-observability. Update when model inventory or deployment topology changes.*

@@ -100,7 +100,7 @@ apps/web/app/api/files/mock-upload/[fileId]/route.ts:35:    console.error('Mock 
 apps/web/app/api/files/mock-upload/[fileId]/route.ts:38:      { error: 'Mock upload failed' },
 apps/web/app/api/files/upload/route.ts:58:    // For now, use mock file handling since database is not fully configured
 apps/web/app/api/files/upload/route.ts:62:    // For development/demo, create a mock signed URL that will be handled by the frontend
-apps/web/app/api/files/upload/route.ts:64:    const mockSignedUrl = `https://quote.frigate.ai/api/files/mock-upload/${fileId}`;
+apps/web/app/api/files/upload/route.ts:64:    const mockSignedUrl = `https://app.frigate.ai/api/files/mock-upload/${fileId}`;
 apps/web/app/api/files/upload/route.ts:66:    console.log(`Created mock signed URL for ${fileName}: ${mockSignedUrl}`);
 apps/web/app/api/files/upload/route.ts:70:      signedUrl: mockSignedUrl,
 apps/web/app/dashboard/page.tsx:22:// Mock data for demonstration
