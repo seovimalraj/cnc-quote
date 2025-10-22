@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-import { MissingOrgContextError, requireOrgAuthContext } from '../../../../_lib/context';
+import { MissingOrgContextError, requireOrgAuthContext } from '../../../_lib/context';
 
 export async function DELETE(_request: NextRequest, { params }: { params: { id: string } }) {
   try {

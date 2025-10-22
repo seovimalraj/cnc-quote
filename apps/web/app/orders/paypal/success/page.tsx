@@ -1,13 +1,20 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 
 export default function PayPalSuccessPage() {
+  return (
+    <Suspense fallback={<PendingState />}>
+      <PayPalSuccessContent />
+    </Suspense>
+  );
+}
+
+function PayPalSuccessContent() {
   const params = useSearchParams();
   const router = useRouter();
-  const orderId = params.get('token'); // PayPal returns token parameter for order approval
-  const payerId = params.get('PayerID');
+  const orderId = params?.get('token'); // PayPal returns token parameter for order approval
   const [status, setStatus] = useState<'capturing' | 'succeeded' | 'error'>('capturing');
   const [error, setError] = useState<string | null>(null);
 
@@ -61,6 +68,15 @@ export default function PayPalSuccessPage() {
         <Button onClick={() => router.push('/portal/orders')}>View Orders</Button>
         <Button variant="outline" onClick={() => router.push('/portal/quotes')}>Back to Quotes</Button>
       </div>
+    </div>
+  );
+}
+
+function PendingState() {
+  return (
+    <div className="min-h-screen flex flex-col items-center justify-center gap-4">
+      <div className="animate-spin h-10 w-10 border-2 border-b-transparent rounded-full" />
+      <p>Finalizing your payment...</p>
     </div>
   );
 }

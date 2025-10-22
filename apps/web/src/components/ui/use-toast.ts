@@ -21,3 +21,7 @@ export function toast({ title, description, variant = "default" }: ToastProps) {
 
   return toastImpl(message, options);
 }
+
+export function useToast() {
+  return { toast };
+}

@@ -1,3 +1,5 @@
+'use client';
+
 import React, { useMemo, useRef } from 'react';
 import useSWR from 'swr';
 import { ContractsVNext } from '@cnc-quote/shared';

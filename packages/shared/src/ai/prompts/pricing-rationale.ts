@@ -6,11 +6,13 @@
  * configurations. Changes require domain sign-off recorded in docs/governance/ai-ml-posture.md.
  */
 
+import type { PricingBreakdownV1 } from '../../contracts/v1/part-config';
 import type {
   PricingRationaleSummaryJobV1,
   QuoteRationaleCostSheetV1,
+  QuoteRationaleHighlightCategoryV1,
 } from '../../contracts/v1/pricing-rationale';
-import type { QuoteRationaleHighlightCategoryV1 } from '../../contracts/v1/pricing-rationale';
+import type { QuoteComplianceAlertV1 } from '../../contracts/v1/pricing-compliance';
 import type { PromptDescriptor } from '../prompt-registry';
 
 const USER_PROMPT_VERSION = '2025-10-20.1';
@@ -89,9 +91,12 @@ export const PRICING_RATIONALE_USER_PROMPT: PromptDescriptor<
           `Item ${index + 1}: quantity ${formatNumber(item.quantity)}, unit ${formatCurrency(item.unitPrice)}, total ${formatCurrency(item.totalPrice)}`,
           item.leadTimeDays ? `lead time ${formatNumber(item.leadTimeDays)} days` : null,
           item.breakdown ? `breakdown: ${formatBreakdown(item.breakdown)}` : null,
-          item.compliance?.flags?.length
-            ? `compliance alerts: ${item.compliance.flags.map((flag) => `${flag.code}:${flag.severity}`).join(', ')}`
-            : null,
+          (() => {
+            const alerts = item.compliance?.alerts ?? ([] as QuoteComplianceAlertV1[]);
+            return alerts.length > 0
+              ? `compliance alerts: ${alerts.map((alert) => `${alert.code}:${alert.severity}`).join(', ')}`
+              : null;
+          })(),
         ]
           .filter(Boolean)
           .join(' | '),
@@ -144,10 +149,44 @@ function toNullableNumber(value: unknown): number | null {
   return null;
 }
 
-function formatBreakdown(breakdown: Record<string, unknown>): string {
-  return Object.entries(breakdown)
-    .map(([key, value]) => `${key}=${formatNumber(value as number)}`)
-    .join(', ');
+function formatBreakdown(breakdown: PricingBreakdownV1 | null | undefined): string {
+  if (!breakdown) {
+    return 'n/a';
+  }
+
+  const numericKeys: Array<keyof PricingBreakdownV1> = [
+    'material',
+    'machining',
+    'setup',
+    'finish',
+    'inspection',
+    'overhead',
+    'margin',
+    'total_cycle_time_min',
+    'machine_time_min',
+  ];
+
+  const segments = numericKeys
+    .map((key) => {
+      const value = breakdown[key];
+      return typeof value === 'number' ? `${key}=${formatNumber(value)}` : null;
+    })
+    .filter((entry): entry is string => entry !== null);
+
+  const toleranceMultipliers = breakdown.tolerance?.multipliers;
+  if (toleranceMultipliers) {
+    segments.push(
+      `tolerance_multiplier=${[
+        toleranceMultipliers.machining,
+        toleranceMultipliers.setup,
+        toleranceMultipliers.inspection,
+      ]
+        .map((value) => formatNumber(value))
+        .join('/')}`,
+    );
+  }
+
+  return segments.join(', ');
 }
 
 export const PRICING_RATIONALE_PROMPT_CATEGORIES: QuoteRationaleHighlightCategoryV1[] = [

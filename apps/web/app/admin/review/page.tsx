@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { AlertTriangle, Loader2, RefreshCw, Search as SearchIcon } from 'lucide-react';
 
@@ -20,8 +20,21 @@ type SortState = {
 const SORTABLE_COLUMNS = new Set(['createdAt', 'totalValue', 'dfmFindingCount', 'priority', 'lastActionAt']);
 
 export default function ManualReviewPage() {
+  return (
+    <RequireAnyRole
+      roles={['admin', 'org_admin', 'reviewer', 'finance']}
+      fallback={<div className="p-6 text-sm text-red-600">Access denied</div>}
+    >
+      <Suspense fallback={<LoadingState />}>
+        <ManualReviewContent />
+      </Suspense>
+    </RequireAnyRole>
+  );
+}
+
+function ManualReviewContent() {
   const router = useRouter();
-  const pathname = usePathname();
+  const pathname = usePathname() ?? '/admin/review';
   const searchParams = useSearchParams();
   const [searchValue, setSearchValue] = useState(() => searchParams?.get('search') ?? '');
 
@@ -151,10 +164,6 @@ export default function ManualReviewPage() {
   ]);
 
   return (
-    <RequireAnyRole
-      roles={['admin', 'org_admin', 'reviewer', 'finance']}
-      fallback={<div className="p-6 text-sm text-red-600">Access denied</div>}
-    >
       <div className="space-y-6 p-6">
         <header className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
@@ -205,7 +214,6 @@ export default function ManualReviewPage() {
           />
         )}
       </div>
-    </RequireAnyRole>
   );
 }
 

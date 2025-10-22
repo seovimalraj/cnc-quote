@@ -231,7 +231,7 @@ console.log('Provider:', data.pricing.tax.provider);`}</code>
 )
 
 data = response.json()
-print(f"Tax: ${data['pricing']['tax']['totalTax']:.2f}")
+print(f"Tax: \${data['pricing']['tax']['totalTax']:.2f}")
 print(f"Jurisdiction: {data['pricing']['tax']['jurisdiction']}")`}</code>
             </pre>
           )}

@@ -105,8 +105,8 @@ export const KanbanBoardStatsVNextSchema = z
   .object({
     totalOrders: z.number().int().nonnegative(),
     totalValue: z.number().optional(),
-    byStatus: z.record(z.number()).optional(),
-    byPriority: z.record(z.number()).optional(),
+    byStatus: z.record(z.string(), z.number()).optional(),
+    byPriority: z.record(z.string(), z.number()).optional(),
   })
   .passthrough();
 

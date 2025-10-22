@@ -15,7 +15,7 @@ export const AdminMachineConfigSchema = z.object({
   hourly_rate: z.number().nonnegative(),
   setup_rate: z.number().nonnegative(),
   min_setup_min: z.number().nonnegative(),
-  feed_rate_map: z.record(z.number()).default({}),
+  feed_rate_map: z.record(z.string(), z.number()).default({}),
   rapid_rate: z.number().nullable().optional(),
   toolchange_s: z.number().nullable().optional(),
   region: z.string().optional(),
@@ -76,13 +76,15 @@ export const AdminOverheadMarginConfigSchema = z.object({
 
 export const AdminPricingConfigSchema = z.object({
   version: z.string(),
-  machines: z.record(AdminMachineConfigSchema),
-  materials: z.record(AdminMaterialConfigSchema),
-  finishes: z.record(AdminFinishConfigSchema),
-  tolerance_packs: z.record(AdminTolerancePackConfigSchema),
+  machines: z.record(z.string(), AdminMachineConfigSchema),
+  materials: z.record(z.string(), AdminMaterialConfigSchema),
+  finishes: z.record(z.string(), AdminFinishConfigSchema),
+  tolerance_packs: z.record(z.string(), AdminTolerancePackConfigSchema),
   inspection: AdminInspectionConfigSchema,
-  speed_region: z.record(z.record(AdminSpeedRegionConfigSchema)).default({}),
-  risk_matrix: z.record(AdminRiskConfigSchema),
+  speed_region: z
+    .record(z.string(), z.record(z.string(), AdminSpeedRegionConfigSchema))
+    .default({}),
+  risk_matrix: z.record(z.string(), AdminRiskConfigSchema),
   overhead_margin: AdminOverheadMarginConfigSchema,
 });
 

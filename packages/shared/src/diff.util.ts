@@ -81,8 +81,8 @@ function createDiff(before: any, after: any): DiffResult | null {
     const result: DiffMap = {};
     const beforeObj = (before ?? {}) as Record<string, any>;
     const afterObj = (after ?? {}) as Record<string, any>;
-    const keys = new Set<string>([...Object.keys(beforeObj), ...Object.keys(afterObj)]);
-    for (const key of keys) {
+  const keys = new Set<string>([...Object.keys(beforeObj), ...Object.keys(afterObj)]);
+  for (const key of Array.from(keys)) {
       const childDiff = createDiff(beforeObj[key], afterObj[key]);
       if (childDiff !== null) {
         result[key] = childDiff;

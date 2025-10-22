@@ -28,7 +28,7 @@ services:
       - SENTRY_SUPPRESS_GLOBAL_ERROR_HANDLER_FILE_WARNING=1
       - NEXT_PUBLIC_SUPABASE_URL=http://localhost:5432
       - NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0
-  - NEXT_PUBLIC_API_URL=https://app.frigate.ai/api
+      - NEXT_PUBLIC_API_URL=https://app.frigate.ai/api
       - SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU
       - JWT_SECRET=cnc-quote-jwt-secret-key-2024-production-ready
     depends_on:
@@ -47,7 +47,7 @@ services:
       - NODE_ENV=production
       - PORT=3001
       - DATABASE_URL=postgresql://postgres:postgres@supabase:5432/postgres
-  - SUPABASE_URL=https://app.frigate.ai/db
+      - SUPABASE_URL=https://app.frigate.ai/db
       - SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0
       - SUPABASE_SERVICE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU
       - SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU
@@ -55,17 +55,17 @@ services:
       - REDIS_HOST=redis
       - REDIS_PORT=6379
       - CAD_SERVICE_URL=http://cad-service:10001
-  - PAYPAL_CLIENT_ID=your_paypal_client_id
-  - PAYPAL_CLIENT_SECRET=your_paypal_client_secret
-  - PAYPAL_ENV=live
+      - PAYPAL_CLIENT_ID=your_paypal_client_id
+      - PAYPAL_CLIENT_SECRET=your_paypal_client_secret
+      - PAYPAL_ENV=live
       - SMTP_HOST=smtp.gmail.com
       - SMTP_PORT=587
       - SMTP_USER=placeholder@example.com
       - SMTP_PASS=placeholder
       - SLACK_BOT_TOKEN=xoxb-placeholder
-  - APP_URL=https://app.frigate.ai
+      - APP_URL=https://app.frigate.ai
       - JWT_SECRET=cnc-quote-jwt-secret-key-2024-production-ready
-  - ALLOWED_ORIGINS=https://app.frigate.ai
+      - ALLOWED_ORIGINS=https://app.frigate.ai
       - APP_NAME=CNC Quote
     depends_on:
       - supabase
@@ -87,7 +87,7 @@ services:
       dockerfile: apps/cad-service/Dockerfile
     environment:
       - PYTHONUNBUFFERED=1
-  - SUPABASE_URL=https://app.frigate.ai/db
+      - SUPABASE_URL=https://app.frigate.ai/db
       - SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU
       - SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU
       - REDIS_HOST=redis

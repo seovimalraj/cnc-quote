@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 
-import { MissingOrgContextError, requireOrgAuthContext } from '../../../_lib/context';
+import { MissingOrgContextError, requireOrgAuthContext } from '../../_lib/context';
 
 const PaymentMethodSchema = z.object({
   id: z.string().uuid().optional(),

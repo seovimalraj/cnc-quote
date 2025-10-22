@@ -1,5 +1,5 @@
 // Base part-config related exports (explicit to avoid collisions)
-export { 
+export type {
 	ProcessType,
 	LeadTimeOption,
 	ToleranceClass,
@@ -7,21 +7,28 @@ export {
 	GeometryMetricsV1,
 	PricingBreakdownV1,
 	QuantityPricePointV1,
-	DfmIssueV1, // part-config scoped issue
+	DfmIssueV1,
 	PartConfigV1,
-	QuoteSummaryV1, // part-config variant
+	QuoteSummaryV1,
 } from './part-config';
 
-export { CostFactorsV1, PricingComputationInputV1, PricingBreakdownDetailedV1 } from './pricing';
-export {
+export type {
+	CostFactorsV1,
+	PricingComputationInputV1,
+	PricingBreakdownDetailedV1,
+} from './pricing';
+
+export type {
 	QuoteComplianceAlertV1,
 	QuoteComplianceAlertCodeV1,
 	QuoteComplianceAlertSeverityV1,
 	QuoteComplianceSnapshotV1,
 	QuoteComplianceSurchargeV1,
+	QuoteComplianceMlAssistJobV1,
+	QuoteComplianceMlInsightV1,
 } from './pricing-compliance';
 
-export {
+export type {
 	AdminRecentEventDiffV1,
 	AdminRecentEventAlertV1,
 	AdminRecentEventAlertSeverityV1,
@@ -31,7 +38,7 @@ export {
 	AdminRecentEventsResponseV1,
 } from './admin-events';
 
-export {
+export type {
 	AdminCmsStatusV1,
 	AdminCmsPageV1,
 	AdminCmsDocumentV1,
@@ -40,7 +47,7 @@ export {
 } from './admin-content';
 
 // Full DFM taxonomy exports (distinct issue type definition)
-export { 
+export type {
 	DfmSeverityV1,
 	DfmIssueCategoryV1,
 	DfmIssueRefV1,
@@ -48,19 +55,19 @@ export {
 	DfmResultV1,
 } from './dfm';
 
-export { 
+export type {
 	QuoteLifecycleStatusV1,
 	QuoteItemV1,
 	QuotePricingTotalsV1,
 	QuoteMetaV1,
 	QuoteV1,
 	QuoteSummaryV1 as QuoteApiSummaryV1,
-  QuoteRevisionSummaryV1,
-  QuoteRevisionApplyResultV1,
-  computeQuoteDiffSummaryV1,
+	QuoteRevisionSummaryV1,
+	QuoteRevisionApplyResultV1,
 } from './quote';
+export { computeQuoteDiffSummaryV1 } from './quote';
 
-export {
+export type {
 	QuoteRationaleHighlightCategoryV1,
 	QuoteRationaleBreakdownHighlightV1,
 	QuoteRationaleSummaryV1,
@@ -68,6 +75,8 @@ export {
 	QuoteRationaleCostSheetV1,
 	QuoteRationaleCachePayloadV1,
 	PricingRationaleSummaryJobV1,
+} from './pricing-rationale';
+export {
 	QUOTE_RATIONALE_CACHE_PREFIX_V1,
 	QUOTE_RATIONALE_CACHE_TTL_SECONDS,
 	buildQuoteRationaleCacheKeyV1,
@@ -75,27 +84,29 @@ export {
 } from './pricing-rationale';
 
 export {
-  AdminPricingRevisionAssistantRequestSchemaV1,
-  AdminPricingRevisionAssistantRequestV1,
-  AdminPricingRevisionAssistantAdjustmentSchemaV1,
-  AdminPricingRevisionAssistantAdjustmentV1,
-  AdminPricingRevisionAssistantLLMResponseSchemaV1,
-  AdminPricingRevisionAssistantLLMResponseV1,
-  AdminPricingRevisionAssistantStatusSchemaV1,
-  AdminPricingRevisionAssistantStatusV1,
+	AdminPricingRevisionAssistantRequestSchemaV1,
+	AdminPricingRevisionAssistantAdjustmentSchemaV1,
+	AdminPricingRevisionAssistantLLMResponseSchemaV1,
+	AdminPricingRevisionAssistantStatusSchemaV1,
 	AdminPricingRevisionAssistantApprovalDecisionSchemaV1,
-	AdminPricingRevisionAssistantApprovalDecisionV1,
 	AdminPricingRevisionDualControlStateSchemaV1,
-	AdminPricingRevisionDualControlStateV1,
 	AdminPricingRevisionAssistantApprovalSchemaV1,
-	AdminPricingRevisionAssistantApprovalV1,
 	AdminPricingRevisionAssistantApprovalRequestSchemaV1,
+	AdminPricingRevisionAssistantRunSchemaV1,
+} from './admin-pricing-assistant';
+export type {
+	AdminPricingRevisionAssistantRequestV1,
+	AdminPricingRevisionAssistantAdjustmentV1,
+	AdminPricingRevisionAssistantLLMResponseV1,
+	AdminPricingRevisionAssistantStatusV1,
+	AdminPricingRevisionAssistantApprovalDecisionV1,
+	AdminPricingRevisionDualControlStateV1,
+	AdminPricingRevisionAssistantApprovalV1,
 	AdminPricingRevisionAssistantApprovalRequestV1,
-  AdminPricingRevisionAssistantRunSchemaV1,
-  AdminPricingRevisionAssistantRunV1,
+	AdminPricingRevisionAssistantRunV1,
 } from './admin-pricing-assistant';
 
-export {
+export type {
 	AIModelRunStatusV1,
 	AIModelRunV1,
 	AIModelReviewStatusV1,

@@ -25,10 +25,12 @@
         "./src/*"
       ],
       "@/lib/*": [
+        "./src/lib/*",
         "./lib/*"
       ],
       "@/components/*": [
-        "./src/components/*"
+        "./src/components/*",
+        "./components/*"
       ],
       "@cnc-quote/shared": [
         "../../packages/shared/src/index.ts"

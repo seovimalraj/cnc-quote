@@ -2,7 +2,7 @@
 import React from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { AlertTriangleIcon, CheckCircleIcon, WrenchIcon, CubeIcon } from '@heroicons/react/24/outline';
+import { ExclamationTriangleIcon, CheckCircleIcon, WrenchIcon, CubeIcon } from '@heroicons/react/24/outline';
 
 interface DetectedFeature {
   type: string;
@@ -87,7 +87,7 @@ export const FeatureAnalysisPanel: React.FC<FeatureAnalysisPanelProps> = ({
         {summary.dff_violations.length > 0 && (
           <div className="border border-red-200 rounded-lg p-3 bg-red-50">
             <div className="flex items-center mb-2">
-              <AlertTriangleIcon className="w-4 h-4 text-red-500 mr-2" />
+              <ExclamationTriangleIcon className="w-4 h-4 text-red-500 mr-2" />
               <span className="text-sm font-medium text-red-700">Design for Manufacturability Issues</span>
             </div>
             <ul className="space-y-1">
@@ -125,7 +125,7 @@ export const FeatureAnalysisPanel: React.FC<FeatureAnalysisPanelProps> = ({
 
                   {feature.dff_issues && feature.dff_issues.length > 0 && (
                     <div className="flex items-center text-xs text-red-600">
-                      <AlertTriangleIcon className="w-3 h-3 mr-1" />
+                      <ExclamationTriangleIcon className="w-3 h-3 mr-1" />
                       {feature.dff_issues.join(', ')}
                     </div>
                   )}

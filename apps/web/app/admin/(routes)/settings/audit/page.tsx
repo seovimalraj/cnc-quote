@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState, Fragment } from 'react';
-import { useAuth } from '@/components/contexts/AuthContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { RBACGuard } from '@/components/auth/RBACGuard';
 import AuditDiff from '@/components/AuditDiff';
 

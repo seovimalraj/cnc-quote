@@ -308,8 +308,8 @@ function normalizeReviewWorkspace(input: any): ContractsVNext.AdminReviewWorkspa
 }
 
 function normalizeReviewListResponse(raw: any): ReviewListResponse {
-  const rows = Array.isArray(raw?.data) ? raw.data : [];
-  const normalizedItems = rows.map(normalizeReviewItem);
+  const rows = Array.isArray(raw?.data) ? (raw.data as unknown[]) : [];
+  const normalizedItems: AdminReviewItem[] = rows.map((row) => normalizeReviewItem(row));
 
   const metaSource = raw?.meta ?? {};
   const limitValue = toNumberValue(metaSource.limit ?? raw?.limit, 25) ?? 25;
@@ -331,7 +331,7 @@ function normalizeReviewListResponse(raw: any): ReviewListResponse {
   };
 
   const parsed = ContractsVNext.AdminReviewListSchema.parse({
-    data: normalizedItems.map(({ quoteNo, ...rest }) => rest),
+    data: normalizedItems.map(({ quoteNo: _quoteNo, ...rest }: AdminReviewItem) => rest),
     meta,
     stats,
   });

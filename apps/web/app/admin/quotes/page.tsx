@@ -5,7 +5,7 @@
  * @purpose Display the admin-facing quote list with filtering and drill-down entry points.
  */
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { AlertTriangle, Loader2, RefreshCw, Search as SearchIcon } from 'lucide-react';
 import { ContractsVNext } from '@cnc-quote/shared';
@@ -21,8 +21,21 @@ import { useAdminQuotesList } from '@/hooks/useAdminQuotesList';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 export default function AdminQuotesPage() {
+  return (
+    <RequireAnyRole
+      roles={['admin', 'org_admin', 'reviewer', 'finance']}
+      fallback={<div className="p-6 text-sm text-red-600">Access denied</div>}
+    >
+      <Suspense fallback={<LoadingState />}>
+        <AdminQuotesContent />
+      </Suspense>
+    </RequireAnyRole>
+  );
+}
+
+function AdminQuotesContent() {
   const router = useRouter();
-  const pathname = usePathname();
+  const pathname = usePathname() ?? '/admin/quotes';
   const searchParams = useSearchParams();
   const [searchValue, setSearchValue] = useState(() => searchParams?.get('search') ?? '');
 
@@ -195,10 +208,6 @@ export default function AdminQuotesPage() {
   const initialLoading = isLoading && !hasResults;
 
   return (
-    <RequireAnyRole
-      roles={['admin', 'org_admin', 'reviewer', 'finance']}
-      fallback={<div className="p-6 text-sm text-red-600">Access denied</div>}
-    >
       <div className="space-y-6 p-6">
         <header className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
@@ -330,7 +339,6 @@ export default function AdminQuotesPage() {
           />
         )}
       </div>
-    </RequireAnyRole>
   );
 }
 

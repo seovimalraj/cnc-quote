@@ -1,14 +1,52 @@
-import React from 'react';
+'use client';
+
+import React, { useCallback, useEffect, useState } from 'react';
 import { RequireAnyRole } from '@/components/auth/RequireAnyRole';
-import useSWR from 'swr';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useQueueStatusSocket } from '@/hooks/useQueueStatusSocket';
 
-const fetcher = (url: string) => fetch(url).then(r => r.json());
-
 export default function AdminQueuesPage() {
-  const { data, error, mutate, isLoading } = useSWR('/api/admin/queues/status', fetcher, { refreshInterval: 60000 });
+  const [data, setData] = useState<any | null>(null);
+  const [error, setError] = useState<Error | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const fetchStatus = useCallback(async (showInitial = false) => {
+    try {
+      if (showInitial) {
+        setIsLoading(true);
+      } else {
+        setIsRefreshing(true);
+      }
+
+      const response = await fetch('/api/admin/queues/status');
+      if (!response.ok) {
+        throw new Error('Failed to fetch queue status');
+      }
+
+      const payload = await response.json();
+      setData(payload);
+      setError(null);
+    } catch (err) {
+      const message = err instanceof Error ? err : new Error('Failed to fetch queue status');
+      setError(message);
+    } finally {
+      if (showInitial) {
+        setIsLoading(false);
+      } else {
+        setIsRefreshing(false);
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchStatus(true);
+    const interval = setInterval(() => fetchStatus(false), 60_000);
+    return () => clearInterval(interval);
+  }, [fetchStatus]);
+
+  const mutate = useCallback(() => fetchStatus(false), [fetchStatus]);
   const { snapshot, connected } = useQueueStatusSocket(data);
   const queues = snapshot?.queues || data?.queues || [];
 
@@ -28,7 +66,7 @@ export default function AdminQueuesPage() {
             {connected ? 'live' : 'offline'}
           </span>
         </div>
-        <Button variant="outline" onClick={() => mutate()}>Manual Refresh</Button>
+  <Button variant="outline" onClick={() => mutate()} disabled={isRefreshing}>Manual Refresh</Button>
       </div>
       {error && <div className="text-sm text-red-600">Failed to load queue status</div>}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
