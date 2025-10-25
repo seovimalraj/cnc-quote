@@ -9,7 +9,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
-import { OutcomesService } from "../legacy/quotes-legacy/outcomes/outcomes.service";
+import { OutcomesService } from "../../legacy/quotes-legacy/outcomes/outcomes.service";
 import { JwtAuthGuard } from "../../core/auth/jwt.guard";
 import { OrgGuard } from "../../core/auth/org.guard";
 

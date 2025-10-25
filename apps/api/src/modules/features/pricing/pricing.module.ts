@@ -22,13 +22,13 @@ import { NotifyModule } from "../notify/notify.module";
 // PricingConfigService moved to AdminPricingModule to break circular dependency
 import { PricingComplianceService } from "./pricing-compliance.service";
 import { QueueModule } from "../../../queues";
-import { AdminFeatureFlagsModule } from "../admin/admin/admin-feature-flags/admin-feature-flags.module";
+import { AdminFeatureFlagsModule } from "../../admin/admin-feature-flags/admin-feature-flags.module";
 import { AIModule } from "../ai/ai.module";
 import { PricingComplianceMlAssistService } from "./pricing-compliance-ml-assist.service";
 import { PricingComplianceMlAssistProcessor } from "./pricing-compliance-ml-assist.processor";
 import { PricingRationaleSummaryService } from "./pricing-rationale-summary.service";
-import { PricingCoreModule } from "../legacy/pricing-core/pricing-core.module";
-import { AdminPricingModule } from "../admin/admin/admin-pricing/admin-pricing.module";
+import { PricingCoreModule } from "../../legacy/pricing-core/pricing-core.module";
+import { AdminPricingModule } from "../../admin/admin-pricing/admin-pricing.module";
 
 @Module({
   imports: [

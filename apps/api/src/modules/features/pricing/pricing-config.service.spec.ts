@@ -1,5 +1,5 @@
 import { PricingConfigService } from './pricing-config.service';
-import { ConfigWithMetadata } from "../admin/admin/admin-pricing/admin-pricing.service";
+import { ConfigWithMetadata } from "../../admin/admin-pricing/admin-pricing.service";
 import type { AdminPricingConfig } from '@cnc-quote/shared';
 
 const { describe, it, expect, beforeEach } = globalThis as Record<string, any>;

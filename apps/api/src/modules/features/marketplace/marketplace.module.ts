@@ -12,11 +12,11 @@ import { SupplierQuotesService } from './supplier-quotes.service';
 import { RoutingController, OrdersRoutingController } from './routing.controller';
 import { RoutingService } from './routing.service';
 import { SupabaseModule } from "../../../lib/supabase/supabase.module";
-import { AuditModule } from "../legacy/audit/audit.module";
-import { EventsModule } from "../websockets/events/events.module";
+import { AuditModule } from "../../legacy/audit-legacy/audit.module";
+// import { EventsModule } from "../../websockets/events/events.module"; // TODO: Implement WebSocket events module
 
 @Module({
-  imports: [SupabaseModule, AuditModule, EventsModule],
+  imports: [SupabaseModule, AuditModule /*, EventsModule */],
   controllers: [
     SuppliersController,
     SupplierProfileController,

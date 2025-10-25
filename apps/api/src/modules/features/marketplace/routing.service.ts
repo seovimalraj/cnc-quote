@@ -4,9 +4,9 @@
  */
 
 import { Injectable, NotFoundException, BadRequestException, ConflictException } from '@nestjs/common';
-import { SupabaseService } from "../supabase/supabase.service";
-import { AuditService } from "../legacy/audit/audit.service";
-import { EventsGateway } from "../websockets/events/events.gateway";
+import { SupabaseService } from "../../../lib/supabase/supabase.service";
+import { AuditService } from "../../legacy/audit-legacy/audit.service";
+// import { EventsGateway } from "../../websockets/events/events.gateway"; // TODO: Implement WebSocket gateway
 import type {
   GetCandidatesDto,
   CandidatesResponse,
@@ -19,14 +19,14 @@ import type {
   Capability,
   RoutingRule,
   CreateRoutingRuleDto,
-} from '@cnc-quote/shared/marketplace';
+} from '@cnc-quote/shared';
 
 @Injectable()
 export class RoutingService {
   constructor(
     private readonly supabase: SupabaseService,
     private readonly audit: AuditService,
-    private readonly events: EventsGateway,
+    // private readonly events: EventsGateway, // TODO: Inject EventsGateway when available
   ) {}
 
   /**

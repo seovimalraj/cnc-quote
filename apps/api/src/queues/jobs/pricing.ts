@@ -1,8 +1,8 @@
 import { Processor, WorkerHost } from "@nestjs/bullmq";
 import { Job } from "bullmq";
 import { Logger } from "@nestjs/common";
-import { PRICING_RECALC_JOB } from "../../lib/pricing-core/pricing-recalc.queue";
-import { PricingRecalcService } from "../../lib/pricing-core/pricing-recalc.service";
+import { PRICING_RECALC_JOB } from "../../modules/features/pricing/pricing-recalc.queue";
+import { PricingRecalcService } from "../../modules/features/pricing/pricing-recalc.service";
 
 @Processor("pricing")
 export class PricingProcessor extends WorkerHost {

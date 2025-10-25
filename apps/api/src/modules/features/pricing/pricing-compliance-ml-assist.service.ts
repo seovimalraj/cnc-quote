@@ -1,7 +1,7 @@
 import { InjectQueue } from '@nestjs/bullmq';
 import { Injectable, Logger } from '@nestjs/common';
 import { Queue } from 'bullmq';
-import { AdminFeatureFlagsService } from "../admin/admin/admin-feature-flags/admin-feature-flags.service";
+import { AdminFeatureFlagsService } from "../../admin/admin-feature-flags/admin-feature-flags.service";
 import { SupabaseService } from "../../../lib/supabase/supabase.service";
 import { PRICING_COMPLIANCE_ML_JOB, PRICING_COMPLIANCE_ML_QUEUE, PricingComplianceMlAssistJob } from './pricing-ml-assist.queue';
 

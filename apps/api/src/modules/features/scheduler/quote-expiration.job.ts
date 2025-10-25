@@ -5,7 +5,7 @@
 
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
-import { QuoteRevisionsService } from "../legacy/quotes-legacy/revisions/revisions.service";
+import { QuoteRevisionsService } from "../../legacy/quotes-legacy/revisions/revisions.service";
 import { AnalyticsService } from "../analytics/analytics.service";
 import { ConfigService } from '@nestjs/config';
 

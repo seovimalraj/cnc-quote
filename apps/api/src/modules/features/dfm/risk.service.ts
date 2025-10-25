@@ -2,7 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { SupabaseService } from "../../../lib/supabase/supabase.service";
 import { AnalyticsService } from "../analytics/analytics.service";
-import { AdminFeatureFlagsService } from "../admin/admin/admin-feature-flags/admin-feature-flags.service";
+import { AdminFeatureFlagsService } from "../../admin/admin-feature-flags/admin-feature-flags.service";
 import {
   IssueTag,
   PersistedRiskResult,

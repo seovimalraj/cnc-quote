@@ -18,7 +18,7 @@ import {
 import { RevisionsService } from './revisions.service';
 import { RestoreGuard } from './restore.guard';
 // RbacGuard import - adjust path as needed - commented out for now
-// import { RbacGuard } from "../core/auth/rbac.guard";
+// import { RbacGuard } from "../../core/auth/rbac.guard";
 
 interface CompareRevisionsDto {
   a: string;

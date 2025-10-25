@@ -18,7 +18,7 @@ import { RbacGuard } from "../../core/auth/rbac.middleware";
 import { MaterialsService } from './materials.service';
 import { CreateMaterialDto, REGION_WHITELIST } from "../../../lib/materials/dto/create-material.dto";
 import { UpdateMaterialDto } from "../../../lib/materials/dto/update-material.dto";
-import { MaterialRegion } from "../../../../../packages/shared/src/types/schema";
+import { MaterialRegion } from "@cnc-quote/shared";
 
 type MaterialRequest = Request & {
   rbac?: {

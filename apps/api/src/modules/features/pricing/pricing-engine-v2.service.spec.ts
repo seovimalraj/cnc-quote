@@ -1,6 +1,6 @@
 import { PricingEngineV2Service } from './pricing-engine-v2.service';
 import { ContractsV1 } from '@cnc-quote/shared';
-import defaultPricingConfig from "../admin/admin/admin-pricing/default-config.json";
+import defaultPricingConfig from "../../admin/admin-pricing/default-config.json";
 
 const globalRef = globalThis as Record<string, any>;
 const { describe, it, expect, beforeEach } = globalRef;

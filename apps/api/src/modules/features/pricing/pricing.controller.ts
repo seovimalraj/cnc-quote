@@ -13,7 +13,7 @@ import { RolesGuard } from "../../core/auth/roles.guard";
 import { PoliciesGuard } from "../../core/auth/policies.guard";
 import { Policies } from "../../core/auth/policies.decorator";
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from "@nestjs/swagger";
-import { PartConfigV1 } from "../../../../../packages/shared/src/contracts/v1";
+import { PartConfigV1 } from "@cnc-quote/shared";
 import { ProcessRecommendationBundle } from "@cnc-quote/shared";
 import {
   PricingResponse,

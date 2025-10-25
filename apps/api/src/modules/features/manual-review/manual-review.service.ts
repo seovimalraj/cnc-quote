@@ -13,7 +13,7 @@ import {
   ManualReviewRuleType,
 } from "./manual-review.types";
 import { Quote, SlackMessage, RuleConditions } from "./manual-review.domain";
-import type { PricingComplianceEventCode } from "../../../lib/pricing-core/pricing-compliance.service";
+import type { PricingComplianceEventCode } from "../pricing/pricing-compliance.service";
 
 @Injectable()
 export class ManualReviewService {

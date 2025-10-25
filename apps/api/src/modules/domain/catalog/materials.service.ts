@@ -13,7 +13,7 @@ import {
   MaterialDetail,
   MaterialRegion,
   MaterialRegionMultiplier,
-} from "../../../../../packages/shared/src/types/schema";
+} from "@cnc-quote/shared";
 import { CreateMaterialDto, RegionMultiplierDto } from "../../../lib/materials/dto/create-material.dto";
 import { UpdateMaterialDto } from "../../../lib/materials/dto/update-material.dto";
 

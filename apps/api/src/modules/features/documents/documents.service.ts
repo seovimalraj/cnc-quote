@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { SupabaseService } from "../../../lib/supabase/supabase.service";
 import { QapService } from "../qap/qap.service";
-import { FileMeta, QAPDocument, Certificate, FAIRReport, Invoice } from "../../../../../packages/shared/src/types/schema";
+import { FileMeta, QAPDocument, Certificate, FAIRReport, Invoice } from "@cnc-quote/shared";
 
 @Injectable()
 export class DocumentsService {

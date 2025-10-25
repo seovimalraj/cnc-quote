@@ -6,8 +6,8 @@ import {
   ProcessRecommendationAdjustment,
   ProcessRecommendationInputSummary,
 } from '@cnc-quote/shared';
-import { SupabaseService } from "../../../lib/supabase/supabase.service";
-import { GeometryService } from "../../geometry/geometry.service";
+import { SupabaseService } from "../../../../lib/supabase/supabase.service";
+import { GeometryService } from "../../../domain/geometry/geometry.service";
 import { PROCESS_RECOMMENDATION_RULES } from './process-recommendation.rules';
 import {
   NormalizedPartMetrics,

@@ -1,7 +1,7 @@
 /* eslint-disable */
 import { PricingRationaleSummaryService } from './pricing-rationale-summary.service';
 import { SupabaseService } from "../../../lib/supabase/supabase.service";
-import { AdminFeatureFlagsService } from "../admin/admin/admin-feature-flags/admin-feature-flags.service";
+import { AdminFeatureFlagsService } from "../../admin/admin-feature-flags/admin-feature-flags.service";
 import { CacheService } from "../../../lib/cache/cache.service";
 import { Queue } from 'bullmq';
 

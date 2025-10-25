@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { CacheService } from "../../../lib/cache/cache.service";
-import { ConfigWithMetadata } from "../admin/admin/admin-pricing/admin-pricing.service";
+import { ConfigWithMetadata } from "../../admin/admin-pricing/admin-pricing.service";
 import {
   ACTIVE_PRICING_CONFIG_CACHE_KEY,
   PREVIEW_PRICING_CONFIG_CACHE_KEY,

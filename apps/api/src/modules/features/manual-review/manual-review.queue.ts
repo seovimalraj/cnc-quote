@@ -1,4 +1,4 @@
-import type { PricingComplianceEventCode } from "../../../lib/pricing-core/pricing-compliance.service";
+import type { PricingComplianceEventCode } from "../pricing/pricing-compliance.service";
 
 export const MANUAL_REVIEW_QUEUE = "manual-review" as const;
 export const MANUAL_REVIEW_JOB_PRICING_COMPLIANCE = "pricing-compliance-escalation" as const;

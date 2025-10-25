@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { SupabaseService } from "../../../lib/supabase/supabase.service";
-import { QAPTemplate } from "../../../../../packages/shared/src/types/schema";
+import { QAPTemplate } from "@cnc-quote/shared";
 
 @Injectable()
 export class QapTemplatesService {

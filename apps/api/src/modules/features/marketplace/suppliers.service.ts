@@ -4,8 +4,8 @@
  */
 
 import { Injectable, NotFoundException, BadRequestException, ConflictException } from '@nestjs/common';
-import { SupabaseService } from "../supabase/supabase.service";
-import { AuditService } from "../legacy/audit/audit.service";
+import { SupabaseService } from "../../../lib/supabase/supabase.service";
+import { AuditService } from "../../legacy/audit-legacy/audit.service";
 import type {
   SupplierProfile,
   CreateSupplierDto,
@@ -13,7 +13,7 @@ import type {
   Capability,
   AttachFileDto,
   SupplierFile,
-} from '@cnc-quote/shared/marketplace';
+} from '@cnc-quote/shared';
 
 @Injectable()
 export class SuppliersService {

@@ -4,9 +4,9 @@
  */
 
 import { Injectable, NotFoundException, ForbiddenException, ConflictException } from '@nestjs/common';
-import { SupabaseService } from "../../../lib/supabase/supabase.service";
+import { SupabaseService } from "../../../../lib/supabase/supabase.service";
 import { AuditService } from "../../audit-legacy/audit.service";
-import { AnalyticsService } from "../../analytics/analytics.service";
+import { AnalyticsService } from "../../../features/analytics/analytics.service";
 import { SetOutcomeDto } from './dtos/outcome.dto';
 import { QuoteOutcome } from './entities/outcome.entity';
 

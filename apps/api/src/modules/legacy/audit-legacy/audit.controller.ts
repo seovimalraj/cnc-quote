@@ -1,7 +1,7 @@
 import { Controller, Get, Param, Query, Req, UseGuards, UnauthorizedException } from '@nestjs/common';
-import { JwtAuthGuard } from "../core/auth/jwt.guard";
-import { OrgGuard } from "../core/auth/org.guard";
-import { RbacGuard } from "../core/auth/rbac.middleware";
+import { JwtAuthGuard } from "../../core/auth/jwt.guard";
+import { OrgGuard } from "../../core/auth/org.guard";
+import { RbacGuard } from "../../core/auth/rbac.middleware";
 import { SupabaseService } from "../../../lib/supabase/supabase.service";
 
 interface AuditListQuery {

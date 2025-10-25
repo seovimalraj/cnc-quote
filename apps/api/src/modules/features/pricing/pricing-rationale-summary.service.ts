@@ -4,7 +4,7 @@ import { Queue } from 'bullmq';
 import { createHash } from 'crypto';
 import { ContractsV1, QUOTE_RATIONALE_CACHE_TTL_SECONDS, buildQuoteRationaleCacheKeyV1, buildQuoteRationaleRevisionCacheKeyV1 } from '@cnc-quote/shared';
 import { SupabaseService } from "../../../lib/supabase/supabase.service";
-import { AdminFeatureFlagsService } from "../admin/admin/admin-feature-flags/admin-feature-flags.service";
+import { AdminFeatureFlagsService } from "../../admin/admin-feature-flags/admin-feature-flags.service";
 import { CacheService } from "../../../lib/cache/cache.service";
 import {
   PRICING_RATIONALE_JOB,

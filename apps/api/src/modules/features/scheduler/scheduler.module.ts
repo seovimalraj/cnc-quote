@@ -6,7 +6,7 @@
 import { Module } from '@nestjs/common';
 import { ScheduleModule } from '@nestjs/schedule';
 import { QuoteExpirationJob } from './quote-expiration.job';
-import { QuoteRevisionsModule } from "../legacy/quotes-legacy/revisions/revisions.module";
+import { QuoteRevisionsModule } from "../../legacy/quotes-legacy/revisions/revisions.module";
 import { AnalyticsModule } from "../analytics/analytics.module";
 import { ConfigModule } from '@nestjs/config';
 

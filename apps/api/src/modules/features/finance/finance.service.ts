@@ -1,7 +1,7 @@
 import { Injectable, Logger, BadRequestException, NotFoundException } from '@nestjs/common';
 import { SupabaseService } from "../../../lib/supabase/supabase.service";
 import { CacheService } from "../../../lib/cache/cache.service";
-import { WebhookEvent, Invoice, Refund, FinanceSettings } from "../../../../../packages/shared/src/types/schema";
+import { WebhookEvent, Invoice, Refund, FinanceSettings } from "@cnc-quote/shared";
 
 @Injectable()
 export class FinanceService {

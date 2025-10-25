@@ -4,7 +4,7 @@
  */
 
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { SupabaseService } from "../../../lib/supabase/supabase.service";
+import { SupabaseService } from "../../../../lib/supabase/supabase.service";
 import { AuditService } from "../../audit-legacy/audit.service";
 
 export interface CostBreakdown {

@@ -8,7 +8,7 @@ import {
   SupplierQuoteListItem,
   SupplierQuoteStatus,
   SupplierQuoteStatusSchema,
-} from '@cnc-quote/shared/marketplace';
+} from '@cnc-quote/shared';
 
 import { SupabaseService } from "../../../lib/supabase/supabase.service";
 

@@ -18,7 +18,7 @@ import type {
   GetCandidatesDto,
   AssignSupplierDto,
   CreateRoutingRuleDto,
-} from '@cnc-quote/shared/marketplace';
+} from '@cnc-quote/shared';
 
 // TODO: Import actual guards
 // import { RbacGuard } from "../../core/auth/auth/rbac.guard";

@@ -16,9 +16,9 @@ import {
 import { ApiTags, ApiOperation, ApiQuery, ApiBearerAuth } from '@nestjs/swagger';
 import { Response } from 'express';
 import { MarginsService } from "../margins/margins.service";
-import { JwtAuthGuard } from "../../auth/jwt.guard";
-import { OrgGuard } from "../../auth/org.guard";
-import { RbacGuard } from "../../auth/rbac.middleware";
+import { JwtAuthGuard } from "../../../core/auth/jwt.guard";
+import { OrgGuard } from "../../../core/auth/org.guard";
+import { RbacGuard } from "../../../core/auth/rbac.middleware";
 
 @ApiTags('Quote Export')
 @ApiBearerAuth()

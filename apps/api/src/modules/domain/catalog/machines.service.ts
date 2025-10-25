@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { SupabaseService } from "../../../lib/supabase/supabase.service";
-import { Machine } from "../../../../../packages/shared/src/types/schema";
+import { Machine } from "@cnc-quote/shared";
 
 @Injectable()
 export class MachinesService {

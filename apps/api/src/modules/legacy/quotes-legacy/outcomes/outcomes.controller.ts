@@ -19,9 +19,9 @@ import {
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { OutcomesService } from './outcomes.service';
 import { SetOutcomeDto } from './dtos/outcome.dto';
-import { JwtAuthGuard } from "../../auth/jwt.guard";
-import { OrgGuard } from "../../auth/org.guard";
-import { RbacGuard } from "../../auth/rbac.middleware";
+import { JwtAuthGuard } from "../../../core/auth/jwt.guard";
+import { OrgGuard } from "../../../core/auth/org.guard";
+import { RbacGuard } from "../../../core/auth/rbac.middleware";
 
 @ApiTags('Quote Outcomes')
 @ApiBearerAuth()

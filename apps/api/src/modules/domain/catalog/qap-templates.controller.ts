@@ -15,7 +15,7 @@ import { QapTemplatesService } from './qap-templates.service';
 import { AuthGuard } from '@nestjs/passport';
 import { OrgGuard } from "../../core/auth/org.guard";
 import { ReqUser } from "../../core/auth/req-user.decorator";
-import { QAPTemplate } from "../../../../../packages/shared/src/types/schema";
+import { QAPTemplate } from "@cnc-quote/shared";
 
 @Controller('admin/qap-templates')
 @UseGuards(AuthGuard, OrgGuard)

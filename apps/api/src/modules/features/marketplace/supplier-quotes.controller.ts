@@ -4,7 +4,7 @@
  * @description Exposes supplier quote listings and refresh triggers using shared marketplace contracts.
  */
 import { Controller, ForbiddenException, Get, Post, Req } from '@nestjs/common';
-import { SUPPLIER_PORTAL_VERSION, SupplierQuotesRespV1 } from '@cnc-quote/shared/marketplace';
+import { SUPPLIER_PORTAL_VERSION, SupplierQuotesRespV1 } from '@cnc-quote/shared';
 
 import { SupplierQuotesService } from './supplier-quotes.service';
 

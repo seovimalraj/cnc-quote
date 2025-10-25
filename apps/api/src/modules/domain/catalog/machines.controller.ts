@@ -15,7 +15,7 @@ import { MachinesService } from './machines.service';
 import { AuthGuard } from '@nestjs/passport';
 import { OrgGuard } from "../../core/auth/org.guard";
 import { ReqUser } from "../../core/auth/req-user.decorator";
-import { Machine } from "../../../../../packages/shared/src/types/schema";
+import { Machine } from "@cnc-quote/shared";
 
 @Controller('admin/machines')
 @UseGuards(AuthGuard, OrgGuard)

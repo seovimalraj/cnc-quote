@@ -2,7 +2,7 @@ import { Body, Controller, Get, Param, Post, Put, UseGuards, ValidationPipe } fr
 import { AuthGuard } from "@nestjs/passport";
 import { OrgGuard } from "../../core/auth/org.guard";
 import { ReqUser } from "../../core/auth/req-user.decorator";
-import { User } from "../../types/user";
+import { User } from "../../../types/user";
 import { QapService } from "./qap.service";
 import { CreateQapTemplateDto, UpdateQapTemplateDto, GenerateQapDocumentDto, GenerateDfmQapDocumentDto } from "./qap.dto";
 import { ApiTags, ApiOperation, ApiResponse, ApiParam } from "@nestjs/swagger";

@@ -4,7 +4,7 @@
  */
 
 import { Injectable, NotFoundException, ConflictException, Logger } from '@nestjs/common';
-import { SupabaseService } from "../../../lib/supabase/supabase.service";
+import { SupabaseService } from "../../../../lib/supabase/supabase.service";
 import { AuditService } from "../../audit-legacy/audit.service";
 import { QuoteRevision, PricingBreakdown, QuoteStatus } from './entities/revision.entity';
 import { RepriceDto, ExtendExpirationDto } from './dtos/revisions.dto';

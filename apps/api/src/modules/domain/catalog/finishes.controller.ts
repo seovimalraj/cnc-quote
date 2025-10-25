@@ -15,7 +15,7 @@ import { FinishesService } from './finishes.service';
 import { AuthGuard } from '@nestjs/passport';
 import { OrgGuard } from "../../core/auth/org.guard";
 import { ReqUser } from "../../core/auth/req-user.decorator";
-import { Finish } from "../../../../../packages/shared/src/types/schema";
+import { Finish } from "@cnc-quote/shared";
 
 @Controller('admin/finishes')
 @UseGuards(AuthGuard, OrgGuard)

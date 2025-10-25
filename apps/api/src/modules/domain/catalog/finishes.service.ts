@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { SupabaseService } from "../../../lib/supabase/supabase.service";
-import { Finish } from "../../../../../packages/shared/src/types/schema";
+import { Finish } from "@cnc-quote/shared";
 
 @Injectable()
 export class FinishesService {

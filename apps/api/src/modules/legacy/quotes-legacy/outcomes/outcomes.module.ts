@@ -6,9 +6,9 @@
 import { Module } from '@nestjs/common';
 import { OutcomesController } from './outcomes.controller';
 import { OutcomesService } from './outcomes.service';
-import { SupabaseModule } from "../../../lib/supabase/supabase.module";
+import { SupabaseModule } from "../../../../lib/supabase/supabase.module";
 import { AuditModule } from "../../audit-legacy/audit.module";
-import { AnalyticsModule } from "../../analytics/analytics.module";
+import { AnalyticsModule } from "../../../features/analytics/analytics.module";
 
 @Module({
   imports: [SupabaseModule, AuditModule, AnalyticsModule],

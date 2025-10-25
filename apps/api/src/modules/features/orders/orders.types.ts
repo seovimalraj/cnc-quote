@@ -1,4 +1,4 @@
-import { User } from "../../types/user";
+import { User } from "../../../types/user";
 import { type QuoteResponse } from "@cnc-quote/shared";
 
 export interface OrderResponse {

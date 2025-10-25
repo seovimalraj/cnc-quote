@@ -36,7 +36,7 @@ import {
   RISK_SEVERITY_MARKUP,
 } from "../dfm/risk.model";
 import { TaxService } from "../tax/tax.service";
-import { PricingConfigService } from "../admin/admin/admin-pricing/pricing-config.service";
+import { PricingConfigService } from "../../admin/admin-pricing/pricing-config.service";
 
 type QuoteComplianceSnapshotV1 = ContractsV1.QuoteComplianceSnapshotV1;
 type QuoteComplianceAlertV1 = ContractsV1.QuoteComplianceAlertV1;

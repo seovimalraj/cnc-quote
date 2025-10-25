@@ -15,7 +15,7 @@ import { InspectionTemplatesService } from './inspection-templates.service';
 import { AuthGuard } from '@nestjs/passport';
 import { OrgGuard } from "../../core/auth/org.guard";
 import { ReqUser } from "../../core/auth/req-user.decorator";
-import { InspectionTemplate } from "../../../../../packages/shared/src/types/schema";
+import { InspectionTemplate } from "@cnc-quote/shared";
 
 @Controller('admin/inspection/templates')
 @UseGuards(AuthGuard, OrgGuard)

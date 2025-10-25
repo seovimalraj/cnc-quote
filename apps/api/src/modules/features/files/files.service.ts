@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { SupabaseService } from "../../../lib/supabase/supabase.service";
-import { FileMeta } from "../../../../../packages/shared/src/types/schema";
+import { FileMeta } from "@cnc-quote/shared";
 
 @Injectable()
 export class FilesService {

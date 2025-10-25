@@ -4,7 +4,7 @@
  * @description Serves supplier portal profile requests with shared contract compliance and traceable metadata.
  */
 import { Controller, ForbiddenException, Get, Req } from '@nestjs/common';
-import { SUPPLIER_PORTAL_VERSION, SupplierProfileRespV1 } from '@cnc-quote/shared/marketplace';
+import { SUPPLIER_PORTAL_VERSION, SupplierProfileRespV1 } from '@cnc-quote/shared';
 
 import { SuppliersService } from './suppliers.service';
 

@@ -10,7 +10,7 @@ import {
   GetTasksParams,
   UpdateTaskDto,
 } from "./manual-review.types";
-import { User } from "../../types/user";
+import { User } from "../../../types/user";
 
 @ApiTags("manual-review")
 @Controller("manual-review")

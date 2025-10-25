@@ -4,7 +4,7 @@
 
 import { Module } from '@nestjs/common';
 import { LookupsController } from './lookups.controller';
-import { OutcomesModule } from "../legacy/quotes-legacy/outcomes/outcomes.module";
+import { OutcomesModule } from "../../legacy/quotes-legacy/outcomes/outcomes.module";
 
 @Module({
   imports: [OutcomesModule],
