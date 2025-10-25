@@ -87,42 +87,35 @@ import { PricingCoreModule } from './modules/legacy/pricing-core/pricing-core.mo
     CacheModule,
     QueueModule,
 
-    // Core Infrastructure
+    // Core Infrastructure (no external module dependencies)
     AuthModule,
     RbacModule,
     HealthModule,
     MetricsModule,
-    QueueMonitorModule,
     TestModule,
 
-    // Domain Entities - Gradually enable after testing
-    // CatalogModule, // TODO: Fix dependency injection issue
+    // Domain Entities (needed by Admin and Features)
     GeometryModule,
     MachineModule,
-    FinishesModule,
+    FinishesModule,  // Required by AdminModule
     LookupsModule,
 
-    // Business Features
-    PricingModule,
-    DfmModule,
-    QuotesModule,
-    LeadsModule,
-    AIModule,
-    OrgsModule,
-    InvitesModule,
-    FilesModule,
-    AccountingModule,
-    CadModule,
-    NotifyModule,
-    PdfModule,
-    AnalyticsModule,
-    SchedulerModule,
+    // Legacy Modules (some needed by Features)
+    AuditModule,
+    LeadtimeModule,
+    QuoteRevisionsModule,
+    OutcomesModule,
+    MarginsModule,
+    ExportModule,
+    RevisionsModule,
+    PricingCoreModule,
 
-    // Admin Features
-    AdminModule,
+    // Admin Features FIRST (some Features depend on these)
+    AdminMetricsModule,  // Must come before AdminModule and QueueMonitorModule
+    AdminFeatureFlagsModule,  // Required by DfmModule
+    AdminModule,         // Depends on FinishesModule and AdminMetricsModule
     AdminUsersModule,
     AdminOrgsModule,
-    AdminFeatureFlagsModule,
     AdminSettingsModule,
     AdminPricingModule,
     AdminContentModule,
@@ -135,20 +128,36 @@ import { PricingCoreModule } from './modules/legacy/pricing-core/pricing-core.mo
     AdminErrorsModule,
     AdminFilesModule,
     AdminHealthModule,
-    AdminMetricsModule,
     AdminRbacModule,
     AdminSandboxModule,
     AdminSystemModule,
 
-    // Legacy Modules
-    AuditModule,
-    LeadtimeModule,
-    QuoteRevisionsModule,
-    OutcomesModule,
-    MarginsModule,
-    ExportModule,
-    RevisionsModule,
-    PricingCoreModule,
+    // Business Features (may depend on Domain, Legacy, and Admin)
+    AnalyticsModule,      // Required by DfmModule
+    PricingModule,
+    DfmModule,            // Depends on AdminFeatureFlagsModule and AnalyticsModule
+    QuotesModule,
+    OrdersModule,
+    LeadsModule,
+    AIModule,
+    ReviewModule,
+    ManualReviewModule,
+    OrgsModule,
+    InvitesModule,
+    FilesModule,
+    DocumentsModule,
+    PaymentsModule,
+    FinanceModule,
+    AccountingModule,
+    CadModule,
+    QapModule,
+    NotifyModule,
+    PdfModule,
+    RoutingModule,
+    SchedulerModule,
+    
+    // QueueMonitorModule depends on AdminMetricsModule, must come last
+    QueueMonitorModule,
   ],
 })
 export class AppModule {}
