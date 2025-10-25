@@ -9,7 +9,7 @@ import { CacheModule } from "../../lib/cache/cache.module";
 import { AdminFeatureFlagsModule } from '../admin-feature-flags/admin-feature-flags.module';
 import { AnalyticsModule } from '../analytics/analytics.module';
 import { GeometryModule } from '../geometry/geometry.module';
-import { AIModule } from '../ai/ai.module';
+// import { AIModule } from '../ai/ai.module'; // TODO: Check if this is needed
 
 @Module({
   imports: [
@@ -18,7 +18,7 @@ import { AIModule } from '../ai/ai.module';
     AdminFeatureFlagsModule,
     AnalyticsModule,
     GeometryModule,
-    AIModule,
+    // AIModule, // Temporarily disabled - causes metatype DI error
   ],
   controllers: [DfmController, RiskController],
   providers: [

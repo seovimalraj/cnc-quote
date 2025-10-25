@@ -43,7 +43,7 @@ import { AdminPricingModule } from "../admin-pricing/admin-pricing.module";
     QueueModule,
     NotifyModule,
     AdminFeatureFlagsModule,
-    AIModule,
+    forwardRef(() => AIModule), // Use forwardRef to prevent circular dependency issues
   ],
   controllers: [PricingController, ProcessRecommendationController, MaterialComparisonController],
   providers: [
