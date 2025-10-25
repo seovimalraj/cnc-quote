@@ -1,6 +1,6 @@
 import pino from 'pino';
 import pinoHttp from 'pino-http';
-import { getReqCtx } from '../common/middleware/request-context.middleware';
+import { getReqCtx } from "../lib/common/middleware/request-context.middleware";
 
 // PII redaction patterns
 const PII_PATTERNS = {

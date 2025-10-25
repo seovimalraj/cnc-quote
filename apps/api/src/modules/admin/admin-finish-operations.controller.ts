@@ -15,11 +15,11 @@ import {
   UseGuards,
   Logger,
 } from '@nestjs/common';
-import { FinishesService } from '../finishes/finishes.service';
-import { JwtAuthGuard } from '../auth/jwt.guard';
-import { RbacAuthGuard } from '../auth/rbac-auth.guard';
-import { Policies } from '../auth/policies.decorator';
-import { FormulaEvaluator } from '../../common/formula/formula-evaluator';
+import { FinishesService } from "../../domain/finishes/finishes.service";
+import { JwtAuthGuard } from "../../core/auth/jwt.guard";
+import { RbacAuthGuard } from "../../core/auth/rbac-auth.guard";
+import { Policies } from "../../core/auth/policies.decorator";
+import { FormulaEvaluator } from "../../../lib/common/formula/formula-evaluator";
 import { z } from 'zod';
 
 // Validation schemas

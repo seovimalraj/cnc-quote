@@ -1,6 +1,6 @@
 import { BadRequestException, Injectable } from "@nestjs/common";
-import { SupabaseService } from "../../lib/supabase/supabase.service";
-import { AdminMetricsService } from '../admin-metrics/admin-metrics.service';
+import { SupabaseService } from "../../../lib/supabase/supabase.service";
+import { AdminMetricsService } from "../admin/admin/admin-metrics/admin-metrics.service";
 import { ContractsV1 } from '@cnc-quote/shared';
 import { AdminRiskComplianceService } from './admin-risk-compliance.service';
 
