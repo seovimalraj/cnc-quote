@@ -32,7 +32,7 @@ export class SuppliersService {
   ): Promise<SupplierProfile> {
     this.validateSupplierDto(dto);
 
-    const client = this.supabase.getClient();
+    const client = this.supabase.client;
 
     // Insert supplier profile
     const { data: supplier, error } = await client
@@ -86,7 +86,7 @@ export class SuppliersService {
       process?: string;
     },
   ): Promise<SupplierProfile[]> {
-    const client = this.supabase.getClient();
+    const client = this.supabase.client;
 
     let query = client
       .from('supplier_profiles')
@@ -124,7 +124,7 @@ export class SuppliersService {
    * Get single supplier by ID
    */
   async findOne(orgId: string, supplierId: string): Promise<SupplierProfile> {
-    const client = this.supabase.getClient();
+    const client = this.supabase.client;
 
     const { data, error } = await client
       .from('supplier_profiles')
@@ -149,7 +149,7 @@ export class SuppliersService {
     supplierId: string,
     dto: UpdateSupplierDto,
   ): Promise<SupplierProfile> {
-    const client = this.supabase.getClient();
+    const client = this.supabase.client;
 
     // Get existing supplier
     const existing = await this.findOne(orgId, supplierId);
@@ -194,7 +194,7 @@ export class SuppliersService {
    * Delete supplier
    */
   async delete(orgId: string, userId: string, supplierId: string): Promise<void> {
-    const client = this.supabase.getClient();
+    const client = this.supabase.client;
 
     const existing = await this.findOne(orgId, supplierId);
 
@@ -233,7 +233,7 @@ export class SuppliersService {
 
     this.validateCapability(capability);
 
-    const client = this.supabase.getClient();
+    const client = this.supabase.client;
 
     const { data, error } = await client
       .from('process_capabilities')
@@ -271,7 +271,7 @@ export class SuppliersService {
     // Verify supplier exists
     await this.findOne(orgId, supplierId);
 
-    const client = this.supabase.getClient();
+    const client = this.supabase.client;
 
     const { data, error } = await client
       .from('supplier_files')

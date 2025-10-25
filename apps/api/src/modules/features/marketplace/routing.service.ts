@@ -36,7 +36,7 @@ export class RoutingService {
     orgId: string,
     dto: GetCandidatesDto,
   ): Promise<CandidatesResponse> {
-    const client = this.supabase.getClient();
+    const client = this.supabase.client;
 
     // 1. Fetch all active suppliers with capabilities
     const { data: suppliers, error } = await client
@@ -334,7 +334,7 @@ export class RoutingService {
     orderId: string,
     dto: AssignSupplierDto,
   ): Promise<AssignSupplierResponse> {
-    const client = this.supabase.getClient();
+    const client = this.supabase.client;
 
     // 1. Verify order exists and isn't already assigned
     const { data: order, error: orderError } = await client
@@ -399,13 +399,14 @@ export class RoutingService {
     });
 
     // 5. Emit websocket event
-    this.events.emit('orders', 'ORDER_ROUTED', {
-      orderId,
-      supplierId: dto.supplierId,
-      supplierName: supplier.name,
-      routedBy: userId,
-      routedAt,
-    });
+    // TODO: Re-enable when EventsGateway is available
+    // this.events.emit('orders', 'ORDER_ROUTED', {
+    //   orderId,
+    //   supplierId: dto.supplierId,
+    //   supplierName: supplier.name,
+    //   routedBy: userId,
+    //   routedAt,
+    // });
 
     return {
       status: 'ok',
@@ -424,7 +425,7 @@ export class RoutingService {
     userId: string,
     dto: CreateRoutingRuleDto,
   ): Promise<RoutingRule> {
-    const client = this.supabase.getClient();
+    const client = this.supabase.client;
 
     const { data, error } = await client
       .from('routing_rules')
