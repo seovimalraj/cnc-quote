@@ -1,7 +1,7 @@
-import { RequestUser } from "../modules/auth/jwt.strategy";
-import { Membership } from "../modules/auth/rbac.types";
+import { RequestUser } from "../modules/core/auth/jwt.strategy";
+import { Membership } from "../modules/core/auth/rbac.types";
 import { Role } from "@cnc-quote/shared";
-import { AuditAction, AuditResourceType } from "../modules/audit-legacy/audit.types";
+import { AuditAction, AuditResourceType } from "../modules/legacy/audit-legacy/audit.types";
 import { LoggerService } from "../observability/logger.types";
 
 interface RequestAuditPreset {

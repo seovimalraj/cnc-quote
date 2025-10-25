@@ -66,6 +66,7 @@ export {
   QUOTE_RATIONALE_CACHE_TTL_SECONDS,
   buildQuoteRationaleRevisionCacheKeyV1,
 } from './contracts';
+export type { PartConfigV1 } from './contracts/v1/part-config';
 export {
 	toQuoteSummaryV1,
 	toQuoteSummaryVNext,

@@ -16,8 +16,5 @@ export { MachineModule } from './machines/machine.module';
 export { FinishesModule } from './finishes/finishes.module';
 export { FinishesService } from './finishes/finishes.service';
 
-// Suppliers
-export { SuppliersModule } from './suppliers/suppliers.module';
-
 // Reference Data Lookups
 export { LookupsModule } from './lookups/lookups.module';

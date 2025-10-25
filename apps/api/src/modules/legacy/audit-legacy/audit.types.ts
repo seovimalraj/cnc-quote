@@ -33,7 +33,14 @@ export type AuditAction =
   | 'AI_ASSISTANT_RATE_LIMITED'
   | 'AI_ASSISTANT_APPROVED'
   | 'AI_ASSISTANT_REJECTED'
-  | 'AI_ASSISTANT_APPROVAL_REQUIRED';
+  | 'AI_ASSISTANT_APPROVAL_REQUIRED'
+  // Marketplace actions
+  | 'ORDER_ROUTED'
+  | 'ROUTING_RULE_CREATED'
+  | 'SUPPLIER_CREATED'
+  | 'SUPPLIER_UPDATED'
+  | 'SUPPLIER_DELETED'
+  | 'SUPPLIER_FILE_ATTACHED';
 
 export type AuditResourceType =
   | 'org'
@@ -46,7 +53,11 @@ export type AuditResourceType =
   | 'invoice'
   | 'file'
   | 'user'
-  | 'material';
+  | 'material'
+  // Marketplace resource types
+  | 'order'
+  | 'routing_rule'
+  | 'supplier';
 
 export interface AuditContext {
   orgId: string;
