@@ -5,7 +5,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { AdminMetricsService, HistogramBucket } from './admin-metrics.service';
-import { MetricPoint } from "../admin/admin/admin-health/admin-health.service";
+import { MetricPoint } from "../admin-health/admin-health.service";
 import { AuthGuard } from '@nestjs/passport';
 import { RolesGuard } from "../../core/auth/roles.guard";
 import { Roles } from "../../core/auth/roles.decorator";

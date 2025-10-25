@@ -6,9 +6,9 @@ import { OrgGuard } from "../../core/auth/org.guard";
 import { RbacGuard } from "../../core/auth/rbac.middleware";
 import { ReqUser } from "../../core/auth/req-user.decorator";
 import { SupabaseService } from "../../../lib/supabase/supabase.service";
-import { PRICING_RECALC_JOB } from "../../../lib/pricing-core/pricing-recalc.queue";
+import { PRICING_RECALC_JOB } from "../../lib/pricing-core/pricing-recalc.queue";
 import type { ContractsV1 } from '@cnc-quote/shared';
-import { PricingRecalcService } from "../../../lib/pricing-core/pricing-recalc.service";
+import { PricingRecalcService } from "../../lib/pricing-core/pricing-recalc.service";
 
 type PricingRecalcJob = ContractsV1.PricingRecalcJobV1;
 

@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { SupabaseService } from "../../../lib/supabase/supabase.service";
 import { CacheService } from "../../../lib/cache/cache.service";
-import { MetricPoint } from "../admin/admin/admin-health/admin-health.service";
+import { MetricPoint } from "../admin-health/admin-health.service";
 import { ContractsVNext } from '@cnc-quote/shared';
 
 export interface HistogramBucket {

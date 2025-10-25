@@ -4,7 +4,7 @@ import { AdminPricingService } from './admin-pricing.service';
 import { PricingConfigService } from './pricing-config.service';
 import { SupabaseModule } from "../../../lib/supabase/supabase.module";
 import { CacheModule } from "../../../lib/cache/cache.module";
-import { PricingModule } from "../../../lib/pricing-core/pricing.module";
+import { PricingModule } from "../../lib/pricing-core/pricing.module";
 
 @Module({
   imports: [

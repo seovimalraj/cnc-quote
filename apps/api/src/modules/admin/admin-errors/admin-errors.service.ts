@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { SupabaseService } from "../../../lib/supabase/supabase.service";
 import { CacheService } from "../../../lib/cache/cache.service";
-import { HeatmapCell } from "../admin/admin/admin-health/admin-health.service";
+import { HeatmapCell } from "../admin-health/admin-health.service";
 
 export interface ErrorEvent {
   id: string;

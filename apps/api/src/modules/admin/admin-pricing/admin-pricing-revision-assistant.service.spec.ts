@@ -3,7 +3,7 @@ import { ForbiddenException } from '@nestjs/common';
 import { getQueueToken } from '@nestjs/bullmq';
 import { AdminPricingRevisionAssistantService } from './admin-pricing-revision-assistant.service';
 import { SupabaseService } from "../../../lib/supabase/supabase.service";
-import { AdminFeatureFlagsService } from "../admin/admin/admin-feature-flags/admin-feature-flags.service";
+import { AdminFeatureFlagsService } from "../admin-feature-flags/admin-feature-flags.service";
 import { AdminPricingService } from './admin-pricing.service';
 import { ADMIN_PRICING_REVISION_QUEUE } from './admin-pricing-revision.queue';
 import type { AdminPricingConfig } from '@cnc-quote/shared';

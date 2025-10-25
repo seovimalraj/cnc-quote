@@ -1,7 +1,7 @@
 import { Injectable, Logger, BadRequestException, NotFoundException } from '@nestjs/common';
 import { SupabaseService } from "../../../lib/supabase/supabase.service";
 import { CacheService } from "../../../lib/cache/cache.service";
-import { Organization, MembershipSchema, QuotaSchema } from "../../../../../packages/shared/src/types/schema";
+import { Organization, MembershipSchema, QuotaSchema } from "@cnc-quote/shared";
 import { z } from 'zod';
 
 type Quota = z.infer<typeof QuotaSchema>;

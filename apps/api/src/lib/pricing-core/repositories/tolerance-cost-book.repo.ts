@@ -1,7 +1,7 @@
 import { Injectable, Logger, OnModuleDestroy } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import Redis from "ioredis";
-import { SupabaseService } from "../../lib/supabase/supabase.service";
+import { SupabaseService } from "../../supabase/supabase.service";
 
 export type ToleranceUnit = "mm" | "um" | "deg";
 export type ToleranceAffect = "machine_time" | "setup_time" | "risk";

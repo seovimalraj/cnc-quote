@@ -5,7 +5,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { AdminErrorsService, ErrorEvent } from './admin-errors.service';
-import { HeatmapCell } from "../admin/admin/admin-health/admin-health.service";
+import { HeatmapCell } from "../admin-health/admin-health.service";
 import { AuthGuard } from '@nestjs/passport';
 import { RolesGuard } from "../../core/auth/roles.guard";
 import { Roles } from "../../core/auth/roles.decorator";

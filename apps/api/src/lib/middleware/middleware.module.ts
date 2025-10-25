@@ -1,5 +1,5 @@
 import { Module, MiddlewareConsumer, NestModule } from '@nestjs/common';
-import { SupabaseModule } from "../lib/supabase/supabase.module";
+import { SupabaseModule } from "../supabase/supabase.module";
 import { SessionValidationMiddleware } from './session-validation.middleware';
 import { SecurityMiddleware } from './security.middleware';
 

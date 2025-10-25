@@ -4,8 +4,8 @@
  */
 
 import { Injectable, Logger } from '@nestjs/common';
-import { FinishesService } from "../../modules/finishes/finishes.service";
-import { FormulaContext } from "../../modules/finishes/finishes.types";
+import { FinishesService } from "../../../modules/domain/finishes/finishes.service";
+import { FormulaContext } from "../../../modules/domain/finishes/finishes.types";
 
 export interface FinishChainFactorInput {
   quote_line_id: string;

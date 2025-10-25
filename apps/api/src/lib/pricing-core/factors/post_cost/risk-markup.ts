@@ -1,5 +1,5 @@
 import { PricingContext, PricingFactor } from "../../core/types";
-import { RiskContribution, RiskSeverity, RISK_SEVERITY_MARKUP } from "../../../modules/dfm/risk.model";
+import { RiskContribution, RiskSeverity, RISK_SEVERITY_MARKUP } from "../../../../modules/features/dfm/risk.model";
 
 const toMoney = (value: number): number => Number(value.toFixed(2));
 

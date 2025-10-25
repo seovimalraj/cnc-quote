@@ -8,7 +8,7 @@
 import { Injectable } from '@nestjs/common';
 import { PricingOrchestrator } from './core/orchestrator';
 import { createFinishChainCostFactor } from './factors/cost/finish-chain-cost';
-import { FinishesService } from "../modules/finishes/finishes.service";
+import { FinishesService } from "../../modules/domain/finishes/finishes.service";
 import { SetupTimeFactor } from './factors/setup/setup-time';
 import { MachineTimeFactor } from './factors/cost/machine-time';
 import { MaterialCostFactor } from './factors/cost/material-cost';

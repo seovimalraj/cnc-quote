@@ -5,8 +5,8 @@ import {
   NestInterceptor,
 } from '@nestjs/common';
 import { Observable, tap } from 'rxjs';
-import { AuditService } from "../../modules/legacy/audit-legacy/audit.service";
-import { AuditAction, AuditResourceType } from "../../modules/legacy/audit-legacy/audit.types";
+import { AuditService } from "../../../modules/legacy/audit-legacy/audit.service";
+import { AuditAction, AuditResourceType } from "../../../modules/legacy/audit-legacy/audit.types";
 
 type AuditPreset = {
   action: AuditAction;

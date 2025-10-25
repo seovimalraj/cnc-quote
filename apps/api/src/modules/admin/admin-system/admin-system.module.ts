@@ -3,7 +3,7 @@ import { AdminSystemController, AdminSystemHealthController } from './admin-syst
 import { AdminSystemService } from './admin-system.service';
 import { SupabaseModule } from "../../../lib/supabase/supabase.module";
 import { CacheModule } from "../../../lib/cache/cache.module";
-import { AdminHealthModule } from "../admin/admin/admin-health/admin-health.module";
+import { AdminHealthModule } from "../admin-health/admin-health.module";
 
 @Module({
   imports: [SupabaseModule, CacheModule, AdminHealthModule],

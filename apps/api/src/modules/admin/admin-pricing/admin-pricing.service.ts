@@ -13,7 +13,7 @@ import fallbackConfig from './default-config.json';
 import {
   ACTIVE_PRICING_CONFIG_CACHE_KEY,
   PREVIEW_PRICING_CONFIG_CACHE_KEY,
-} from "../../../lib/pricing-core/pricing-config.constants";
+} from "../../lib/pricing-core/pricing-config.constants";
 
 interface PricingConfigRecord {
   id: string;
@@ -217,7 +217,7 @@ export class AdminPricingService {
 
     // Enqueue background repricing for impacted quotes (minimal: org-level sweep)
     try {
-      const { PRICING_RECALC_JOB } = await import('../pricing/pricing-recalc.queue');
+      const { PRICING_RECALC_JOB } = await import('../../../lib/pricing-core/pricing-recalc.queue');
       const { randomUUID } = await import('crypto');
       const traceId = randomUUID();
       const orgId = options?.orgId ?? null;

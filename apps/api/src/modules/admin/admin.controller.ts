@@ -1,7 +1,7 @@
 import { Controller, Get, Post, Query, UseGuards } from "@nestjs/common";
 import { ApiTags, ApiBearerAuth } from "@nestjs/swagger";
-import { JwtAuthGuard } from "../../core/auth/jwt.guard";
-import { OrgGuard } from "../../core/auth/org.guard";
+import { JwtAuthGuard } from "../core/auth/jwt.guard";
+import { OrgGuard } from "../core/auth/org.guard";
 import { AdminService } from "./admin.service";
 
 @ApiTags("Admin Dashboard")

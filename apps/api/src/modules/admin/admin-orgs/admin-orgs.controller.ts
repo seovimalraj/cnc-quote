@@ -16,7 +16,7 @@ import { AuthGuard } from '@nestjs/passport';
 import { RolesGuard } from "../../core/auth/roles.guard";
 import { Roles } from "../../core/auth/roles.decorator";
 import { ReqUser } from "../../core/auth/req-user.decorator";
-import { Organization, QuotaSchema } from "../../../../../packages/shared/src/types/schema";
+import { Organization, QuotaSchema } from "@cnc-quote/shared";
 import { z } from 'zod';
 
 type Quota = z.infer<typeof QuotaSchema>;

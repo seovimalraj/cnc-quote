@@ -39,7 +39,7 @@ type AdminPricingRevisionAssistantRunV1 = z.infer<
 import { SupabaseService } from "../../../lib/supabase/supabase.service";
 import { CacheService } from "../../../lib/cache/cache.service";
 import { AuditService } from "../../legacy/audit-legacy/audit.service";
-import { AdminFeatureFlagsService } from "../admin/admin/admin-feature-flags/admin-feature-flags.service";
+import { AdminFeatureFlagsService } from "../admin-feature-flags/admin-feature-flags.service";
 import { AdminPricingService } from './admin-pricing.service';
 import {
   ADMIN_PRICING_REVISION_QUEUE,

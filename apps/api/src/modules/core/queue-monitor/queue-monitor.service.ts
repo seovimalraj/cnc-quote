@@ -6,7 +6,7 @@ import { JobCounts, QueueHealth, QueueHealthMetrics } from "./queue-monitor.metr
 import { MetricsService } from "../metrics/metrics.service";
 import { AdminMetricsService } from "../../admin/admin-metrics/admin-metrics.service";
 import { SupabaseService } from "../../../lib/supabase/supabase.service";
-import { AdminService } from "../../admin/admin/admin.service";
+import { AdminService } from "../../admin/admin.service";
 
 @Injectable()
 export class QueueMonitorService {

@@ -5,8 +5,8 @@
 
 import { Injectable, Logger } from '@nestjs/common';
 import { PricingContext, PricingFactor } from "../../core/types";
-import { FinishesService } from "../../../modules/finishes/finishes.service";
-import { FormulaContext } from "../../../modules/finishes/finishes.types";
+import { FinishesService } from "../../../../modules/domain/finishes/finishes.service";
+import { FormulaContext } from "../../../../modules/domain/finishes/finishes.types";
 
 @Injectable()
 export class FinishChainCostFactorService {

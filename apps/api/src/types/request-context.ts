@@ -1,8 +1,8 @@
 import { Request } from "express";
 import { Logger } from "@nestjs/common";
 import { LoggerService } from "../observability/logger.types";
-import { RequestUser } from "../modules/auth/jwt.strategy";
-import { Membership } from "../modules/auth/rbac.types";
+import { RequestUser } from "../modules/core/auth/jwt.strategy";
+import { Membership } from "../modules/core/auth/rbac.types";
 import type { Role } from "@cnc-quote/shared";
 
 interface RequestOrgContext {

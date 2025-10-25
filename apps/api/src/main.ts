@@ -12,13 +12,13 @@ import { Request, Response, NextFunction } from "express";
 // import * as Sentry from "@sentry/node";
 // import { nodeProfilingIntegration } from "@sentry/profiling-node";
 import { AppModule } from "./app.module";
-import { AuditInterceptor } from "./common/interceptors/audit.interceptor";
-import { ResponseInterceptor } from "./common/interceptors/response.interceptor";
-import { HttpExceptionFilter } from "./common/filters/http-exception.filter";
-import { AuditService } from "./modules/audit-legacy/audit.service";
+import { AuditInterceptor } from "./lib/common/interceptors/audit.interceptor";
+import { ResponseInterceptor } from "./lib/common/interceptors/response.interceptor";
+import { HttpExceptionFilter } from "./lib/common/filters/http-exception.filter";
+import { AuditService } from "./modules/legacy/audit-legacy/audit.service";
 import { startOTel, shutdownOTel } from "./observability/otel";
 import { httpLogger } from "./observability/logger";
-import { RequestContextMiddleware } from "./common/middleware/request-context.middleware";
+import { RequestContextMiddleware } from "./lib/common/middleware/request-context.middleware";
 import { setupOpenAPI } from "./docs/openapi";
 
 // Initialize Sentry

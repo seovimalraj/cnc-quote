@@ -3,7 +3,7 @@ import type {
   ToleranceAppliesTo,
   ToleranceFeatureType,
   ToleranceUnit,
-} from "../lib/pricing-core/repositories/tolerance-cost-book.repo";
+} from "../pricing-core/repositories/tolerance-cost-book.repo";
 
 export type StructuredToleranceInput = StructuredToleranceEntry[];
 

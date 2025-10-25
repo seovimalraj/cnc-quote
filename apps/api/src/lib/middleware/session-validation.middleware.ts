@@ -1,6 +1,6 @@
 import { Injectable, NestMiddleware, UnauthorizedException } from '@nestjs/common';
 import { Request, Response, NextFunction } from 'express';
-import { SupabaseService } from "../lib/supabase/supabase.service";
+import { SupabaseService } from "../supabase/supabase.service";
 
 @Injectable()
 export class SessionValidationMiddleware implements NestMiddleware {

@@ -2,7 +2,7 @@ import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { SupabaseService } from "../../../lib/supabase/supabase.service";
 import { CacheService } from "../../../lib/cache/cache.service";
-import { AdminHealthService, HealthStatus } from "../admin/admin/admin-health/admin-health.service";
+import { AdminHealthService, HealthStatus } from "../admin-health/admin-health.service";
 
 export interface SystemHealthSummary {
   overall_status: 'healthy' | 'degraded' | 'unhealthy';
