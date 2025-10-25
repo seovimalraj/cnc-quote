@@ -256,7 +256,7 @@ export class StorageService {
       throw uploadError;
     }
 
-    return this.completeUpload(record.id, {
+    return this.completeUpload(record.id, params.org_id, {
       linked_type: params.linked_type,
       linked_id: params.linked_id,
     });

@@ -1,18 +1,10 @@
 import { SupabaseClient } from '@supabase/supabase-js';
-import { ComplianceAnalyticsService } from './compliance-analytics.service.js';
-import { MetricsPublisher } from '../lib/pushgateway.js';
+import { ComplianceAnalyticsService } from './compliance-analytics.service';
+import { MetricsPublisher } from '../lib/pushgateway';
 
 describe('ComplianceAnalyticsService', () => {
   const windowStart = new Date('2025-10-18T00:00:00.000Z');
   const windowEnd = new Date('2025-10-19T00:00:00.000Z');
-  const eventBase = {
-    severity: 'warning',
-    org_id: 'org-1',
-    quote_item_id: 'item-1',
-    message: 'Test event',
-    created_at: windowStart.toISOString(),
-    payload: { snapshot: {} },
-  } as const;
 
   function buildSupabaseDouble(events: any[]) {
     const selectBuilder = {

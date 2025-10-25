@@ -2,7 +2,7 @@ import { Logger } from '@nestjs/common';
 import { WebSocketGateway, WebSocketServer, OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect } from '@nestjs/websockets';
 import { Server } from 'socket.io';
 import { QueueMonitorService } from './queue-monitor.service';
-import { JwtStrategy } from '../../auth/jwt.strategy';
+import { JwtStrategy } from '../auth/jwt.strategy';
 import { JwtService } from '@nestjs/jwt';
 
 // Basic namespace for queue monitoring status

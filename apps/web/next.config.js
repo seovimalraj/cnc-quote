@@ -2,7 +2,6 @@
  * @ownership web-platform
  * @raci docs/governance/raci-matrix.yaml
  */
-const { withSentryConfig } = require("@sentry/nextjs");
 
 const nextConfig = {
   reactStrictMode: true,
@@ -71,8 +70,4 @@ const nextConfig = {
   // },
 };
 
-module.exports = withSentryConfig(nextConfig, {
-  silent: true,
-  org: process.env.SENTRY_ORG,
-  project: process.env.SENTRY_PROJECT,
-});
+module.exports = nextConfig;

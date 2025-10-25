@@ -19,9 +19,9 @@ import {
   EmbeddingConfig,
   ApiUsageStats,
 } from './admin-api-keys.service';
-import { JwtAuthGuard } from '../../auth/jwt.guard';
-import { RolesGuard } from '../../auth/roles.guard';
-import { Roles } from '../../auth/roles.decorator';
+import { JwtAuthGuard } from '../auth/jwt.guard';
+import { RolesGuard } from '../auth/roles.guard';
+import { Roles } from '../auth/roles.decorator';
 
 @Controller('admin/api-keys')
 @UseGuards(JwtAuthGuard, RolesGuard)

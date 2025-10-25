@@ -57,7 +57,7 @@ export class AccountingService {
     orderId: string;
     amount: number;
     date: string;
-  }) {
+  }): Promise<{ invoice_id: string } & Record<string, any>> {
     // Make Zoho Books API call to create invoice
     const response = await fetch("https://books.zoho.com/api/v3/invoices", {
       method: "POST",
@@ -86,6 +86,21 @@ export class AccountingService {
       throw new Error(`Zoho Books API error: ${response.statusText}`);
     }
 
-    return response.json();
+    const json = (await response.json()) as { invoice_id?: string } & Record<string, any>;
+    
+    // Validate response has required invoice_id
+    if (!json || typeof json !== 'object' || !json.invoice_id || typeof json.invoice_id !== 'string') {
+      const errorDetails = {
+        orderId: params.orderId,
+        hasInvoiceId: !!json?.invoice_id,
+        responseKeys: json ? Object.keys(json) : [],
+        responseSize: JSON.stringify(json).length,
+        message: 'Zoho Books response missing or invalid invoice_id'
+      };
+      this.logger.error('Invalid Zoho response', errorDetails);
+      throw new Error(`Zoho Books API returned invalid response for order ${params.orderId}`);
+    }
+    
+    return json as { invoice_id: string } & Record<string, any>;
   }
 }

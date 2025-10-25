@@ -11,12 +11,16 @@ import {
   getModelConfig,
   renderAdminPricingRevisionSystemPrompt,
   renderAdminPricingRevisionUserPrompt,
-  type PromptDescriptor,
 } from '@cnc-quote/shared';
-import { config } from '../config.js';
-import { logger } from '../lib/logger.js';
-import { incrementOllamaFailure, recordOllamaLatency } from '../lib/ollama-metrics.js';
-import { getModelGatewayClient } from '../lib/model-gateway-client.js';
+import type { PromptDescriptor as PromptDescriptorType } from '@cnc-quote/shared/dist/ai/prompt-registry';
+import type {
+  AdminPricingRevisionAssistantLLMResponseV1,
+  AdminPricingRevisionAssistantAdjustmentV1,
+  AdminPricingRevisionAssistantStatusV1,
+} from '@cnc-quote/shared/dist/contracts/v1';
+import { logger } from '../lib/logger';
+import { incrementOllamaFailure, recordOllamaLatency } from '../lib/ollama-metrics';
+import { getModelGatewayClient } from '../lib/model-gateway-client';
 
 const ADJUSTABLE_ROOTS = new Set([
   'speed_region',
@@ -28,7 +32,7 @@ const ADJUSTABLE_ROOTS = new Set([
 
 interface RunRecord {
   id: string;
-  status: ContractsV1.AdminPricingRevisionAssistantStatusV1;
+  status: AdminPricingRevisionAssistantStatusV1;
   instructions: string;
   focus_areas: string[] | null;
   base_version: string;
@@ -171,7 +175,7 @@ export class AdminPricingRevisionAssistantService {
     requestedBy?: string | null;
     traceId?: string | null;
     prompt: RunRecord;
-    response: ContractsV1.AdminPricingRevisionAssistantLLMResponseV1;
+    response: AdminPricingRevisionAssistantLLMResponseV1;
     latencyMs: number;
     systemPrompt: string;
     userPrompt: string;
@@ -179,8 +183,8 @@ export class AdminPricingRevisionAssistantService {
     focusAreas?: string[];
     modelVersion: string;
     promptMetadata: {
-      system: PromptDescriptor<'admin-pricing-revision/system', unknown>;
-      user: PromptDescriptor<'admin-pricing-revision/user', unknown>;
+      system: PromptDescriptorType<'admin-pricing-revision/system', unknown>;
+      user: PromptDescriptorType<'admin-pricing-revision/user', unknown>;
     };
   }): Promise<void> {
     if (!params.orgId) {
@@ -249,14 +253,14 @@ export class AdminPricingRevisionAssistantService {
     baseVersion: string;
     context?: { traceId?: string | null; orgId?: string | null };
   }): Promise<{
-    response: ContractsV1.AdminPricingRevisionAssistantLLMResponseV1;
+    response: AdminPricingRevisionAssistantLLMResponseV1;
     latencyMs: number;
     systemPrompt: string;
     userPrompt: string;
     modelVersion: string;
     promptMetadata: {
-      system: PromptDescriptor<'admin-pricing-revision/system', unknown>;
-      user: PromptDescriptor<'admin-pricing-revision/user', unknown>;
+      system: PromptDescriptorType<'admin-pricing-revision/system', unknown>;
+      user: PromptDescriptorType<'admin-pricing-revision/user', unknown>;
     };
   }> {
     const modelConfig = getModelConfig('admin-pricing-revision');
@@ -340,7 +344,7 @@ export class AdminPricingRevisionAssistantService {
     });
   }
 
-  private parseModelResponse(raw: string): ContractsV1.AdminPricingRevisionAssistantLLMResponseV1 {
+  private parseModelResponse(raw: string): AdminPricingRevisionAssistantLLMResponseV1 {
     const normalized = raw
       .replace(/^```json/iu, '')
       .replace(/^```/u, '')
@@ -364,15 +368,15 @@ export class AdminPricingRevisionAssistantService {
 
   private applyAdjustments(
     baseConfig: AdminPricingConfig,
-    adjustments: ContractsV1.AdminPricingRevisionAssistantAdjustmentV1[],
+    adjustments: AdminPricingRevisionAssistantAdjustmentV1[],
   ): {
   config: AdminPricingConfig;
-    adjustments: ContractsV1.AdminPricingRevisionAssistantAdjustmentV1[];
+    adjustments: AdminPricingRevisionAssistantAdjustmentV1[];
     diffSummary: string[];
   } {
   const clone = JSON.parse(JSON.stringify(baseConfig)) as AdminPricingConfig;
     const summaries: string[] = [];
-    const enriched: ContractsV1.AdminPricingRevisionAssistantAdjustmentV1[] = [];
+    const enriched: AdminPricingRevisionAssistantAdjustmentV1[] = [];
 
     for (const adjustment of adjustments) {
       const segments = adjustment.path.split('.');
@@ -385,7 +389,7 @@ export class AdminPricingRevisionAssistantService {
       const after = this.computeNextValue(before, adjustment);
       apply(after);
 
-      enriched.push({ ...adjustment, beforeValue: before, afterValue: after });
+  enriched.push({ ...adjustment, beforeValue: before ?? undefined, afterValue: after });
       summaries.push(`${label}: ${before ?? 'n/a'} → ${after} (${adjustment.reason})`);
     }
 
@@ -396,7 +400,7 @@ export class AdminPricingRevisionAssistantService {
     };
   }
 
-  private computeNextValue(current: number | null | undefined, adjustment: ContractsV1.AdminPricingRevisionAssistantAdjustmentV1): number {
+  private computeNextValue(current: number | null | undefined, adjustment: AdminPricingRevisionAssistantAdjustmentV1): number {
     const currentValue = typeof current === 'number' ? current : 0;
     switch (adjustment.type) {
       case 'set':

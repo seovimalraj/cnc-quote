@@ -36,6 +36,8 @@ import {
   InformationCircleIcon,
 } from '@heroicons/react/24/outline';
 import { posthog } from 'posthog-js';
+import { useRealtimePricing } from '@/hooks/useRealtimePricing';
+import { createClient } from '@/lib/supabase/client';
 
 // Types based on specification
 interface Quote {
@@ -203,6 +205,9 @@ export default function QuoteDetailsPage() {
   const quoteId = params.id as string;
 
   const [quote, setQuote] = useState(mockQuoteData);
+  const [authToken, setAuthToken] = useState<string | undefined>(undefined);
+  const [orgId, setOrgId] = useState<string | undefined>(undefined);
+  const { joinQuote } = useRealtimePricing({ baseUrl: process.env.NEXT_PUBLIC_API_URL, authToken, orgId, autoReconcileOnDrift: true });
   const [selectedItems, setSelectedItems] = useState<string[]>([]);
   const [leadTimeSelections, setLeadTimeSelections] = useState<Record<string, string>>({});
   const [promoCode, setPromoCode] = useState('');
@@ -267,6 +272,27 @@ export default function QuoteDetailsPage() {
         return null;
     }
   };
+
+  // Fetch Supabase session to get access token for realtime pricing
+  useEffect(() => {
+    const supabase = createClient();
+    supabase.auth.getSession().then(({ data }) => {
+      const session = data.session ?? null;
+      const token = session?.access_token;
+      const appMeta: any = session?.user?.app_metadata || {};
+      const userMeta: any = session?.user?.user_metadata || {};
+      const oid: string | undefined = appMeta.org_id || userMeta.org_id || undefined;
+      if (token) setAuthToken(token);
+      if (oid) setOrgId(oid);
+    }).catch(() => { /* noop */ });
+  }, []);
+
+  // Join the pricing channel for this quote to receive updates
+  useEffect(() => {
+    if (quoteId) {
+      joinQuote(quoteId);
+    }
+  }, [quoteId, joinQuote]);
 
   return (
     <div className="min-h-screen bg-gray-50">

@@ -9,21 +9,21 @@ import {
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
 import { Logger, UseGuards } from '@nestjs/common';
-import { JwtAuthGuard } from '../../auth/jwt.guard';
-import { PricingEngineV2Service, PricingEngineRequest } from '../pricing/pricing-engine-v2.service';
+import { JwtAuthGuard } from '../auth/jwt.guard';
+import { PricingEngineV2Service, PricingEngineRequest } from './pricing-engine-v2.service';
 import { GeometryService } from '../geometry/geometry.service';
-import { PartConfigV1, PricingBreakdown } from '@packages/shared/contracts/v1';
+import type { ContractsV1 } from '@cnc-quote/shared';
 
 interface PricingRequest {
   quote_id: string;
   quote_item_id: string;
-  part_config: PartConfigV1;
+  part_config: ContractsV1.PartConfigV1;
   geometry_data?: any;
 }
 
 interface PricingResponse {
   quote_item_id: string;
-  pricing: PricingBreakdown;
+  pricing: any;
   timestamp: string;
   calculation_time_ms: number;
 }
@@ -348,7 +348,7 @@ export class PricingWebSocketGateway implements OnGatewayConnection, OnGatewayDi
     @MessageBody() data: {
       quote_id: string;
       quote_item_id: string;
-      part_config: PartConfigV1;
+      part_config: ContractsV1.PartConfigV1;
       geometry_data?: any;
     }
   ) {
@@ -403,7 +403,7 @@ export class PricingWebSocketGateway implements OnGatewayConnection, OnGatewayDi
       quote_id: string;
       updates: Array<{
         quote_item_id: string;
-        part_config: PartConfigV1;
+        part_config: ContractsV1.PartConfigV1;
         geometry_data?: any;
       }>;
     }

@@ -113,6 +113,30 @@ export type {
 	AIModelBiasReviewV1,
 } from './ai-model';
 
+// Pricing recalculation job contracts
+export type { PricingRecalcJobV1, PricingRecalcReasonV1 } from './pricing-recalc';
+export type {
+	PricingRecalcRunV1,
+	PricingRecalcItemV1,
+	PricingRecalcRunStatusV1,
+	PricingRecalcItemStatusV1,
+} from './pricing-recalc-status';
+
+// Supplier portal contracts (capabilities, approvals, events)
+export {
+	SupplierCapabilitySchemaV1,
+	SupplierApprovalSchemaV1,
+	SupplierEventKindV1,
+	SupplierCapabilityUpdatedEventSchemaV1,
+	SupplierApprovalRecordedEventSchemaV1,
+} from './supplier';
+export type {
+	SupplierCapabilityV1,
+	SupplierApprovalV1,
+	SupplierCapabilityUpdatedEventV1,
+	SupplierApprovalRecordedEventV1,
+} from './supplier';
+
 // Realtime events: import then re-export to avoid resolution glitches & name collisions
 import * as Realtime from './realtime-events';
 export type RealtimeEventKindV1 = Realtime.RealtimeEventKindV1;

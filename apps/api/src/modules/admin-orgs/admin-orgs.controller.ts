@@ -13,9 +13,9 @@ import {
 } from '@nestjs/common';
 import { AdminOrgsService } from './admin-orgs.service';
 import { AuthGuard } from '@nestjs/passport';
-import { RolesGuard } from '../../auth/roles.guard';
-import { Roles } from '../../auth/roles.decorator';
-import { ReqUser } from '../../auth/req-user.decorator';
+import { RolesGuard } from '../auth/roles.guard';
+import { Roles } from '../auth/roles.decorator';
+import { ReqUser } from '../auth/req-user.decorator';
 import { Organization, QuotaSchema } from '../../../../../packages/shared/src/types/schema';
 import { z } from 'zod';
 

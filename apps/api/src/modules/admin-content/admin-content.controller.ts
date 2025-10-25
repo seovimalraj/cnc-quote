@@ -11,9 +11,9 @@ import {
 import { AuthGuard } from '@nestjs/passport';
 import { Request } from 'express';
 
-import { Roles } from '../../auth/roles.decorator';
-import { RolesGuard } from '../../auth/roles.guard';
-import { ReqUser } from '../../auth/req-user.decorator';
+import { Roles } from '../auth/roles.decorator';
+import { RolesGuard } from '../auth/roles.guard';
+import { ReqUser } from '../auth/req-user.decorator';
 import { AdminContentService, ActorContext } from './admin-content.service';
 import { UpsertDocumentDto, UpsertPageDto } from './admin-content.dto';
 

@@ -19,9 +19,8 @@ RUN apt-get update && apt-get install -y \
     libocct-visualization-7.6t64 \
     && rm -rf /var/lib/apt/lists/*
 
-# Install poetry
-RUN curl -sSL https://install.python-poetry.org | python3 -
-ENV PATH="/root/.local/bin:$PATH"
+# Install poetry system-wide to avoid conflicts
+RUN pip3 install --break-system-packages poetry
 
 # Set working directory
 WORKDIR /app
@@ -30,12 +29,16 @@ WORKDIR /app
 COPY apps/cad-service/pyproject.toml ./pyproject.toml
 COPY apps/cad-service/app ./app
 
-# Install dependencies
-RUN poetry config virtualenvs.create false \
-    && poetry install --no-interaction --no-ansi --only=main --no-root
+# Create virtual environment and install dependencies
+RUN python3 -m venv /app/venv \
+    && /app/venv/bin/pip install --upgrade pip \
+    && /app/venv/bin/pip install fastapi uvicorn pydantic celery redis python-multipart numpy httpx psutil requests structlog \
+    && /app/venv/bin/pip install opentelemetry-api opentelemetry-sdk opentelemetry-instrumentation-fastapi \
+    && /app/venv/bin/pip install opentelemetry-instrumentation-redis opentelemetry-instrumentation-requests \
+    && /app/venv/bin/pip install opentelemetry-exporter-otlp-proto-grpc
 
 # Expose port
 EXPOSE 10001
 
 # Run FastAPI with port from environment
-CMD poetry run uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-10001}
+CMD /app/venv/bin/uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-10001}

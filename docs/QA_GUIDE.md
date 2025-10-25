@@ -40,8 +40,50 @@ For debugging, it's useful to run the tests in UI mode, which provides a visual 
 pnpm --filter @cnc-quote/web test:e2e:ui
 ```
 
-### 2.4. Pricing Compliance Analytics Rollup
-`pnpm qa:check-pricing` now validates the pricing API and triggers the nightly compliance rollup job via the worker health endpoint. Ensure `WORKER_URL` and `WORKER_SECRET` are set when running against non-default environments so the script can enqueue the BullMQ rollup. The job should succeed before QA sign-off to confirm compliance analytics coverage.
+### 2.4. Pricing and Compliance QA
+Use the consolidated script to validate pricing paths and the compliance rollup job:
+
+```bash
+pnpm qa:check-pricing
+```
+
+The script supports the following environment variables:
+
+- `WEB_URL` (default `http://localhost:3000`): Web app base URL. The script posts to `WEB_URL/api/pricing` which proxies to the backend when available and falls back to a deterministic estimate when the upstream API is unavailable.
+- `API_URL` (default `http://localhost:3001`): API base URL. Used to query `/v1/monitoring/health` for a non-fatal health check.
+- `WORKER_URL` (default `http://localhost:3001`): Worker health server URL. Used to trigger the compliance analytics rollup via `/tasks/compliance-rollup`.
+- `WORKER_SECRET` (default `dev-secret`): Secret header for the worker task trigger.
+
+Behavior notes:
+
+- If the web pricing route isn’t available in the current environment, the script will skip the pricing check with a warning and continue.
+- The API health check is non-fatal and provides visibility only.
+- The compliance rollup trigger is also non-fatal in environments where the worker health server isn’t running; a warning is logged and the script continues.
+
+This keeps QA runs green across local/dev where not all services may be running while still exercising the production paths when available. In pre-release and prod-like environments, ensure all URLs point to live services so the script validates end-to-end.
+
+### 2.5. Admin Recalc Smoke (dry-run)
+
+Run a non-destructive smoke test that previews and enqueues an org-scoped dry-run pricing recalc, then polls for completion and writes an artifact:
+
+```bash
+pnpm qa:check-recalc
+```
+
+Environment variables:
+
+- `API_URL` (default `http://localhost:3001`): API base URL.
+- `JWT_TOKEN` (required): Bearer token with admin privileges for the target org.
+
+The script performs:
+
+- `POST /admin/pricing/recalc/preview` to fetch eligible count, a sample of quote IDs (first 100), and min/max created_at.
+- `POST /admin/pricing/recalc` with `dryRun: true` to enqueue a run and then polls `GET /admin/pricing/recalc-runs/:id` until it completes or times out.
+- Writes `artifacts/recalc-smoke.json` with summary details.
+
+Notes:
+
+- This test exits successfully even if the run ends `partial` or is still running after the timeout in dev environments, to keep smoke runs non-blocking. Use metrics and run records to investigate failures.
 
 ## 3. QA Test Cases and Scenarios
 

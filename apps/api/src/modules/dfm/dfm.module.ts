@@ -21,7 +21,11 @@ import { AIModule } from '../ai/ai.module';
     AIModule,
   ],
   controllers: [DfmController, RiskController],
-  providers: [DfmService, DfmAnalysisProcessor, RiskService],
+  providers: [
+    DfmService, 
+    // DfmAnalysisProcessor, // Temporarily disabled to isolate DI error
+    RiskService
+  ],
   exports: [DfmService, RiskService],
 })
 export class DfmModule {}

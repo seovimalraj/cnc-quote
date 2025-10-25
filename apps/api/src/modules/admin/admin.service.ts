@@ -317,7 +317,7 @@ export class AdminService {
     };
 
     const baseQuery = this.supabase.client
-      .from<WebhookRow>('admin_webhook_status')
+      .from('admin_webhook_status')
       .select('provider, status, failed_24h, last_event_type, last_delivery_at, updated_at')
       .order('updated_at', { ascending: false })
       .limit(50);
@@ -331,7 +331,7 @@ export class AdminService {
 
     if (!rows.length) {
       const { data: fallbackRows, error: fallbackError } = await this.supabase.client
-        .from<WebhookRow>('admin_webhook_status')
+        .from('admin_webhook_status')
         .select('provider, status, failed_24h, last_event_type, last_delivery_at, updated_at')
         .order('updated_at', { ascending: false })
         .limit(50);
@@ -498,7 +498,7 @@ export class AdminService {
     `;
 
     const { data, error } = await this.supabase.client
-      .from<TActivity>('admin_activity_events')
+      .from('admin_activity_events')
       .select(selectClause)
       .order('occurred_at', { ascending: false })
       .limit(limit);
@@ -540,7 +540,7 @@ export class AdminService {
 
   private async fetchActivityRowsFromAudit<TActivity extends Record<string, any>>(limit: number): Promise<TActivity[]> {
     const { data, error } = await this.supabase.client
-      .from<TActivity>('audit_events')
+      .from('audit_events')
       .select(`
         id,
         ts,
@@ -565,7 +565,7 @@ export class AdminService {
       throw error;
     }
 
-    return (data ?? []).map((row: any) => ({
+  return (data ?? []).map((row: any) => ({
       id: row.id,
       occurred_at: row.ts,
       area: row.area,
@@ -613,13 +613,13 @@ export class AdminService {
 
     const [{ data: errorRows, error: errorEventsError }, { data: failedJobRows, error: failedJobError }] = await Promise.all([
       this.supabase.client
-        .from<ErrorRow>('admin_error_events')
+        .from('admin_error_events')
         .select('id, service, title, count_1h, first_seen, last_seen, users_affected, permalink')
         .gte('last_seen', since)
         .order('last_seen', { ascending: false })
         .limit(50),
       this.supabase.client
-        .from<FailedJobRow>('admin_failed_jobs')
+        .from('admin_failed_jobs')
         .select('queue, job_id, attempts, reason, occurred_at')
         .gte('occurred_at', since)
         .order('occurred_at', { ascending: false })

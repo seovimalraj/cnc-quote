@@ -20,11 +20,11 @@ import {
   ApiParam,
   ApiQuery,
 } from '@nestjs/swagger';
-import { JwtAuthGuard } from '../../auth/jwt.guard';
-import { OrgGuard } from '../../auth/org.guard';
-import { RolesGuard } from '../../auth/roles.guard';
-import { Roles } from '../../auth/roles.decorator';
-import { User } from '../../auth/user.decorator';
+import { JwtAuthGuard } from '../auth/jwt.guard';
+import { OrgGuard } from '../auth/org.guard';
+import { RolesGuard } from '../auth/roles.guard';
+import { Roles } from '../auth/roles.decorator';
+import { User } from '../auth/user.decorator';
 import { AdminDfmService } from './admin-dfm.service';
 import {
   DfmOptionDto,
@@ -266,8 +266,8 @@ export class AdminDfmController {
   @ApiQuery({ name: 'processType', required: false, description: 'Filter by process type' })
   @ApiResponse({ status: 200, description: 'List of DFM rules', type: [DfmRuleDto] })
   async getDfmRules(
-    @Query('processType') processType?: string,
     @User() user: any,
+    @Query('processType') processType?: string,
   ): Promise<DfmRuleDto[]> {
     return this.adminDfmService.getDfmRules(user.org_id, processType);
   }

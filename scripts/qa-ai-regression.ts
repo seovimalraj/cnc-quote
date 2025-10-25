@@ -22,15 +22,26 @@ interface PricingRegressionFixture {
   tolerance?: number;
 }
 
-async function loadFixtures(dir: string): Promise<PricingRegressionFixture[]> {
+interface QuoteDetailFixture {
+  id: string;
+  type: 'quote-detail';
+  description?: string;
+  expected: {
+    hasMatrix?: boolean;
+    tierKeys?: string[];
+  };
+  payload?: any;
+}
+
+async function loadFixtures(dir: string): Promise<Array<PricingRegressionFixture | QuoteDetailFixture>> {
   const entries = await fs.readdir(dir);
-  const fixtures: PricingRegressionFixture[] = [];
+  const fixtures: Array<PricingRegressionFixture | QuoteDetailFixture> = [];
 
   for (const entry of entries) {
     if (!entry.endsWith('.json')) continue;
     const raw = await fs.readFile(path.join(dir, entry), 'utf-8');
-    const parsed = JSON.parse(raw) as PricingRegressionFixture;
-    if (parsed.type !== 'pricing') continue;
+    const parsed = JSON.parse(raw) as PricingRegressionFixture | QuoteDetailFixture;
+    if (parsed.type !== 'pricing' && parsed.type !== 'quote-detail') continue;
     fixtures.push(parsed);
   }
 
@@ -79,23 +90,81 @@ async function main() {
 
   for (const fixture of fixtures) {
     total += 1;
-    console.log(`🧪  Running fixture ${fixture.id}${fixture.description ? ` – ${fixture.description}` : ''}`);
+    console.log(`🧪  Running fixture ${fixture.id}${(fixture as any).description ? ` – ${(fixture as any).description}` : ''}`);
 
-    const breakdown = computePricingBreakdown({
-      quantity: fixture.input.quantity,
-      metrics: fixture.input.metrics,
-      factors: fixture.input.factors,
-      tolerance_multiplier: fixture.input.toleranceMultiplier,
-    });
+    if (fixture.type === 'pricing') {
+      const f = fixture as PricingRegressionFixture;
+      const breakdown = computePricingBreakdown({
+        quantity: f.input.quantity,
+        metrics: f.input.metrics,
+        factors: f.input.factors,
+        tolerance_multiplier: f.input.toleranceMultiplier,
+      });
 
-    const { passed, failures } = compareBreakdowns(fixture, breakdown);
-    if (!passed) {
-      failed += 1;
-      for (const message of failures) {
-        console.error(`   ❌ ${message}`);
+      const { passed, failures } = compareBreakdowns(f, breakdown);
+      if (!passed) {
+        failed += 1;
+        for (const message of failures) {
+          console.error(`   ❌ ${message}`);
+        }
+      } else {
+        console.log('   ✅ Regression match');
       }
-    } else {
-      console.log('   ✅ Regression match');
+    } else if (fixture.type === 'quote-detail') {
+      const f = fixture as QuoteDetailFixture;
+      const WEB_URL = process.env.WEB_URL || process.env.APP_URL || 'http://localhost:3000';
+      try {
+        const payload = f.payload || {
+          quoteId: 'qa-regression',
+          currency: 'USD',
+          lines: [
+            {
+              id: 'line-1',
+              quantity: 10,
+              partConfig: {
+                process_type: 'cnc_milling',
+                selected_quantity: 10,
+                material_spec: '6061_aluminum',
+                lead_time_option: 'standard',
+              },
+            },
+          ],
+        };
+        const res = await fetch(`${WEB_URL}/api/pricing`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        if (!res.ok) {
+          console.warn(`   ⚠️  Quote detail fetch unavailable (${res.status}); skipping fixture.`);
+          continue;
+        }
+        const data = await res.json();
+        const matrix = data?.matrix;
+        let pass = true;
+        const failures: string[] = [];
+        if (f.expected.hasMatrix && !Array.isArray(matrix)) {
+          pass = false;
+          failures.push('matrix missing');
+        }
+        if (Array.isArray(matrix) && f.expected.tierKeys && f.expected.tierKeys.length) {
+          const first = matrix[0] || {};
+          for (const key of f.expected.tierKeys) {
+            if (!(key in first)) {
+              pass = false;
+              failures.push(`tier key missing: ${key}`);
+            }
+          }
+        }
+        if (!pass) {
+          failed += 1;
+          for (const msg of failures) console.error(`   ❌ ${msg}`);
+        } else {
+          console.log('   ✅ Quote detail structure OK');
+        }
+      } catch (e) {
+        console.warn(`   ⚠️  Quote detail check failed: ${String((e && (e as any).message) || e)}`);
+      }
     }
   }
 

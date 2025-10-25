@@ -14,6 +14,9 @@ import { CadConversionService } from "./cad-conversion.service";
       timeout: 120000, // 2 minutes timeout for CAD operations including conversion
       maxRedirects: 5,
     }),
+    BullModule.registerQueue({
+      name: 'cad',
+    }),
     FilesModule,
   ],
   controllers: [CadController, CadConversionController],

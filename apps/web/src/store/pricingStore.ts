@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
 import { ContractsV1 } from '@cnc-quote/shared';
 import { api } from '../lib/api';
 
@@ -56,7 +57,7 @@ function mergeRows(existing: PricingRowView[], patches: ContractsV1.PricingMatri
   return Array.from(map.values()).sort((a,b) => a.quantity - b.quantity);
 }
 
-export const usePricingStore = create<PricingState>((set, get) => ({
+export const usePricingStore = create<PricingState>()(persist((set, get) => ({
   quoteId: undefined,
   items: {},
   driftDetected: false,
@@ -90,8 +91,14 @@ export const usePricingStore = create<PricingState>((set, get) => ({
     if (!quoteId) return;
     set({ reconciling: true });
     try {
-      const resp = await api.post('/price/v2/recalculate', { quote_id: quoteId, quote_item_ids: itemIds });
-      const results = resp.data?.results || [];
+      const resp = await fetch('/api/price/v2/recalculate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ quote_id: quoteId, quote_item_ids: itemIds }),
+      });
+      if (!resp.ok) throw new Error(`reconcile failed ${resp.status}`);
+      const data = await resp.json();
+      const results = data?.results || [];
       set(state => {
         let lastSubtotalDelta = state.lastSubtotalDelta;
         const updatedItems = { ...state.items };
@@ -156,4 +163,7 @@ export const usePricingStore = create<PricingState>((set, get) => ({
       return { ...state, items: nextItems };
     });
   },
+}), {
+  name: 'pricing-store',
+  storage: createJSONStorage(() => sessionStorage),
 }));

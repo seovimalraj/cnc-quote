@@ -58,7 +58,8 @@ export class PricingPersistenceService {
     traceId?: string;
   }): Promise<{ subtotal: number; total: number; pricing_version: number }> {
     const { quote_id, quote_item_id, matrix, partConfig, traceId } = params;
-    const pricing_version = Date.now();
+  const pricing_version = Date.now();
+  const pricingVersion = pricing_version;
     const resolvedTraceId = traceId ?? randomUUID();
 
     // 1. Update item matrix & version

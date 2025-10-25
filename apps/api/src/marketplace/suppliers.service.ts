@@ -5,7 +5,7 @@
 
 import { Injectable, NotFoundException, BadRequestException, ConflictException } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
-import { AuditService } from '../audit/audit.service';
+import { AuditService } from '../legacy/audit/audit.service';
 import type {
   SupplierProfile,
   CreateSupplierDto,

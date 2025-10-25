@@ -2,8 +2,8 @@ import { Controller, Post, Body, Get, Query, HttpException, HttpStatus, Res, Use
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { Response } from 'express';
 import { AuthService } from './auth.service';
-import { JwtAuthGuard } from '../../auth/jwt.guard';
-import { User } from '../../auth/user.decorator';
+import { JwtAuthGuard } from '../auth/jwt.guard';
+import { User } from '../auth/user.decorator';
 import {
   SendInviteDto,
   AcceptInviteDto,

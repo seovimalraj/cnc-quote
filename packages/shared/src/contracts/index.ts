@@ -65,6 +65,36 @@ export namespace ContractsV1 {
   export type AIModelReviewStatusV1 = V1.AIModelReviewStatusV1;
   export type AIModelBiasReviewV1 = V1.AIModelBiasReviewV1;
 
+  // Pricing Recalculation (Admin)
+  export type PricingRecalcJobV1 = V1.PricingRecalcJobV1;
+  export type PricingRecalcReasonV1 = V1.PricingRecalcReasonV1;
+  export type PricingRecalcRunV1 = V1.PricingRecalcRunV1;
+  export type PricingRecalcItemV1 = V1.PricingRecalcItemV1;
+  export type PricingRecalcRunStatusV1 = V1.PricingRecalcRunStatusV1;
+  export type PricingRecalcItemStatusV1 = V1.PricingRecalcItemStatusV1;
+
+  // Supplier Contracts
+  export type SupplierCapabilityV1 = V1.SupplierCapabilityV1;
+  export type SupplierApprovalV1 = V1.SupplierApprovalV1;
+  export type SupplierCapabilityUpdatedEventV1 = V1.SupplierCapabilityUpdatedEventV1;
+  export type SupplierApprovalRecordedEventV1 = V1.SupplierApprovalRecordedEventV1;
+
+  // Expose selected V1 zod schemas for validators in API layer
+  // Admin Pricing Revision Assistant schemas
+  export const AdminPricingRevisionAssistantRequestSchemaV1 = V1.AdminPricingRevisionAssistantRequestSchemaV1;
+  export const AdminPricingRevisionAssistantAdjustmentSchemaV1 = V1.AdminPricingRevisionAssistantAdjustmentSchemaV1;
+  export const AdminPricingRevisionAssistantLLMResponseSchemaV1 = V1.AdminPricingRevisionAssistantLLMResponseSchemaV1;
+  export const AdminPricingRevisionAssistantStatusSchemaV1 = V1.AdminPricingRevisionAssistantStatusSchemaV1;
+  export const AdminPricingRevisionAssistantApprovalDecisionSchemaV1 = V1.AdminPricingRevisionAssistantApprovalDecisionSchemaV1;
+  export const AdminPricingRevisionDualControlStateSchemaV1 = V1.AdminPricingRevisionDualControlStateSchemaV1;
+  export const AdminPricingRevisionAssistantApprovalSchemaV1 = V1.AdminPricingRevisionAssistantApprovalSchemaV1;
+  export const AdminPricingRevisionAssistantApprovalRequestSchemaV1 = V1.AdminPricingRevisionAssistantApprovalRequestSchemaV1;
+  export const AdminPricingRevisionAssistantRunSchemaV1 = V1.AdminPricingRevisionAssistantRunSchemaV1;
+
+  // Supplier schemas
+  export const SupplierCapabilitySchemaV1 = V1.SupplierCapabilitySchemaV1;
+  export const SupplierApprovalSchemaV1 = V1.SupplierApprovalSchemaV1;
+
   // Realtime Events
   export type PricingUpdateEventV1 = V1.PricingUpdateEventV1;
   export type PricingOptimisticEventV1 = V1.PricingOptimisticEventV1;

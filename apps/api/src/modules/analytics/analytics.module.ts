@@ -1,8 +1,9 @@
 import { Module } from '@nestjs/common';
 import { AnalyticsService } from './analytics.service';
-import { SupabaseService } from '../../lib/supabase/supabase.service';
+import { SupabaseModule } from '../../lib/supabase/supabase.module';
 
 @Module({
+  imports: [SupabaseModule],
   providers: [AnalyticsService],
   exports: [AnalyticsService],
 })

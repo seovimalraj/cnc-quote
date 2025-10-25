@@ -3,9 +3,13 @@ import { z } from 'zod';
 // User Schema (enhanced for admin workcenter)
 export const UserSchema = z.object({
   id: z.string().uuid(),
+  sub: z.string().optional(), // JWT subject (user ID from auth)
   name: z.string(),
   email: z.string().email(),
   status: z.enum(['active', 'disabled', 'invited', 'pending_migration']),
+  org_id: z.string().uuid().optional(), // Current organization ID
+  default_org_id: z.string().uuid().optional(), // Default organization ID
+  last_org_id: z.string().uuid().optional(), // Last accessed organization ID
   last_active_at: z.string().datetime().nullable(),
   created_at: z.string().datetime(),
   mfa_enabled: z.boolean().default(false),

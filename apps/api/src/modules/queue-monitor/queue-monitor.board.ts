@@ -1,7 +1,8 @@
 import { ExpressAdapter } from "@bull-board/express";
 import { Queue as _BullMQQueue } from "bullmq";
 import { BullMQAdapter as _BullMQAdapter } from "@bull-board/api/bullMQAdapter";
-import { BaseAdapter } from "@bull-board/api/dist/src/queueAdapters/base";
+// Avoid importing internal paths; use a relaxed adapter type
+type BaseAdapter = any;
 
 export interface BullBoard {
   addQueue(queue: BaseAdapter): void;

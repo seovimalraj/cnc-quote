@@ -13,8 +13,8 @@ import {
 } from '@nestjs/common';
 import { FinishesService } from './finishes.service';
 import { AuthGuard } from '@nestjs/passport';
-import { OrgGuard } from '../../auth/org.guard';
-import { ReqUser } from '../../auth/req-user.decorator';
+import { OrgGuard } from '../auth/org.guard';
+import { ReqUser } from '../auth/req-user.decorator';
 import { Finish } from '../../../../../packages/shared/src/types/schema';
 
 @Controller('admin/finishes')

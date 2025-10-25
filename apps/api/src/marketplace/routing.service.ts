@@ -5,8 +5,8 @@
 
 import { Injectable, NotFoundException, BadRequestException, ConflictException } from '@nestjs/common';
 import { SupabaseService } from '../supabase/supabase.service';
-import { AuditService } from '../audit/audit.service';
-import { EventsGateway } from '../events/events.gateway';
+import { AuditService } from '../legacy/audit/audit.service';
+import { EventsGateway } from '../websockets/events/events.gateway';
 import type {
   GetCandidatesDto,
   CandidatesResponse,

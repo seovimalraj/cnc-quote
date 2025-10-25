@@ -1,8 +1,8 @@
 import { Body, Controller, Delete, Get, Param, Post, Put, Query, Req, UseGuards } from '@nestjs/common';
 import { DocumentsService } from './documents.service';
 import { AuthGuard } from '@nestjs/passport';
-import { OrgGuard } from '../../auth/org.guard';
-import { ReqUser } from '../../auth/req-user.decorator';
+import { OrgGuard } from '../auth/org.guard';
+import { ReqUser } from '../auth/req-user.decorator';
 
 @Controller('documents')
 export class DocumentsController {

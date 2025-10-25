@@ -13,9 +13,9 @@ import {
   Logger,
 } from '@nestjs/common';
 import { AdminRbacService, RolePermission, UserRole, PolicySimulation } from './admin-rbac.service';
-import { JwtAuthGuard } from '../../auth/jwt.guard';
-import { RolesGuard } from '../../auth/roles.guard';
-import { Roles } from '../../auth/roles.decorator';
+import { JwtAuthGuard } from '../auth/jwt.guard';
+import { RolesGuard } from '../auth/roles.guard';
+import { Roles } from '../auth/roles.decorator';
 
 @Controller('admin/rbac')
 @UseGuards(JwtAuthGuard, RolesGuard)

@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Step 19: OpenTelemetry Setup for API
  * Distributed tracing with OTLP exporter

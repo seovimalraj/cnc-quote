@@ -50,7 +50,7 @@ const createRedisStore = async (config: ConfigService): Promise<RedisClientStore
   };
 };
 
-@Global()
+// @Global() // REMOVED: Causes double instantiation and "metatype is not a constructor" error
 @Module({
   imports: [
     NestCacheModule.registerAsync({

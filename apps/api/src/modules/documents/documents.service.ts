@@ -23,6 +23,7 @@ export class DocumentsService {
       });
 
       // Create QAP document record
+      const fileId = (qapResult as any)?.fileId ?? (qapResult as any)?.file?.id ?? null;
       const { data: qapDoc } = await this.supabase.client
         .from('qap_documents')
         .insert({
@@ -30,7 +31,7 @@ export class DocumentsService {
           order_id: orderId,
           template_id: templateId,
           status: 'Generated',
-          file_id: qapResult.fileId,
+          file_id: fileId,
           generated_at: new Date().toISOString(),
         })
         .select()

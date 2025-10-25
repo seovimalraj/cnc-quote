@@ -1,9 +1,9 @@
 import { Controller, Post, Body, Param, UseGuards, Get, UploadedFile, UseInterceptors, BadRequestException, Req } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { JwtAuthGuard } from '../../auth/jwt.guard';
-import { OrgGuard } from '../../auth/org.guard';
+import { JwtAuthGuard } from '../auth/jwt.guard';
+import { OrgGuard } from '../auth/org.guard';
 import { StorageService } from './storage.service';
-import { RbacGuard } from '../../auth/rbac.middleware';
+import { RbacGuard } from '../auth/rbac.middleware';
 
 @Controller('api/files')
 @UseGuards(JwtAuthGuard, OrgGuard)

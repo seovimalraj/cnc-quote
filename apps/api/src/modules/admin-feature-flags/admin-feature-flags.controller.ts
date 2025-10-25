@@ -17,9 +17,9 @@ import {
   FeatureFlag,
   FeatureFlagEvaluation,
 } from './admin-feature-flags.service';
-import { JwtAuthGuard } from '../../auth/jwt.guard';
-import { RolesGuard } from '../../auth/roles.guard';
-import { Roles } from '../../auth/roles.decorator';
+import { JwtAuthGuard } from '../auth/jwt.guard';
+import { RolesGuard } from '../auth/roles.guard';
+import { Roles } from '../auth/roles.decorator';
 
 @Controller('admin/feature-flags')
 @UseGuards(JwtAuthGuard, RolesGuard)

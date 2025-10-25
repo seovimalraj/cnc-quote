@@ -2,8 +2,15 @@ import { ApiProperty } from "@nestjs/swagger";
 import { IsString, IsNumber, IsOptional } from "class-validator";
 import { ContractsV1 } from '@cnc-quote/shared';
 
-// Deprecated: Use ContractsV1.QuoteV1 instead
-export type Quote = ContractsV1.QuoteV1;
+// Deprecated: Use ContractsV1.QuoteV1 instead. For compatibility with legacy rules, we extend with optional fields.
+export type Quote = ContractsV1.QuoteV1 & {
+  user_id?: string | null;
+  process_type?: string | null;
+  features?: string[] | null;
+  quantity?: number | null;
+  dimensions?: { length?: number | null; width?: number | null; height?: number | null } | null;
+  material_id?: string | null;
+};
 
 export interface ReviewNotification {
   quoteId: string;

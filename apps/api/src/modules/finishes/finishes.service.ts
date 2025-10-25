@@ -264,7 +264,7 @@ export class FinishesService {
       // Evaluate cost formula
       let costCents = 0;
       try {
-        const costResult = await this.formulaEvaluator.evaluate(op.cost_formula, evalContext);
+  const costResult = await this.formulaEvaluator.evaluate(op.cost_formula, evalContext as any);
         costCents = Math.round(costResult);
       } catch (err) {
         this.logger.error(
@@ -276,7 +276,7 @@ export class FinishesService {
       // Evaluate lead days formula
       let leadDays = 0;
       try {
-        const leadResult = await this.formulaEvaluator.evaluate(op.lead_days_formula, evalContext);
+  const leadResult = await this.formulaEvaluator.evaluate(op.lead_days_formula, evalContext as any);
         leadDays = Math.ceil(leadResult);
       } catch (err) {
         this.logger.error(

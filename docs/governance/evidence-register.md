@@ -12,6 +12,7 @@
 | EV-006 | AI observability telemetry (spans, metrics, drift board) | Grafana board `AI Safety - Revision Assistant`; OTLP export in s3://cnc-quote-audit/otel/ai/; redacted prompt log in Supabase `admin_ai_prompts` | SOC2 CC7.2, ISO A.12.4 | AI Platform Lead | 2025-10-20 |
 | EV-007 | AI regression & chaos validation artifacts | `artifacts/ai-regression/`; non-prod Ollama chaos logs in s3://cnc-quote-audit/ai-chaos/ | SOC2 CC7.1, ISO A.12.1 | QA Lead | _TBD_ |
 | EV-008 | Dual-control approvals & audit trail | Supabase tables `admin_pricing_revision_approvals`, `admin_pricing_revision_runs` (`approval_state`, `proposal_digest`); Audit action `AI_ASSISTANT_APPROVED` exported via OTLP | SOC2 CC7.2, ISO A.12.4 | AI Platform Lead | _TBD_ |
+| EV-009 | Pricing QA run & endpoint alignment evidence | `scripts/check-pricing.js` (uses Node fetch), run logs in `artifacts/qa-results.sample.json` and CI logs; web proxies updated to `/v1/price*` and `/v1/api/files*` | SOC2 CC7.2 (monitoring), ISO A.12.1 (change mgmt) | QA Lead | 2025-10-23 |
 
 _Update this table after each quarterly compliance review._
 

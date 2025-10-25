@@ -5,7 +5,7 @@
 
 import pino from 'pino';
 import { context, trace } from '@opentelemetry/api';
-import { config } from '../config.js';
+import { config } from '../config';
 
 /**
  * Get trace context for logging

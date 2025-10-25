@@ -4,7 +4,7 @@
  */
 
 import { Injectable, Logger } from '@nestjs/common';
-import { LeadtimeService } from '../../leadtime/leadtime.service';
+import { LeadtimeService } from '../../modules/leadtime-legacy/leadtime.service';
 import {
   PricingHookInput,
   LeadClass,

@@ -11,9 +11,9 @@ import {
 } from '@nestjs/common';
 import { AdminAlertsService, AlertRule, AlertIncident, AlertChannel } from './admin-alerts.service';
 import { AuthGuard } from '@nestjs/passport';
-import { RolesGuard } from '../../auth/roles.guard';
-import { Roles } from '../../auth/roles.decorator';
-import { ReqUser } from '../../auth/req-user.decorator';
+import { RolesGuard } from '../auth/roles.guard';
+import { Roles } from '../auth/roles.decorator';
+import { ReqUser } from '../auth/req-user.decorator';
 
 @Controller('admin/alerts')
 @UseGuards(AuthGuard, RolesGuard)

@@ -1,4 +1,4 @@
-import { Processor, Process } from '@nestjs/bullmq';
+import { Processor, WorkerHost } from '@nestjs/bullmq';
 import { Job } from 'bullmq';
 import { trace, SpanStatusCode } from '@opentelemetry/api';
 import { Injectable, Logger } from '@nestjs/common';
@@ -26,16 +26,25 @@ interface InsertPayload {
 
 @Injectable()
 @Processor(PRICING_COMPLIANCE_ML_QUEUE)
-export class PricingComplianceMlAssistProcessor {
+export class PricingComplianceMlAssistProcessor extends WorkerHost {
   private readonly logger = new Logger(PricingComplianceMlAssistProcessor.name);
 
   constructor(
     private readonly supabase: SupabaseService,
     private readonly ollama: OllamaService,
-  ) {}
+  ) {
+    super();
+  }
 
-  @Process(PRICING_COMPLIANCE_ML_JOB)
-  async handle(job: Job<PricingComplianceMlAssistJob>): Promise<void> {
+  async process(job: Job<PricingComplianceMlAssistJob>): Promise<void> {
+    if (job.name !== PRICING_COMPLIANCE_ML_JOB) {
+      throw new Error(`Unknown job type: ${job.name}`);
+    }
+    
+    return this.handle(job);
+  }
+
+  private async handle(job: Job<PricingComplianceMlAssistJob>): Promise<void> {
     const tracer = trace.getTracer('api');
     await tracer.startActiveSpan('pricing.compliance.ml_assist', async (span) => {
       try {

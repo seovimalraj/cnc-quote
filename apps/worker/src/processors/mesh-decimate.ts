@@ -126,7 +126,7 @@ export async function processMeshDecimate(
     await publishProgressBoth(org_id, {
       job_id: job_id || job.id!,
       status: 'failed',
-      progress: job.progress || 0,
+      progress: typeof (job as any).progress === 'number' ? (job as any).progress : 0,
       message: error.message,
       error: error.message,
     });

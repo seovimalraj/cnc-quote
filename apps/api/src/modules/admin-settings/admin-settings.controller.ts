@@ -6,8 +6,8 @@ import {
 } from '@nestjs/common';
 import { AdminSettingsService, AuditLogEvent } from './admin-settings.service';
 import { AuthGuard } from '@nestjs/passport';
-import { RolesGuard } from '../../auth/roles.guard';
-import { Roles } from '../../auth/roles.decorator';
+import { RolesGuard } from '../auth/roles.guard';
+import { Roles } from '../auth/roles.decorator';
 
 @Controller('admin/settings')
 @UseGuards(AuthGuard, RolesGuard)

@@ -66,6 +66,12 @@ class QARunner {
       console.log('⚙️  Running functional tests...');
       await this.runFunctionalTests();
 
+      // 3b. Supplier tests (optional)
+      if (Array.isArray(this.config.supplier_tests) && this.config.supplier_tests.length > 0) {
+        console.log('🏭 Running supplier tests...');
+        await this.runSupplierTests();
+      }
+
       // 4. UI audit
       console.log('🎨 Running UI audit...');
       await this.runUIAudit();
@@ -191,6 +197,38 @@ class QARunner {
           name: test.name,
           passed: false,
           logs: error.message
+        });
+      }
+    }
+  }
+
+  async runSupplierTests() {
+    for (const test of this.config.supplier_tests) {
+      try {
+        console.log(`  → ${test.name}`);
+        const result = await this.executeScript(test.cmd);
+        this.results.functional.push({
+          name: test.name,
+          passed: result.exitCode === (test.expect?.exit_code ?? 0),
+          logs: result.output,
+        });
+
+        if (result.exitCode !== (test.expect?.exit_code ?? 0)) {
+          this.results.problems_found.push({
+            id: `PRB-${Date.now()}`,
+            suite: 'supplier',
+            fail_code: test.fail_code || 'SUPPLIER_TEST_FAIL',
+            severity: 'major',
+            summary: `${test.name} failed`,
+            evidence: [result.output],
+          });
+        }
+      } catch (error) {
+        console.error(`  ❌ ${test.name}: ${error.message}`);
+        this.results.functional.push({
+          name: test.name,
+          passed: false,
+          logs: error.message,
         });
       }
     }

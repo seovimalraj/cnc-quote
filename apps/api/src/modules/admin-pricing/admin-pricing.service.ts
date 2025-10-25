@@ -1,6 +1,9 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Optional } from '@nestjs/common';
+import { InjectQueue } from '@nestjs/bullmq';
+import type { Queue } from 'bullmq';
 import { SupabaseService } from '../../lib/supabase/supabase.service';
 import { CacheService } from '../../lib/cache/cache.service';
+import { PRICING_QUEUE_NAME } from '../pricing-core/pricing-core.module';
 import {
   AdminPricingConfig,
   AdminPricingConfigSchema,
@@ -52,6 +55,7 @@ export class AdminPricingService {
   constructor(
     private readonly supabase: SupabaseService,
     private readonly cache: CacheService,
+    @Optional() @InjectQueue(PRICING_QUEUE_NAME) private readonly pricingQueue?: Queue,
   ) {
     const parsed = AdminPricingConfigSchema.safeParse(fallbackConfig);
     if (!parsed.success) {
@@ -210,6 +214,46 @@ export class AdminPricingService {
     await this.saveDraft(configWithVersion, userId, (await this.fetchLatestByStatus('draft'))?.id);
 
     await this.invalidateRuntimeCache();
+
+    // Enqueue background repricing for impacted quotes (minimal: org-level sweep)
+    try {
+      const { PRICING_RECALC_JOB } = await import('../pricing/pricing-recalc.queue');
+      const { randomUUID } = await import('crypto');
+      const traceId = randomUUID();
+      const orgId = options?.orgId ?? null;
+      // Include traceId in jobId to prevent collisions when same version is published multiple times
+      const jobId = `recalc:${orgId ?? 'global'}:${nextVersion}:${traceId}`;
+      
+      if (this.pricingQueue) {
+        await this.pricingQueue.add(
+          PRICING_RECALC_JOB,
+          {
+            version: 1,
+            traceId,
+            orgId,
+            requestedBy: userId ?? null,
+            reason: 'pricing-config-published',
+            targetQuoteIds: null,
+            dryRun: false,
+          },
+          {
+            jobId,
+            attempts: 3,
+            backoff: { type: 'exponential', delay: 5000 },
+            removeOnComplete: true,
+            removeOnFail: false,
+          },
+        );
+        this.logger.log(
+          `Enqueued pricing recalc job after publish (org=${orgId ?? 'null'}, version=${nextVersion}, traceId=${traceId}, jobId=${jobId})`,
+        );
+      } else {
+        this.logger.warn('Pricing queue not available, skipping recalc job enqueue');
+      }
+    } catch (e) {
+      // Soft-fail to avoid blocking publish if queue is unavailable
+      this.logger.warn(`Failed to enqueue pricing recalc job: ${(e as Error).message}`);
+    }
 
     return this.toMetadata(configWithVersion, {
       status: 'published',

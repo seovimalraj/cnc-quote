@@ -13,8 +13,8 @@ import {
 } from '@nestjs/common';
 import { Request } from 'express';
 import { AuthGuard } from '@nestjs/passport';
-import { OrgGuard } from '../../auth/org.guard';
-import { RbacGuard } from '../../auth/rbac.middleware';
+import { OrgGuard } from '../auth/org.guard';
+import { RbacGuard } from '../auth/rbac.middleware';
 import { MaterialsService } from './materials.service';
 import { CreateMaterialDto, REGION_WHITELIST } from '../../materials/dto/create-material.dto';
 import { UpdateMaterialDto } from '../../materials/dto/update-material.dto';

@@ -11,7 +11,7 @@ export async function POST(request: NextRequest) {
     headers['content-type'] = contentType;
   }
 
-  const upstream = await proxyFetch(request, resolveApiUrl('/files/initiate'), {
+  const upstream = await proxyFetch(request, resolveApiUrl('/v1/api/files/initiate'), {
     method: 'POST',
     body: body.length > 0 ? body : undefined,
     headers,

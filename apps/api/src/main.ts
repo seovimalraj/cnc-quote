@@ -15,7 +15,7 @@ import { AppModule } from "./app.module";
 import { AuditInterceptor } from "./common/interceptors/audit.interceptor";
 import { ResponseInterceptor } from "./common/interceptors/response.interceptor";
 import { HttpExceptionFilter } from "./common/filters/http-exception.filter";
-import { AuditService } from "./audit/audit.service";
+import { AuditService } from "./modules/audit-legacy/audit.service";
 import { startOTel, shutdownOTel } from "./observability/otel";
 import { httpLogger } from "./observability/logger";
 import { RequestContextMiddleware } from "./common/middleware/request-context.middleware";
@@ -137,9 +137,9 @@ async function bootstrap() {
   // Global response interceptor (add requestId/traceId to success responses)
   app.useGlobalInterceptors(new ResponseInterceptor());
 
-  // Global audit interceptor
-  const auditService = app.get(AuditService);
-  app.useGlobalInterceptors(new AuditInterceptor(auditService));
+  // Global audit interceptor - temporarily disabled until AuditModule is added to AppModule
+  // const auditService = app.get(AuditService);
+  // app.useGlobalInterceptors(new AuditInterceptor(auditService));
 
   // Setup OpenAPI documentation (/docs and /openapi.json with sanitization)
   setupOpenAPI(app);

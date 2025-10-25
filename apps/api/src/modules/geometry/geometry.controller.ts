@@ -1,7 +1,7 @@
 import { Body, Controller, Get, HttpCode, HttpStatus, NotFoundException, Param, Post, Query, Req, Res, StreamableFile, UseGuards, ForbiddenException } from '@nestjs/common';
 import * as crypto from 'crypto';
-import { JwtAuthGuard } from '../../auth/jwt.guard';
-import { OrgGuard } from '../../auth/org.guard';
+import { JwtAuthGuard } from '../auth/jwt.guard';
+import { OrgGuard } from '../auth/org.guard';
 import { GeometryService } from './geometry.service';
 import type { Response } from 'express';
 

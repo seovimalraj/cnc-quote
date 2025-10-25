@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
   if (shouldTryV2) {
     try {
       const v2Request = ContractsVNext.toV2PricingRequest(light);
-      const upstream = await proxyFetch(request, resolveApiUrl('/price/v2/calculate'), {
+      const upstream = await proxyFetch(request, resolveApiUrl('/v1/price/v2/calculate'), {
         method: 'POST',
         body: JSON.stringify(v2Request),
         headers: { 'content-type': 'application/json' },
@@ -61,7 +61,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const legacyRequest = ContractsVNext.toLegacyPricingRequest(light);
-    const upstream = await proxyFetch(request, resolveApiUrl('/price'), {
+    const upstream = await proxyFetch(request, resolveApiUrl('/v1/price'), {
       method: 'POST',
       body: JSON.stringify(legacyRequest),
       headers: { 'content-type': 'application/json' },

@@ -11,9 +11,10 @@ import {
   applyRiskMargin,
 } from '@cnc-quote/shared';
 import { AnalyticsService } from '../analytics/analytics.service';
-import { FeatureExtractionService } from '../../pricing/featureExtraction';
-import { ProcessSelectionService } from '../../pricing/processSelection';
-import { BOMService } from '../../pricing/bomService';
+// TODO: Legacy pricing-v1 services removed - need to migrate or remove these dependencies
+// import { FeatureExtractionService } from '../../../legacy/pricing-v1/featureExtraction';
+// import { ProcessSelectionService } from '../../../legacy/pricing-v1/processSelection';
+// import { BOMService } from '../../../legacy/pricing-v1/bomService';
 
 interface InternalMaterialIndex { [code: string]: any }
 interface InternalFinishIndex { [code: string]: any }
@@ -28,9 +29,10 @@ export class QuotePreviewService {
   private processIdx: InternalProcessIndex = {};
   private machineIdx: InternalMachineIndex = {};
   private readonly snapshotVersion = CATALOG_SNAPSHOT.version;
-  private readonly featureExtractor = new FeatureExtractionService();
-  private readonly processSelector = new ProcessSelectionService();
-  private readonly bomService = new BOMService();
+  // TODO: Legacy services commented out - need to migrate or replace
+  // private readonly featureExtractor = new FeatureExtractionService();
+  // private readonly processSelector = new ProcessSelectionService();
+  // private readonly bomService = new BOMService();
 
   constructor(@Optional() private readonly analytics?: AnalyticsService) {
     this.buildIndexes();
@@ -88,7 +90,15 @@ export class QuotePreviewService {
         area_mm2: (part.surface_area_cm2 || 500) * 100, // Convert cm2 to mm2, default 500cm2
         bbox_mm: [100, 50, 20] as [number, number, number], // Default bounding box
       };
-      const featureResult = await this.featureExtractor.extractFeatures(geometry, part.material_code, part.process_code);
+      // TODO: Legacy featureExtractor removed - using mock data
+      const featureResult = { 
+        features: [],
+        summary: {
+          total_features: 0,
+          complexity_score: 50,
+          dff_violations: []
+        }
+      };
 
       // Get process recommendation
       const processCriteria = {
@@ -115,7 +125,23 @@ export class QuotePreviewService {
           surface_finish: part.finish_codes?.[0] || null
         }
       };
-      const processRecommendation = await this.processSelector.selectProcess(processCriteria);
+      // TODO: Legacy processSelector removed - using mock data
+      const processRecommendation = {
+        recommended: {
+          code: part.process_code,
+          name: 'CNC Milling',
+          confidence: 0.8,
+          reasoning: ['Mock process recommendation'],
+          limitations: []
+        },
+        alternatives: [],
+        analysis: {
+          primary_driver: 'complexity',
+          cost_impact: 'moderate',
+          lead_time_impact: 'standard',
+          quality_notes: []
+        }
+      }; // await this.processSelector.selectProcess(processCriteria);
 
       // Generate BOM for this part
       const bomInput = {
@@ -150,7 +176,16 @@ export class QuotePreviewService {
           }
         }]
       };
-      const bomData = await this.bomService.generateBOM(bomInput);
+      // TODO: Legacy bomService removed - using mock data
+      const bomData = {
+        items: [],
+        summary: {
+          total_items: 0,
+          total_cost: 0,
+          categories: {},
+          critical_path_lead_time: 0
+        }
+      }; // await this.bomService.generateBOM(bomInput);
 
       // Derive cost factor inputs using current heuristic components (Phase 1 translation layer)
       const finishCostAdders: Record<string, number> = {};
@@ -219,12 +254,12 @@ export class QuotePreviewService {
         complexity_score: round(complexity, 3),
         features: {
           detected_features: featureResult.features.map(f => ({
-            type: f.type,
-            dimensions: f.dimensions ? Object.fromEntries(
+            type: String(f.type || 'unknown'),
+            dimensions: (f.dimensions ? Object.fromEntries(
               Object.entries(f.dimensions).filter(([_, v]) => typeof v === 'number')
-            ) : undefined,
-            machining_difficulty: f.machining_difficulty,
-            dff_issues: f.dff_issues,
+            ) : {}) as Record<string, number>,
+            machining_difficulty: Number(f.machining_difficulty || 0),
+            dff_issues: Array.isArray(f.dff_issues) ? f.dff_issues : [],
           })),
           summary: {
             total_features: featureResult.summary.total_features,

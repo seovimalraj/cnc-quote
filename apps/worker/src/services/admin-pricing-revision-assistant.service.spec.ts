@@ -1,9 +1,7 @@
 import axios from 'axios';
-import { AdminPricingRevisionAssistantService } from './admin-pricing-revision-assistant.service.js';
-import type {
-  AdminPricingConfig,
-  AdminPricingRevisionAssistantLLMResponseV1,
-} from '@cnc-quote/shared';
+import { AdminPricingRevisionAssistantService } from './admin-pricing-revision-assistant.service';
+import type { AdminPricingRevisionAssistantLLMResponseV1 } from '@cnc-quote/shared/dist/contracts/v1';
+import type { AdminPricingConfig } from '@cnc-quote/shared/dist/ai/prompts/admin-pricing-revision';
 
 describe('AdminPricingRevisionAssistantService (worker)', () => {
   const baseConfig: AdminPricingConfig = {

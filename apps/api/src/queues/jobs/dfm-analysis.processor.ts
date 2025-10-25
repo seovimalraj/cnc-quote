@@ -104,10 +104,10 @@ export class DfmAnalysisProcessor extends WorkerHost {
     }
   }
 
-  private async parseCadFile(fileId: string, quoteLineId: string, process: string, material: string) {
+  private async parseCadFile(fileId: string, quoteLineId: string, processCode: string, material: string) {
     // Call CAD service for actual geometry analysis
     try {
-      const cadServiceUrl = process.env.CAD_SERVICE_URL || 'http://localhost:3002';
+  const cadServiceUrl = (process as any).env?.CAD_SERVICE_URL || process.env?.CAD_SERVICE_URL || 'http://localhost:3002';
 
       const response = await fetch(`${cadServiceUrl}/dfm/analyze`, {
         method: 'POST',
@@ -117,7 +117,7 @@ export class DfmAnalysisProcessor extends WorkerHost {
         body: JSON.stringify({
           file_id: fileId,
           quote_line_id: quoteLineId,
-          process: process,
+          process: processCode,
           material: material,
           units: 'mm'
         }),
@@ -127,8 +127,8 @@ export class DfmAnalysisProcessor extends WorkerHost {
         throw new Error(`CAD service returned ${response.status}: ${response.statusText}`);
       }
 
-      const cadResult = await response.json();
-      const taskId = cadResult.task_id;
+  const cadResult: any = await response.json();
+  const taskId = cadResult.task_id;
 
       // Poll for completion (simplified - in production use websockets or better polling)
       let attempts = 0;
@@ -140,7 +140,7 @@ export class DfmAnalysisProcessor extends WorkerHost {
           throw new Error(`Failed to get CAD result: ${statusResponse.status}`);
         }
 
-        const statusResult = await statusResponse.json();
+  const statusResult: any = await statusResponse.json();
 
         if (statusResult.status === 'Succeeded') {
           // Extract geometry from CAD result
@@ -151,7 +151,7 @@ export class DfmAnalysisProcessor extends WorkerHost {
               surfaceArea: geomProps.area_mm2 || 1500,
               boundingBox: this.extractBoundingBox(geomProps.bbox_mm)
             },
-            features: this.extractFeatures(statusResult.checks || [])
+            features: this.extractFeatureCountsFromChecks(statusResult.checks || [])
           };
         } else if (statusResult.status === 'Failed') {
           throw new Error('CAD analysis failed');
@@ -194,7 +194,7 @@ export class DfmAnalysisProcessor extends WorkerHost {
     };
   }
 
-  private extractFeatures(checks: any[]): { holes: number; pockets: number; fillets: number; chamfers: number } {
+  private extractFeatureCountsFromChecks(checks: any[]): { holes: number; pockets: number; fillets: number; chamfers: number } {
     // Extract feature counts from DFM checks (simplified)
     let holes = 0, pockets = 0, fillets = 0, chamfers = 0;
 

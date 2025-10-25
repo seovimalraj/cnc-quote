@@ -4,7 +4,7 @@ import { buildProxyResponse, resolveApiUrl } from '@/app/api/_lib/backend';
 import { proxyFetch } from '@/app/api/_lib/proxyFetch';
 
 export async function GET(request: NextRequest) {
-  const upstream = await proxyFetch(request, resolveApiUrl('/admin/pricing/config'), {
+  const upstream = await proxyFetch(request, resolveApiUrl('/v1/admin/pricing/config'), {
     method: 'GET',
   });
   return buildProxyResponse(upstream);
@@ -18,7 +18,7 @@ export async function PUT(request: NextRequest) {
     headers['content-type'] = contentType;
   }
 
-  const upstream = await proxyFetch(request, resolveApiUrl('/admin/pricing/config'), {
+  const upstream = await proxyFetch(request, resolveApiUrl('/v1/admin/pricing/config'), {
     method: 'PUT',
     body: body.length > 0 ? body : undefined,
     headers,

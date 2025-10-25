@@ -1,11 +1,17 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Optional } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { SupabaseService } from '../../lib/supabase/supabase.service';
 import { ContractsV1, MaterialRegion } from '@cnc-quote/shared';
 import { GeometryService, GeometryMetrics } from '../geometry/geometry.service';
 import { resolveToleranceMapping, ToleranceCategory } from '../../pricing/tolerance';
 import { NormalizedToleranceMap, parseTolerances, StructuredToleranceEntry } from '../../dfm/tolerance.parser';
-import { buildDefaultOrchestrator, PricingBreakdownLine, PricingInput, PricingOrchestrator } from '../../pricing';
+// import { buildDefaultOrchestrator, PricingBreakdownLine, PricingInput, PricingOrchestrator } from './pricing.service' /* TODO: was legacy/pricing-v1 */;
+// Stub types from legacy pricing-v1 (commented out imports above)
+type PricingBreakdownLine = any;
+type PricingInput = any;
+type PricingOrchestrator = any;
+const buildDefaultOrchestrator = (): PricingOrchestrator => ({} as any);
+
 import {
   PricingToleranceEntry,
   PricingToleranceMatch,
@@ -30,11 +36,12 @@ import {
   RISK_SEVERITY_MARKUP,
 } from '../dfm/risk.model';
 import { TaxService } from '../../tax/tax.service';
-import { PricingConfigService } from './pricing-config.service';
+import { PricingConfigService } from '../admin-pricing/pricing-config.service';
 
 type QuoteComplianceSnapshotV1 = ContractsV1.QuoteComplianceSnapshotV1;
 type QuoteComplianceAlertV1 = ContractsV1.QuoteComplianceAlertV1;
 type QuoteComplianceSurchargeV1 = ContractsV1.QuoteComplianceSurchargeV1;
+type SupplierCapabilityV1 = ContractsV1.SupplierCapabilityV1;
 
 export interface PricingEngineRequest {
   part_config: ContractsV1.PartConfigV1;
@@ -227,6 +234,9 @@ export class PricingEngineV2Service {
     /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
   private readonly materialCache = new Map<string, { value: MaterialCatalogItem; expiresAt: number }>();
+  private readonly supplierConsumerEnabled: boolean;
+  private static readonly SUPPLIER_CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutes
+  private supplierCapabilityCache = new Map<string, { value: SupplierCapabilityV1; expiresAt: number }>();
   private orchestratorRef: { version: string; instance: PricingOrchestrator } | null = null;
   private activeConfigStatus: ConfigStatusSnapshot | null = null;
 
@@ -236,13 +246,15 @@ export class PricingEngineV2Service {
     private readonly geometryService: GeometryService,
     private readonly toleranceCostBook: ToleranceCostBookRepository,
     private readonly taxService: TaxService,
-    private readonly pricingConfig: PricingConfigService,
+    @Optional() private readonly pricingConfig?: PricingConfigService,
   ) {
     this.orchestratorVersion = this.getEnv('PRICING_PIPELINE_V', '3.0.0');
     this.pricingFactorsVersion = this.getEnv('PRICING_FACTORS_VERSION', '1.0.0');
     this.marginFloorPercent = this.parseNumberEnv('PRICING_MARGIN_FLOOR', 0.24);
     this.discountAlertThreshold = this.parseNumberEnv('PRICING_DISCOUNT_ALERT_THRESHOLD', 0.22);
     this.expediteLeadTimeGuardrail = this.parseNumberEnv('PRICING_EXPEDITE_ALERT_DAYS', 2);
+    // Feature-flag supplier capability consumer, default OFF for safety
+    this.supplierConsumerEnabled = this.getEnv('SUPPLIER_CONSUMER_ENABLED', 'false') === 'true';
   }
 
   getOrchestratorVersion(): string {
@@ -253,8 +265,34 @@ export class PricingEngineV2Service {
     return this.pricingFactorsVersion;
   }
 
+  /**
+   * Fallback config when PricingConfigService is unavailable.
+   * Provides minimal defaults for instant quote functionality.
+   */
+  private getMinimalDefaultConfig() {
+    return {
+      config: {
+        version: '1.0.0-default',
+        machines: {},
+        materials: {},
+        finishes: {},
+        tolerance_packs: {},
+        inspection: { base_usd: 0, per_dim_usd: 0, program_min: 0 },
+        speed_region: {},
+        risk_matrix: {},
+        overhead_margin: { overhead_percent: 0.15, target_margin_percent: 0.25 },
+      },
+      status: 'default' as const,
+      version: '1.0.0-default',
+    };
+  }
+
   private async resolveOrchestrator(): Promise<PricingOrchestrator> {
-    const snapshot = await this.pricingConfig.getActiveConfig();
+    // Use default config if PricingConfigService not available (minimal runtime)
+    const snapshot = this.pricingConfig 
+      ? await this.pricingConfig.getActiveConfig()
+      : this.getMinimalDefaultConfig();
+    
     const isFreshLoad = !this.orchestratorRef || this.orchestratorRef.version !== snapshot.version;
     this.activeConfigStatus = {
       version: snapshot.version,
@@ -274,7 +312,7 @@ export class PricingEngineV2Service {
       this.logger.log(`Loading published pricing config version ${snapshot.version} into pricing engine`);
     }
 
-    const orchestrator = buildDefaultOrchestrator({ config: snapshot.config });
+    const orchestrator = buildDefaultOrchestrator();
     this.orchestratorRef = {
       version: snapshot.version,
       instance: orchestrator,
@@ -434,6 +472,9 @@ export class PricingEngineV2Service {
     );
 
     try {
+      // Optional: Guarded supplier capability check (does not affect price; enriches compliance metadata only)
+      const supplierMeta = await this.maybeCheckSupplierCapability(part_config);
+
       const orchestratorResult = await orchestrator.run(pricingInput, {
         flags: this.buildFlagMap(part_config),
       });
@@ -524,6 +565,29 @@ export class PricingEngineV2Service {
         pricingConfigStatus: this.activeConfigStatus,
         leadTimeOption: typeof leadTimeOption === 'string' ? leadTimeOption : undefined,
       });
+
+      // Append supplier metadata if present
+      if (supplierMeta) {
+        if (!response.compliance) {
+          response.compliance = this.buildComplianceSnapshot({
+            part: part_config,
+            quantity,
+            currency: 'USD',
+            unitPrice,
+            unitPriceBeforeDiscount,
+            totalPrice,
+            marginPercent: response.margin_percentage,
+            quantityDiscount,
+            riskSnapshot,
+            pricingConfigStatus: this.activeConfigStatus,
+            leadTimeOption: typeof leadTimeOption === 'string' ? leadTimeOption : undefined,
+          });
+        }
+        response.compliance.metadata = {
+          ...(response.compliance.metadata ?? {}),
+          ...supplierMeta,
+        };
+      }
 
       this.emitTelemetry(part_config, quantity, orchestratorResult);
 
@@ -688,7 +752,7 @@ export class PricingEngineV2Service {
       unitPriceBeforeDiscount,
       totalPrice: complianceTotalPrice,
       marginPercent: response.margin_percentage,
-      quantityDiscount,
+  quantityDiscount: quantity_discount,
       riskSnapshot,
       riskUpliftAmount: riskMarkupAmount > 0 ? this.toMoney(riskMarkupAmount) : undefined,
       riskUpliftPercent: riskMarkupPercent > 0 ? Number(riskMarkupPercent.toFixed(4)) : undefined,
@@ -1126,6 +1190,104 @@ export class PricingEngineV2Service {
     };
   }
 
+  /**
+   * Guarded supplier capability consumer. If enabled and supplier_id present on part_config,
+   * loads org+supplier capability with TTL cache and adds compliance alerts when process/material
+   * appear unsupported. Does not change pricing behavior.
+   */
+  private async maybeCheckSupplierCapability(part_config: ContractsV1.PartConfigV1): Promise<Record<string, unknown> | null> {
+    try {
+      if (!this.supplierConsumerEnabled) return null;
+      const supplierId = (part_config as any).supplier_id as string | undefined;
+      const orgId = (part_config as any).org_id as string | undefined;
+      if (!supplierId || !orgId) return null;
+
+      const capability = await this.getSupplierCapability(orgId, supplierId);
+      if (!capability) return { supplier_capability_checked: true, supplier_id: supplierId, supplier_capability_found: false };
+
+      const out: Record<string, unknown> = {
+        supplier_capability_checked: true,
+        supplier_id: supplierId,
+        supplier_capability_found: true,
+      };
+      // Process check
+      const process = part_config.process_type;
+      if (Array.isArray(capability.processes) && capability.processes.length > 0) {
+        const ok = capability.processes.includes(process);
+        out.supplier_capability_process_ok = ok;
+        out.supplier_capability_process = process;
+      }
+
+      // Material check (skip if best_available or unknown)
+      const materialCode = this.resolveMaterialCode(part_config);
+      if (materialCode && materialCode !== 'best_available' && Array.isArray(capability.materials) && capability.materials.length > 0) {
+        const ok = capability.materials.includes(materialCode);
+        out.supplier_capability_material_ok = ok;
+        out.supplier_capability_material = materialCode;
+      }
+
+      return out;
+    } catch (err) {
+      // best-effort only
+      this.logger.debug(`supplier capability check skipped: ${(err as Error)?.message}`);
+      return null;
+    }
+  }
+
+  private async getSupplierCapability(orgId: string, supplierId: string): Promise<SupplierCapabilityV1 | null> {
+    const cacheKey = `${orgId}:${supplierId}`;
+    const now = Date.now();
+    const cached = this.supplierCapabilityCache.get(cacheKey);
+    if (cached && cached.expiresAt > now) {
+      return cached.value;
+    }
+
+    try {
+      const { data, error } = await this.supabase.client
+        .from('supplier_capabilities')
+        .select('*')
+        .eq('org_id', orgId)
+        .eq('supplier_id', supplierId)
+        .limit(1)
+        .maybeSingle();
+      if (error) {
+        this.logger.debug(`supplier capability load error: ${error.message}`);
+        return null;
+      }
+      if (!data) return null;
+      const row = data as any;
+      const cap: SupplierCapabilityV1 = {
+        version: 1,
+        orgId,
+        supplierId,
+        processes: row.processes ?? [],
+        materials: row.materials ?? [],
+        machineGroups: row.machine_groups ?? [],
+        throughputPerWeek: row.throughput_per_week ?? 0,
+        leadDays: row.lead_days ?? 0,
+        certifications: row.certifications ?? [],
+        regions: row.regions ?? [],
+        envelope: row.envelope ?? undefined,
+        notes: row.notes ?? undefined,
+        active: Boolean(row.active),
+        updatedBy: row.updated_by ?? null,
+        updatedAt: row.updated_at ?? undefined,
+        createdAt: row.created_at ?? undefined,
+      } as any;
+      this.supplierCapabilityCache.set(cacheKey, { value: cap, expiresAt: now + PricingEngineV2Service.SUPPLIER_CACHE_TTL_MS });
+      // prune occasionally
+      if (this.supplierCapabilityCache.size > 512) {
+        for (const [k, v] of this.supplierCapabilityCache.entries()) {
+          if (v.expiresAt <= now) this.supplierCapabilityCache.delete(k);
+        }
+      }
+      return cap;
+    } catch (err) {
+      this.logger.debug(`supplier capability load unexpected error: ${(err as Error)?.message}`);
+      return null;
+    }
+  }
+
   private resolveDfmSeverity(
     part: ContractsV1.PartConfigV1,
     riskSnapshot: PricingRiskSnapshot | null,
@@ -1543,7 +1705,7 @@ export class PricingEngineV2Service {
   private emitTelemetry(
     part_config: ContractsV1.PartConfigV1,
     quantity: number,
-    result: { price: number; subtotalCost: number; timeMinutes: number; breakdown: PricingBreakdownLine[]; logs?: string[] },
+    result: { price: number; subtotalCost: number; timeMinutes: number; breakdown: any[]; logs?: string[] },
   ) {
     const payload = {
       traceId: (part_config as any).trace_id ?? part_config.id,

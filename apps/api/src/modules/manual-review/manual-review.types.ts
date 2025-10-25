@@ -85,7 +85,7 @@ export class UpdateRuleDto implements Partial<ManualReviewRule> {
   @ApiProperty({ required: false })
   @IsObject()
   @IsOptional()
-  conditions?: Record<string, unknown>;
+  conditions?: ManualReviewRule['conditions'];
 
   @ApiProperty({ required: false })
   @IsString()

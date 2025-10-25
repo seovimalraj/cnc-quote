@@ -12,9 +12,9 @@ import {
 } from '@nestjs/common';
 import { AdminUsersService } from './admin-users.service';
 import { AuthGuard } from '@nestjs/passport';
-import { RolesGuard } from '../../auth/roles.guard';
-import { Roles } from '../../auth/roles.decorator';
-import { ReqUser } from '../../auth/req-user.decorator';
+import { RolesGuard } from '../auth/roles.guard';
+import { Roles } from '../auth/roles.decorator';
+import { ReqUser } from '../auth/req-user.decorator';
 
 @Controller('admin/users')
 @UseGuards(AuthGuard, RolesGuard)

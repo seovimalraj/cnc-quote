@@ -8,9 +8,9 @@ import {
   Logger,
 } from '@nestjs/common';
 import { AdminSystemService } from './admin-system.service';
-import { JwtAuthGuard } from '../../auth/jwt.guard';
-import { RolesGuard } from '../../auth/roles.guard';
-import { Roles } from '../../auth/roles.decorator';
+import { JwtAuthGuard } from '../auth/jwt.guard';
+import { RolesGuard } from '../auth/roles.guard';
+import { Roles } from '../auth/roles.decorator';
 
 @Controller('admin/system')
 @UseGuards(JwtAuthGuard, RolesGuard)

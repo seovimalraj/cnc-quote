@@ -1,9 +1,9 @@
 import { Body, Controller, Get, HttpException, HttpStatus, Post, Put, UseGuards } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { AdminPricingService } from './admin-pricing.service';
-import { Roles } from '../../auth/roles.decorator';
-import { RolesGuard } from '../../auth/roles.guard';
-import { ReqUser } from '../../auth/req-user.decorator';
+import { Roles } from '../auth/roles.decorator';
+import { RolesGuard } from '../auth/roles.guard';
+import { ReqUser } from '../auth/req-user.decorator';
 import { AdminPricingConfigSchema } from '@cnc-quote/shared';
 
 @Controller('admin/pricing')

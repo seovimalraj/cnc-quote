@@ -1,8 +1,8 @@
 import { Controller, Post, Body, UseGuards, Get, Query, Param, UnauthorizedException, Req, Ip } from "@nestjs/common";
 import { DfmService } from "./dfm.service";
-import { DfmAuthGuard } from "../../auth/dfm-auth.guard";
-import { AllowSession } from "../../auth/allow-session.decorator";
-import { User } from "../../auth/user.decorator";
+import { DfmAuthGuard } from "../auth/dfm-auth.guard";
+import { AllowSession } from "../auth/allow-session.decorator";
+import { User } from "../auth/user.decorator";
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery, ApiParam } from "@nestjs/swagger";
 import { SupabaseService } from "../../lib/supabase/supabase.service";
 import { AnalyticsService } from "../analytics/analytics.service";

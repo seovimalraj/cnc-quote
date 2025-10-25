@@ -2,9 +2,9 @@ import { Body, Controller, Post, Req, UseGuards, BadRequestException } from '@ne
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { ProcessRecommendationRequestPayload, ProcessRecommendationResponse } from '@cnc-quote/shared';
 import { ProcessRecommendationService } from './process-recommendation.service';
-import { JwtAuthGuard } from '../../../auth/jwt.guard';
-import { OrgGuard } from '../../../auth/org.guard';
-import { RbacGuard } from '../../../auth/rbac.middleware';
+import { JwtAuthGuard } from '../../auth/jwt.guard';
+import { OrgGuard } from '../../auth/org.guard';
+import { RbacGuard } from '../../auth/rbac.middleware';
 
 @ApiTags('pricing')
 @ApiBearerAuth()

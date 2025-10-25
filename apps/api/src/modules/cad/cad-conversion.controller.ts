@@ -1,5 +1,5 @@
 import { Controller, Post, Body, UseGuards, BadRequestException } from '@nestjs/common';
-import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
+import { JwtAuthGuard } from '../auth/jwt.guard';
 import { CadConversionService } from './cad-conversion.service';
 
 export interface ConvertCadRequest {

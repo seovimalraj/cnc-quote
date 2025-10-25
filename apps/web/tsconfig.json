@@ -22,15 +22,19 @@
     "baseUrl": ".",
     "paths": {
       "@/*": [
-        "./src/*"
+        "./src/*",
+        "./*"
+      ],
+      "@/app/*": [
+        "./app/*"
       ],
       "@/lib/*": [
-        "./src/lib/*",
-        "./lib/*"
+        "./lib/*",
+        "./src/lib/*"
       ],
       "@/components/*": [
-        "./src/components/*",
-        "./components/*"
+        "./components/*",
+        "./src/components/*"
       ],
       "@cnc-quote/shared": [
         "../../packages/shared/src/index.ts"

@@ -1,7 +1,6 @@
-/* eslint-disable */
 import axios from 'axios';
-import { ContractsV1 } from '@cnc-quote/shared';
-import { PricingRationaleService } from './pricing-rationale.service.js';
+import type { PricingRationaleSummaryJobV1 } from '@cnc-quote/shared/dist/contracts/v1';
+import { PricingRationaleService } from './pricing-rationale.service';
 
 declare const describe: any;
 declare const it: any;
@@ -11,7 +10,7 @@ declare const afterEach: any;
 declare const jest: any;
 
 describe('PricingRationaleService', () => {
-  const basePayload: ContractsV1.PricingRationaleSummaryJobV1 = {
+  const basePayload: PricingRationaleSummaryJobV1 = {
     version: 1,
     quoteId: 'quote-1',
     quoteRevisionId: 'rev-1',

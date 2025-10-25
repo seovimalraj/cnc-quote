@@ -1,7 +1,7 @@
 import { Body, Controller, Get, Param, Post, Put, UseGuards, ValidationPipe } from "@nestjs/common";
 import { AuthGuard } from "@nestjs/passport";
-import { OrgGuard } from "../../auth/org.guard";
-import { ReqUser } from "../../auth/req-user.decorator";
+import { OrgGuard } from "../auth/org.guard";
+import { ReqUser } from "../auth/req-user.decorator";
 import { User } from "../../types/user";
 import { QapService } from "./qap.service";
 import { CreateQapTemplateDto, UpdateQapTemplateDto, GenerateQapDocumentDto, GenerateDfmQapDocumentDto } from "./qap.dto";
@@ -39,6 +39,8 @@ export class QapController {
   ): Promise<QapTemplate> {
     return this.qapService.updateTemplate(id, {
       ...updateQapTemplateDto,
+      // schemaJson in DTO is a generic record; service expects QapTemplateSchema – cast for compatibility
+      schemaJson: (updateQapTemplateDto as any).schemaJson,
       userId: user.id,
     });
   }

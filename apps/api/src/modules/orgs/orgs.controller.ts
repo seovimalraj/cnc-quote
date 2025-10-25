@@ -10,7 +10,7 @@ import {
 import { Request } from 'express';
 import { OrgsService } from './orgs.service';
 import { CreateOrgDtoSchema } from './dto/create-org.dto';
-import { RbacGuard } from '../../auth/rbac.middleware';
+import { RbacGuard } from '../auth/rbac.middleware';
 import { UpdateMemberRoleDtoSchema } from './dto/update-member-role.dto';
 
 @Controller('orgs')

@@ -1,11 +1,11 @@
 import { Body, Controller, Delete, Get, Param, Patch, Post, Put, Query, UploadedFile, UseGuards, UseInterceptors } from "@nestjs/common";
 import { FileInterceptor } from "@nestjs/platform-express";
 import { OrdersService } from "./orders.service";
-import { JwtAuthGuard } from "../../auth/jwt.guard";
-import { OrgGuard } from "../../auth/org.guard";
-import { PoliciesGuard } from "../../auth/policies.guard";
-import { Policies } from "../../auth/policies.decorator";
-import { ReqUser } from "../../auth/req-user.decorator";
+import { JwtAuthGuard } from "../auth/jwt.guard";
+import { OrgGuard } from "../auth/org.guard";
+import { PoliciesGuard } from "../auth/policies.guard";
+import { Policies } from "../auth/policies.decorator";
+import { ReqUser } from "../auth/req-user.decorator";
 
 @Controller("orders")
 @UseGuards(JwtAuthGuard, OrgGuard, PoliciesGuard)

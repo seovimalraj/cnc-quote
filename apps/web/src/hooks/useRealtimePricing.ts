@@ -24,6 +24,7 @@ interface QuoteItemPricingState {
 interface UseRealtimePricingOptions {
   baseUrl?: string; // e.g. http://localhost:3000
   authToken?: string;
+  orgId?: string;
   autoConnect?: boolean;
   onDrift?: (reason: string) => void;
   onLatencySample?: (ms: number) => void;
@@ -150,23 +151,31 @@ function handlePricingSocketEvent(evt: ContractsV1.PricingOptimisticEventV1 | Co
 }
 
 export function useRealtimePricing(options: UseRealtimePricingOptions = {}): UseRealtimePricingReturn {
-  const { baseUrl = '', authToken, autoConnect = true, onDrift, onLatencySample, autoReconcileOnDrift = true } = options;
+  const { baseUrl = '', authToken, orgId, autoConnect = true, onDrift, onLatencySample, autoReconcileOnDrift = true } = options;
   const socketRef = useRef<Socket | null>(null);
   const [connected, setConnected] = useState(false);
   const [quoteId, setQuoteId] = useState<string | undefined>();
   const [items, setItems] = useState<Record<string, QuoteItemPricingState>>({});
   const lastSubtotalDeltaRef = useRef<number | undefined>(undefined);
   const correlationMap = useRef<Map<string, string>>(new Map()); // correlation_id -> quote_item_id
+  const lastAppliedCorrelationByItemRef = useRef<Map<string, string>>(new Map()); // quote_item_id -> correlation_id
   interface GeometryEvent { [k: string]: any }
   interface DfmEvent { [k: string]: any }
   const [geometry, setGeometry] = useState<GeometryEvent | undefined>(undefined);
   const [dfm, setDfm] = useState<DfmEvent | undefined>(undefined);
   const isReconcilingRef = useRef(false);
+  // Debounce map for per-item recalc throttling
+  const recalcDebounceRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
   const itemsRef = useRef(items);
   const quoteIdRef = useRef<string | undefined>(quoteId);
   const applyPricingEvent = usePricingStore(state => state.applyPricingEvent);
   const setStoreQuoteId = usePricingStore(state => state.setQuoteId);
   const resetPricingStore = usePricingStore(state => state.reset);
+  const traceIdRef = useRef<string>(
+    (typeof crypto !== 'undefined' && 'randomUUID' in crypto && typeof (crypto as any).randomUUID === 'function')
+      ? (crypto as any).randomUUID()
+      : `trace-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+  );
 
   useEffect(() => { itemsRef.current = items; }, [items]);
   useEffect(() => { quoteIdRef.current = quoteId; }, [quoteId]);
@@ -182,16 +191,34 @@ export function useRealtimePricing(options: UseRealtimePricingOptions = {}): Use
     try {
       const itemIds = Object.keys(itemsRef.current);
       if (!itemIds.length) return;
-      const res = await fetch(`${baseUrl}/price/v2/recalculate`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
-        },
-        body: JSON.stringify({ quote_id: qid, quote_item_ids: itemIds })
-      });
-      if (!res.ok) throw new Error(`reconcile failed ${res.status}`);
-      const data = await res.json();
+      // Simple retry with exponential backoff + jitter
+      let attempt = 0;
+      let data: any = null;
+      while (attempt < 3) {
+        attempt++;
+        const res = await fetch(`/api/price/v2/recalculate`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
+            ...(orgId ? { 'X-Org-Id': orgId } : {}),
+            'X-Trace-Id': traceIdRef.current,
+          },
+          body: JSON.stringify({ quote_id: qid, quote_item_ids: itemIds })
+        });
+        if (res.ok) {
+          data = await res.json();
+          break;
+        }
+        if (res.status >= 400 && res.status < 500) {
+          // Don't retry client errors
+          throw new Error(`reconcile failed ${res.status}`);
+        }
+        const backoff = 200 * Math.pow(2, attempt - 1) + Math.floor(Math.random() * 100);
+        await new Promise(r => setTimeout(r, backoff));
+      }
+      if (!data) throw new Error('reconcile failed after retries');
+      
       const results = data?.results || [];
       setItems(prev => {
         const next = { ...prev };
@@ -224,7 +251,8 @@ export function useRealtimePricing(options: UseRealtimePricingOptions = {}): Use
     const sock = io(`${baseUrl}/ws/pricing`, {
       autoConnect: false,
       transports: ['websocket'],
-      auth: authToken ? { token: authToken } : undefined,
+      auth: authToken ? { token: authToken, orgId } : (orgId ? { orgId } as any : undefined),
+      query: { traceId: traceIdRef.current },
     });
     socketRef.current = sock;
     sock.on('connect', () => setConnected(true));
@@ -233,7 +261,27 @@ export function useRealtimePricing(options: UseRealtimePricingOptions = {}): Use
       // eslint-disable-next-line no-console
       console.warn('pricing socket error', err);
     });
+    sock.on('connect_error', (err: any) => {
+      // Best-effort reconnect on transient failures
+      // eslint-disable-next-line no-console
+      console.warn('pricing socket connect_error', err?.message || err);
+      setTimeout(() => {
+        if (socketRef.current && !socketRef.current.connected) {
+          try { socketRef.current.connect(); } catch { /* noop */ }
+        }
+      }, 1500);
+    });
     sock.on('pricing_event', (evt: ContractsV1.PricingOptimisticEventV1 | ContractsV1.PricingUpdateEventV1) => {
+      const corrId = (evt as any).correlation_id as string | undefined;
+      const payloadAny: any = evt?.payload || {};
+      const itemId: string | undefined = payloadAny?.quote_item_id;
+      if (evt?.kind === 'pricing:update' && corrId && itemId) {
+        const lastCorr = lastAppliedCorrelationByItemRef.current.get(itemId);
+        if (lastCorr && lastCorr === corrId) {
+          // Duplicate event for the same correlation/item; drop it
+          return;
+        }
+      }
       handlePricingSocketEvent(evt, {
         setItems,
         onDrift,
@@ -244,6 +292,9 @@ export function useRealtimePricing(options: UseRealtimePricingOptions = {}): Use
         correlationMap,
         lastSubtotalDeltaRef,
       });
+      if (evt?.kind === 'pricing:update' && itemId && corrId) {
+        lastAppliedCorrelationByItemRef.current.set(itemId, corrId);
+      }
       applyPricingEvent(evt);
     });
     // Geometry & DFM event streams
@@ -254,7 +305,7 @@ export function useRealtimePricing(options: UseRealtimePricingOptions = {}): Use
       setDfm((prev: DfmEvent | undefined) => ({ ...(prev || {}), ...evt }));
     });
     return sock;
-  }, [authToken, baseUrl, onDrift, onLatencySample, applyPricingEvent, autoReconcileOnDrift]);
+  }, [authToken, orgId, baseUrl, onDrift, onLatencySample, applyPricingEvent, autoReconcileOnDrift]);
 
   // Auto-connect
   useEffect(() => {
@@ -275,8 +326,47 @@ export function useRealtimePricing(options: UseRealtimePricingOptions = {}): Use
   const recalcItem = useCallback((qid: string, quoteItemId: string, config?: ContractsV1.PartConfigV1) => {
     const s = ensureSocket();
     if (!s.connected) return; // Optionally auto-connect; keep simple for now
-    s.emit('recalculate_pricing', { quote_id: qid, quote_item_id: quoteItemId, config });
-  }, [ensureSocket]);
+    // Optimistic patch for quantity changes when possible
+    try {
+      const anyCfg: any = config as any;
+      const quantities: number[] | undefined = Array.isArray(anyCfg?.quantities)
+        ? anyCfg.quantities
+        : (typeof anyCfg?.selected_quantity === 'number' ? [anyCfg.selected_quantity] : undefined);
+      if (quantities && quantities.length) {
+        setItems(prev => {
+          const current = prev[quoteItemId] || { quote_item_id: quoteItemId, rows: [] };
+          const patches = quantities.map((q: number) => ({ quantity: q, status: 'optimistic' })) as any;
+          return {
+            ...prev,
+            [quoteItemId]: {
+              ...current,
+              rows: applyPatches(current.rows, patches, true),
+              last_updated: new Date().toISOString(),
+            }
+          };
+        });
+      }
+    } catch {
+      // noop
+    }
+    // Debounce emits per item so rapid edits coalesce to one request
+    const pending = recalcDebounceRef.current.get(quoteItemId);
+    if (pending) clearTimeout(pending);
+    const timeout = setTimeout(() => {
+      const correlationId = (typeof crypto !== 'undefined' && 'randomUUID' in crypto && typeof (crypto as any).randomUUID === 'function')
+        ? (crypto as any).randomUUID()
+        : `corr-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      // Track for drift detection
+      correlationMap.current.set(correlationId, quoteItemId);
+      try {
+        s.emit('recalculate_pricing', { quote_id: qid, quote_item_id: quoteItemId, config, correlation_id: correlationId });
+      } catch (e) {
+        // eslint-disable-next-line no-console
+        console.warn('emit recalc failed', e);
+      }
+    }, 250);
+    recalcDebounceRef.current.set(quoteItemId, timeout);
+  }, [ensureSocket, setItems]);
 
   const reset = useCallback(() => {
     setItems({});

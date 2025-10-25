@@ -1,17 +1,14 @@
 import Redis from 'ioredis';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { z } from 'zod';
-import {
-  ContractsV1,
-  buildQuoteRationaleCacheKeyV1,
-  buildQuoteRationaleRevisionCacheKeyV1,
-  getModelConfig,
-  renderPricingRationaleSystemPrompt,
-  renderPricingRationaleUserPrompt,
-  QUOTE_RATIONALE_CACHE_TTL_SECONDS,
-} from '@cnc-quote/shared';
-import { getModelGatewayClient } from '../lib/model-gateway-client.js';
-import { logger } from '../lib/logger.js';
+import { ContractsV1, getModelConfig, renderPricingRationaleSystemPrompt, renderPricingRationaleUserPrompt, buildQuoteRationaleCacheKeyV1 } from '@cnc-quote/shared';
+import type {
+  QuoteRationaleSummaryV1,
+  PricingRationaleSummaryJobV1,
+  QuoteRationaleCachePayloadV1,
+} from '@cnc-quote/shared/dist/contracts/v1';
+import { getModelGatewayClient } from '../lib/model-gateway-client';
+import { logger } from '../lib/logger';
 
 const highlightSchema = z.object({
   category: z.enum([
@@ -39,7 +36,7 @@ const responseSchema = z.object({
 });
 
 export interface PricingRationalePersistenceResult {
-  summary: ContractsV1.QuoteRationaleSummaryV1;
+  summary: QuoteRationaleSummaryV1;
 }
 
 export class PricingRationaleService {
@@ -48,7 +45,7 @@ export class PricingRationaleService {
     private readonly redis: Redis,
   ) {}
 
-  async generateAndPersist(payload: ContractsV1.PricingRationaleSummaryJobV1): Promise<PricingRationalePersistenceResult> {
+  async generateAndPersist(payload: PricingRationaleSummaryJobV1): Promise<PricingRationalePersistenceResult> {
     if (!payload.orgId) {
       throw new Error('Pricing rationale job missing orgId');
     }
@@ -56,7 +53,7 @@ export class PricingRationaleService {
     const { content, modelVersion } = await this.generateSummary(payload);
     const validated = this.parseModelResponse(content);
 
-    const summary: ContractsV1.QuoteRationaleSummaryV1 = {
+  const summary: QuoteRationaleSummaryV1 = {
       quoteId: payload.quoteId,
       quoteRevisionId: payload.quoteRevisionId ?? null,
       summaryText: validated.summaryText.trim(),
@@ -89,7 +86,7 @@ export class PricingRationaleService {
     return { summary };
   }
 
-  private async generateSummary(payload: ContractsV1.PricingRationaleSummaryJobV1): Promise<{ content: string; modelVersion: string }> {
+  private async generateSummary(payload: PricingRationaleSummaryJobV1): Promise<{ content: string; modelVersion: string }> {
     const modelConfig = getModelConfig('pricing-rationale');
     const { prompt: userPrompt, metadata: userMetadata } = renderPricingRationaleUserPrompt(payload.costSheet);
     const { prompt: systemPrompt, metadata: systemMetadata } = renderPricingRationaleSystemPrompt(payload);
@@ -152,8 +149,8 @@ export class PricingRationaleService {
   }
 
   private async persistSummary(args: {
-    payload: ContractsV1.PricingRationaleSummaryJobV1;
-    summary: ContractsV1.QuoteRationaleSummaryV1;
+    payload: PricingRationaleSummaryJobV1;
+    summary: QuoteRationaleSummaryV1;
   }): Promise<void> {
     const { payload, summary } = args;
 
@@ -183,21 +180,21 @@ export class PricingRationaleService {
   }
 
   private async writeThroughCache(args: {
-    payload: ContractsV1.PricingRationaleSummaryJobV1;
-    summary: ContractsV1.QuoteRationaleSummaryV1;
+    payload: PricingRationaleSummaryJobV1;
+    summary: QuoteRationaleSummaryV1;
   }): Promise<void> {
     const { payload, summary } = args;
-    const cachePayload: ContractsV1.QuoteRationaleCachePayloadV1 = {
+    const cachePayload: QuoteRationaleCachePayloadV1 = {
       summary,
       costSheet: payload.costSheet,
     };
 
     const primaryKey = buildQuoteRationaleCacheKeyV1(payload.quoteId);
-    await this.redis.set(primaryKey, JSON.stringify(cachePayload), 'EX', QUOTE_RATIONALE_CACHE_TTL_SECONDS);
+    await this.redis.set(primaryKey, JSON.stringify(cachePayload), 'EX', ContractsV1.QUOTE_RATIONALE_CACHE_TTL_SECONDS);
 
     if (summary.quoteRevisionId) {
-      const revisionKey = buildQuoteRationaleRevisionCacheKeyV1(summary.quoteRevisionId);
-      await this.redis.set(revisionKey, JSON.stringify(cachePayload), 'EX', QUOTE_RATIONALE_CACHE_TTL_SECONDS);
+      const revisionKey = ContractsV1.buildQuoteRationaleRevisionCacheKeyV1(summary.quoteRevisionId);
+      await this.redis.set(revisionKey, JSON.stringify(cachePayload), 'EX', ContractsV1.QUOTE_RATIONALE_CACHE_TTL_SECONDS);
     }
   }
 

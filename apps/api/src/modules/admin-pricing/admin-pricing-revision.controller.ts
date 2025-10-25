@@ -1,8 +1,8 @@
 import { Body, Controller, Get, HttpException, HttpStatus, Param, Post, Req, UseGuards } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
-import { Roles } from '../../auth/roles.decorator';
-import { RolesGuard } from '../../auth/roles.guard';
-import { ReqUser } from '../../auth/req-user.decorator';
+import { Roles } from '../auth/roles.decorator';
+import { RolesGuard } from '../auth/roles.guard';
+import { ReqUser } from '../auth/req-user.decorator';
 import { ContractsV1 } from '@cnc-quote/shared';
 import { AdminPricingRevisionAssistantService } from './admin-pricing-revision-assistant.service';
 import { AdminPricingRevisionThrottleGuard } from './admin-pricing-revision.throttle.guard';
@@ -16,7 +16,6 @@ export class AdminPricingRevisionController {
   @Post()
   @Roles('admin', 'org_admin', 'finance')
   @UseGuards(AdminPricingRevisionThrottleGuard)
-  @Throttle(6, 60)
   async requestAssistant(@Body() body: unknown, @Req() req: any, @ReqUser() user: any) {
     const parsed = ContractsV1.AdminPricingRevisionAssistantRequestSchemaV1.safeParse(body);
     if (!parsed.success) {

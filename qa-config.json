@@ -143,7 +143,11 @@
     { "name": "Observability wiring", "tool": "script", "cmd": "pnpm check-observability", "expect": { "exit_code": 0 }, "fail_code": "OBSERVABILITY_FAIL" },
     { "name": "AI regression fixtures", "tool": "script", "cmd": "pnpm qa:ai-regression", "expect": { "exit_code": 0 }, "fail_code": "AI_REGRESSION_DRIFT" },
     { "name": "Ollama chaos readiness", "tool": "script", "cmd": "pnpm qa:seed-ollama-chaos", "expect": { "exit_code": 0 }, "fail_code": "AI_CHAOS_FAIL" },
-    { "name": "Canary shadow comparisons", "tool": "script", "cmd": "pnpm qa:canary-shadow", "expect": { "exit_code": 0 }, "fail_code": "AI_CANARY_DRIFT" }
+    { "name": "Canary shadow comparisons", "tool": "script", "cmd": "pnpm qa:canary-shadow", "expect": { "exit_code": 0 }, "fail_code": "AI_CANARY_DRIFT" },
+    { "name": "Admin recalc smoke (dry-run)", "tool": "script", "cmd": "pnpm qa:check-recalc", "expect": { "exit_code": 0 }, "fail_code": "ADMIN_RECALC_SMOKE_FAIL" }
+  ],
+  "supplier_tests": [
+    { "name": "Supplier sync smoke", "tool": "script", "cmd": "pnpm qa:check-supplier", "expect": { "exit_code": 0 }, "fail_code": "SUPPLIER_SMOKE_FAIL" }
   ],
   "ui_audit": {
     "routes": ["/instant-quote", "/quote/:id", "/quote/:id/configure/:line_id", "/checkout/:quote_id", "/dfm-analysis", "/dfm-analysis/:id"],

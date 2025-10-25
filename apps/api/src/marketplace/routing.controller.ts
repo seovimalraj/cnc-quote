@@ -21,8 +21,8 @@ import type {
 } from '@cnc-quote/shared/marketplace';
 
 // TODO: Import actual guards
-// import { RbacGuard } from '../auth/rbac.guard';
-// import { RequirePermissions } from '../auth/permissions.decorator';
+// import { RbacGuard } from '../core/auth/auth/rbac.guard';
+// import { RequirePermissions } from '../core/auth/auth/permissions.decorator';
 
 @Controller('routing')
 // @UseGuards(RbacGuard)

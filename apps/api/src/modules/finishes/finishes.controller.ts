@@ -5,9 +5,9 @@
 
 import { Controller, Get, Post, Put, Delete, Body, Param, Query, UseGuards, Logger } from '@nestjs/common';
 import { FinishesService } from './finishes.service';
-import { AuthGuard } from '../../guards/auth.guard';
-import { RbacGuard } from '../../guards/rbac.guard';
-import { RequirePermissions } from '../../decorators/permissions.decorator';
+import { JwtAuthGuard } from '../auth/jwt.guard';
+import { RbacAuthGuard } from '../auth/rbac-auth.guard';
+import { Policies } from '../auth/policies.decorator';
 import { z } from 'zod';
 
 // Validation schemas
@@ -15,7 +15,7 @@ const ValidateChainRequestSchema = z.object({
   steps: z.array(
     z.object({
       operation_code: z.string(),
-      params: z.record(z.any()).optional(),
+  params: z.record(z.string(), z.any()).optional(),
     }),
   ),
 });
@@ -24,7 +24,7 @@ const UpdateChainRequestSchema = z.object({
   steps: z.array(
     z.object({
       operation_code: z.string(),
-      params: z.record(z.any()).optional(),
+  params: z.record(z.string(), z.any()).optional(),
     }),
   ),
   context: z.object({
@@ -38,7 +38,7 @@ const UpdateChainRequestSchema = z.object({
     setup_minutes: z.number().optional(),
     run_minutes_per_part: z.number().optional(),
     batch_size: z.number().optional(),
-    part_class: z.string().optional(),
+    part_class: z.enum(['simple', 'complex', 'delicate']).optional(),
   }),
 });
 
@@ -46,7 +46,7 @@ type ValidateChainRequest = z.infer<typeof ValidateChainRequestSchema>;
 type UpdateChainRequest = z.infer<typeof UpdateChainRequestSchema>;
 
 @Controller('finishes')
-@UseGuards(AuthGuard, RbacGuard)
+@UseGuards(JwtAuthGuard, RbacAuthGuard)
 export class FinishesController {
   private readonly logger = new Logger(FinishesController.name);
 
@@ -57,7 +57,7 @@ export class FinishesController {
    * List all finish operations (optionally filtered by process)
    */
   @Get()
-  @RequirePermissions('quotes:read')
+  @Policies({ action: 'view', resource: 'finishes' })
   async listOperations(
     @Query('process') process?: string,
     @Query('active') active?: string,
@@ -75,7 +75,7 @@ export class FinishesController {
    * Get a single finish operation by code
    */
   @Get(':code')
-  @RequirePermissions('quotes:read')
+  @Policies({ action: 'view', resource: 'finishes' })
   async getOperation(@Param('code') code: string) {
     const operation = await this.finishesService.getOperationByCode(code);
     if (!operation) {
@@ -89,7 +89,7 @@ export class FinishesController {
    * Validate a finish chain (checks prerequisites, incompatibilities)
    */
   @Post('validate')
-  @RequirePermissions('quotes:read')
+  @Policies({ action: 'view', resource: 'finishes' })
   async validateChain(@Body() body: ValidateChainRequest) {
     try {
       ValidateChainRequestSchema.parse(body);
@@ -106,7 +106,7 @@ export class FinishesController {
    * Get finish chain for a quote line
    */
   @Get('quotes/:quoteId/lines/:lineId/finish-chain')
-  @RequirePermissions('quotes:read')
+  @Policies({ action: 'view', resource: 'finishes' })
   async getChain(
     @Param('quoteId') _quoteId: string,
     @Param('lineId') lineId: string,
@@ -123,7 +123,7 @@ export class FinishesController {
    * Update finish chain for a quote line (validates, computes cost, persists)
    */
   @Put('quotes/:quoteId/lines/:lineId/finish-chain')
-  @RequirePermissions('quotes:write')
+  @Policies({ action: 'manage', resource: 'finishes' })
   async updateChain(
     @Param('quoteId') _quoteId: string,
     @Param('lineId') lineId: string,
@@ -149,7 +149,7 @@ export class FinishesController {
    * Delete finish chain for a quote line
    */
   @Delete('quotes/:quoteId/lines/:lineId/finish-chain')
-  @RequirePermissions('quotes:write')
+  @Policies({ action: 'manage', resource: 'finishes' })
   async deleteChain(
     @Param('quoteId') _quoteId: string,
     @Param('lineId') lineId: string,

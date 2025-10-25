@@ -16,6 +16,16 @@ export class MetricsService implements OnModuleInit {
   readonly queueThroughputPerMin: Gauge;
   readonly queueWaitingJobs: Gauge;
   readonly queueActiveJobs: Gauge;
+  // Admin pricing recalc metrics
+  readonly recalcRunsTotal: Counter;
+  readonly recalcItemsTotal: Counter;
+  readonly recalcItemDurationMs: Histogram;
+  readonly recalcCircuitTrippedTotal: Counter;
+  // Supplier sync metrics
+  readonly supplierCapabilityUpdatesTotal: Counter;
+  readonly supplierApprovalTotal: Counter;
+  readonly supplierCapacityMismatchGauge: Gauge;
+  readonly dfmFeedbackShiftTotal: Counter;
 
   constructor() {
     this.quoteStatusTransitions = new Counter({
@@ -71,6 +81,51 @@ export class MetricsService implements OnModuleInit {
       labelNames: ['queue']
     });
 
+    // Admin pricing recalc metrics
+    this.recalcRunsTotal = new Counter({
+      name: 'admin_pricing_recalc_runs_total',
+      help: 'Count of admin pricing recalc runs by status',
+      labelNames: ['org_id', 'status', 'reason', 'dry_run']
+    });
+    this.recalcItemsTotal = new Counter({
+      name: 'admin_pricing_recalc_items_total',
+      help: 'Count of admin pricing recalc items by outcome',
+      labelNames: ['org_id', 'outcome', 'reason', 'dry_run']
+    });
+    this.recalcItemDurationMs = new Histogram({
+      name: 'admin_pricing_recalc_item_duration_ms',
+      help: 'Item processing duration for admin pricing recalc',
+      labelNames: ['org_id', 'outcome'],
+      buckets: [10, 25, 50, 100, 250, 500, 1000, 2000, 5000]
+    });
+    this.recalcCircuitTrippedTotal = new Counter({
+      name: 'admin_pricing_recalc_circuit_tripped_total',
+      help: 'Count of recalc runs where circuit-breaker tripped',
+      labelNames: ['org_id']
+    });
+
+    // Supplier sync metrics
+    this.supplierCapabilityUpdatesTotal = new Counter({
+      name: 'supplier_capability_updates_total',
+      help: 'Count of supplier capability update fields',
+      labelNames: ['org_id', 'supplier_id', 'field']
+    });
+    this.supplierApprovalTotal = new Counter({
+      name: 'supplier_approval_total',
+      help: 'Count of supplier approvals recorded by outcome',
+      labelNames: ['org_id', 'supplier_id', 'outcome']
+    });
+    this.supplierCapacityMismatchGauge = new Gauge({
+      name: 'supplier_capacity_mismatch_gauge',
+      help: 'Percentage of demand not covered by supplier capacity (0..1)',
+      labelNames: ['org_id', 'process']
+    });
+    this.dfmFeedbackShiftTotal = new Counter({
+      name: 'dfm_feedback_shift_total',
+      help: 'Count of times supplier capability changed DFM outcome',
+      labelNames: ['org_id', 'kind']
+    });
+
     collectDefaultMetrics({ register: this.registry });
     this.registry.registerMetric(this.quoteStatusTransitions);
     this.registry.registerMetric(this.queueOldestJobAge);
@@ -82,6 +137,14 @@ export class MetricsService implements OnModuleInit {
   this.registry.registerMetric(this.queueThroughputPerMin);
   this.registry.registerMetric(this.queueWaitingJobs);
   this.registry.registerMetric(this.queueActiveJobs);
+  this.registry.registerMetric(this.recalcRunsTotal);
+  this.registry.registerMetric(this.recalcItemsTotal);
+  this.registry.registerMetric(this.recalcItemDurationMs);
+  this.registry.registerMetric(this.recalcCircuitTrippedTotal);
+  this.registry.registerMetric(this.supplierCapabilityUpdatesTotal);
+  this.registry.registerMetric(this.supplierApprovalTotal);
+  this.registry.registerMetric(this.supplierCapacityMismatchGauge);
+  this.registry.registerMetric(this.dfmFeedbackShiftTotal);
   }
 
   onModuleInit() {

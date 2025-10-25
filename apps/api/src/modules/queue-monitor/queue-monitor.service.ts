@@ -203,7 +203,7 @@ export class QueueMonitorService {
     };
 
     const { data: rowsInWindow, error } = await this.supabase.client
-      .from<WebhookRow>('admin_webhook_status')
+      .from('admin_webhook_status')
       .select('provider, status, failed_24h, last_event_type, last_delivery_at, updated_at')
       .gte('updated_at', since)
       .order('updated_at', { ascending: false })
@@ -217,7 +217,7 @@ export class QueueMonitorService {
 
     if (!rows.length) {
       const { data: fallbackRows, error: fallbackError } = await this.supabase.client
-        .from<WebhookRow>('admin_webhook_status')
+        .from('admin_webhook_status')
         .select('provider, status, failed_24h, last_event_type, last_delivery_at, updated_at')
         .order('updated_at', { ascending: false })
         .limit(50);
@@ -305,13 +305,13 @@ export class QueueMonitorService {
 
     const [{ data: errorRows, error: errorEventsError }, { data: failedSnapshots, error: failedSnapshotsError }, liveFailedJobs] = await Promise.all([
       this.supabase.client
-        .from<ErrorRow>('admin_error_events')
+        .from('admin_error_events')
         .select('id, service, title, count_1h, first_seen, last_seen, users_affected, permalink')
         .gte('last_seen', since)
         .order('last_seen', { ascending: false })
         .limit(50),
       this.supabase.client
-        .from<FailedJobRow>('admin_failed_jobs')
+        .from('admin_failed_jobs')
         .select('queue, job_id, attempts, reason, occurred_at')
         .gte('occurred_at', since)
         .order('occurred_at', { ascending: false })

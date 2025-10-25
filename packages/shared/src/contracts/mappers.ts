@@ -93,7 +93,8 @@ function mapPricingMatrixVNextToV1(line: QuoteLineVNext): PartConfigV1['pricing'
     unit_price: row.unitPrice ?? 0,
     total_price: row.totalPrice ?? 0,
     lead_time_days: row.leadTimeDays ?? 0,
-    breakdown: (row.breakdown as ContractsV1.PricingBreakdownV1 | undefined) ?? FALLBACK_BREAKDOWN,
+    // Cast via unknown to satisfy stricter TS where Record<string, unknown> is not assignable to typed breakdown
+    breakdown: (row.breakdown as unknown as ContractsV1.PricingBreakdownV1 | undefined) ?? FALLBACK_BREAKDOWN,
     status: row.status ?? 'ready',
   }));
 

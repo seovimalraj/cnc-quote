@@ -7,11 +7,9 @@
 
 import { trace, SpanStatusCode } from '@opentelemetry/api';
 import { SupabaseClient } from '@supabase/supabase-js';
-import {
-  getModelConfig,
-  type ModelLifecycleJobV1,
-  type ModelConfig,
-} from '@cnc-quote/shared';
+import { getModelConfig } from '@cnc-quote/shared';
+import type { ModelLifecycleJobV1 } from '@cnc-quote/shared/dist/ai/model-lifecycle.types';
+import type { ModelConfig } from '@cnc-quote/shared/dist/ai/model-registry';
 import { getModelGatewayClient } from '../lib/model-gateway-client.js';
 import { logger } from '../lib/logger.js';
 

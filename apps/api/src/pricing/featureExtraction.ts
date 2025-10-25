@@ -28,7 +28,7 @@ export class FeatureExtractionService {
     geometry: {
       volume_mm3: number;
       area_mm2: number;
-      bbox_mm: [number, number, number];
+      bbox_mm: number[];
       features?: Record<string, unknown>;
     },
     materialCode: string,
@@ -344,7 +344,7 @@ export class FeatureExtractionService {
     return Math.min(Math.max(score, 1), 10);
   }
 
-  private estimateHoleDiameter(bbox: [number, number, number], index: number): number {
+  private estimateHoleDiameter(bbox: number[], index: number): number {
     const minDim = Math.min(...bbox);
     // Common hole sizes with some variation
     const commonSizes = [3, 5, 8, 10, 12, 16, 20];
@@ -352,7 +352,7 @@ export class FeatureExtractionService {
     return Math.min(baseSize, minDim * 0.8);
   }
 
-  private estimateHoleDepth(bbox: [number, number, number], diameter: number): number {
+  private estimateHoleDepth(bbox: number[], diameter: number): number {
     const maxDepth = Math.max(...bbox);
     // Through holes or blind holes
     return Math.random() > 0.3 ? maxDepth : maxDepth * (0.3 + Math.random() * 0.4);

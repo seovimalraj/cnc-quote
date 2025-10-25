@@ -50,8 +50,8 @@ export class AdminContentService {
   constructor(private readonly supabase: SupabaseService) {}
 
   async listPages(): Promise<ContractsV1.AdminCmsPagesResponseV1> {
-    const { data, error } = await this.supabase.client
-        .from<PageRow>('admin_cms_pages')
+  const { data, error } = await this.supabase.client
+    .from('admin_cms_pages')
       .select('id, slug, title, status, summary, content, hero_image, seo_description, created_at, updated_at, updated_by, published_at')
       .order('updated_at', { ascending: false })
       .limit(500);
@@ -70,8 +70,8 @@ export class AdminContentService {
   }
 
   async listDocuments(): Promise<ContractsV1.AdminCmsDocumentsResponseV1> {
-    const { data, error } = await this.supabase.client
-        .from<DocumentRow>('admin_cms_documents')
+  const { data, error } = await this.supabase.client
+    .from('admin_cms_documents')
       .select('id, title, slug, status, description, document_type, asset_url, storage_path, created_at, updated_at, updated_by, published_at')
       .order('updated_at', { ascending: false })
       .limit(500);
@@ -120,8 +120,8 @@ export class AdminContentService {
     let row: PageRow | null = null;
 
     if (input.id) {
-      const { data, error } = await this.supabase.client
-          .from<PageRow>('admin_cms_pages')
+    const { data, error } = await this.supabase.client
+      .from('admin_cms_pages')
         .update(payload)
         .eq('id', input.id)
         .select(selectColumns)
@@ -141,8 +141,8 @@ export class AdminContentService {
         created_at: now,
       };
 
-      const { data, error } = await this.supabase.client
-          .from<PageRow>('admin_cms_pages')
+    const { data, error } = await this.supabase.client
+      .from('admin_cms_pages')
         .insert(insertPayload)
         .select(selectColumns)
         .single();
@@ -191,8 +191,8 @@ export class AdminContentService {
     let row: DocumentRow | null = null;
 
     if (input.id) {
-      const { data, error } = await this.supabase.client
-          .from<DocumentRow>('admin_cms_documents')
+    const { data, error } = await this.supabase.client
+      .from('admin_cms_documents')
         .update(payload)
         .eq('id', input.id)
         .select(selectColumns)
@@ -211,8 +211,8 @@ export class AdminContentService {
         created_at: now,
       };
 
-      const { data, error } = await this.supabase.client
-          .from<DocumentRow>('admin_cms_documents')
+    const { data, error } = await this.supabase.client
+      .from('admin_cms_documents')
         .insert(insertPayload)
         .select(selectColumns)
         .single();
@@ -275,7 +275,7 @@ export class AdminContentService {
 
   private async fetchPageRowById(id: string, columns: string): Promise<PageRow | null> {
     const { data, error } = await this.supabase.client
-      .from<PageRow>('admin_cms_pages')
+      .from('admin_cms_pages')
       .select(columns)
       .eq('id', id)
       .single();
@@ -293,7 +293,7 @@ export class AdminContentService {
 
   private async fetchDocumentRowById(id: string, columns: string): Promise<DocumentRow | null> {
     const { data, error } = await this.supabase.client
-      .from<DocumentRow>('admin_cms_documents')
+      .from('admin_cms_documents')
       .select(columns)
       .eq('id', id)
       .single();

@@ -1,8 +1,8 @@
 import { BadRequestException, Body, Controller, Get, Param, Post, Req, UseGuards } from '@nestjs/common';
 import { Type } from 'class-transformer';
 import { IsArray, IsOptional, IsString, IsUUID, ValidateNested, IsNumber } from 'class-validator';
-import { JwtAuthGuard } from '../../auth/jwt.guard';
-import { OrgGuard } from '../../auth/org.guard';
+import { JwtAuthGuard } from '../auth/jwt.guard';
+import { OrgGuard } from '../auth/org.guard';
 import { RiskService } from './risk.service';
 import { RiskComputeInput } from './risk.model';
 

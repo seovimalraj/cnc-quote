@@ -1,9 +1,10 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { SupabaseService } from '../../lib/supabase/supabase.service';
 import { FileMeta } from '../../../../../packages/shared/src/types/schema';
 
 @Injectable()
 export class FilesService {
+  private readonly logger = new Logger(FilesService.name);
   constructor(private readonly supabase: SupabaseService) {}
 
   async getFiles(orgId: string, filters: any = {}) {

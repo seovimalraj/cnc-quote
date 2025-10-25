@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { SupabaseService } from '../../lib/supabase/supabase.service';
 import { MaterialsService } from '../catalog/materials.service';
-import { PricingService } from '../pricing/pricing.service';
+import { PricingService } from './pricing.service';
 
 export interface MaterialComparisonRequest {
   /** Current material ID */
@@ -130,7 +130,7 @@ export class MaterialComparisonService {
     
     try {
       // 1. Get current material details
-      const currentMaterial = await this.materialsService.findById(materialId);
+  const currentMaterial = await this.materialsService.getMaterial(materialId);
       
       if (!currentMaterial) {
         throw new Error(`Material ${materialId} not found`);
@@ -256,7 +256,7 @@ export class MaterialComparisonService {
     const { processType, region, excludeId, limit } = options;
     
     // Query materials from database
-    const { data: materials, error } = await this.supabase.getClient()
+  const { data: materials, error } = await this.supabase.client
       .from('material_properties')
       .select(`
         id,
@@ -320,12 +320,12 @@ export class MaterialComparisonService {
       complexity_multiplier: 1.0,
     };
     
-    const priceResponse = await this.pricingService.calculatePrice(priceRequest);
+  const priceResponse = await this.pricingService.calculateCncPrice(priceRequest as any);
     
     return {
       unit_price: priceResponse.unit_price,
-      material_cost: priceResponse.breakdown?.material || 0,
-      machining_cost: priceResponse.breakdown?.machining || 0,
+      material_cost: priceResponse.breakdown?.material_cost || 0,
+      machining_cost: priceResponse.breakdown?.machine_cost || 0,
       total_cost: priceResponse.unit_price * quantity,
       lead_time_days: priceResponse.lead_time_days || 10,
     };

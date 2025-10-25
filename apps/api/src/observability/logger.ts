@@ -69,33 +69,36 @@ const logger = pino({
     }),
     err: pino.stdSerializers.err,
   },
-  ...(process.env.NODE_ENV === 'development'
-    ? {
-        transport: {
-          target: 'pino-pretty',
-          options: {
-            colorize: true,
-            translateTime: 'SYS:standard',
-            ignore: 'pid,hostname',
-          },
-        },
-      }
-    : {}),
+  // Remove pino-pretty transport to fix pino-http compatibility issue
+  // ...(process.env.NODE_ENV === 'development'
+  //   ? {
+  //       transport: {
+  //         target: 'pino-pretty',
+  //         options: {
+  //           colorize: true,
+  //           translateTime: 'SYS:standard',
+  //           ignore: 'pid,hostname',
+  //         },
+  //       },
+  //     }
+  //   : {}),
 });
 
 // Pino HTTP middleware
 export const httpLogger = pinoHttp({
-  logger,
-  customProps: (req: any) => {
-    const ctx = getReqCtx();
-    return {
-      traceId: ctx?.traceId,
-      spanId: ctx?.spanId,
-      requestId: ctx?.requestId,
-      orgId: ctx?.orgId,
-      userId: ctx?.userId,
-    };
-  },
+  logger: logger as any, // Type cast to avoid pino-http version incompatibility
+  // Disabled customProps to fix pino-http compatibility issue
+  // The trace context is already added via logger.formatters.log
+  // customProps: (req: any) => {
+  //   const ctx = getReqCtx();
+  //   return {
+  //     traceId: ctx?.traceId,
+  //     spanId: ctx?.spanId,
+  //     requestId: ctx?.requestId,
+  //     orgId: ctx?.orgId,
+  //     userId: ctx?.userId,
+  //   };
+  // },
   customSuccessMessage: (req, res) => {
     return `${req.method} ${req.url} ${res.statusCode}`;
   },

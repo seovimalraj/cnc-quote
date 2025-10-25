@@ -1,7 +1,7 @@
 import { Module } from "@nestjs/common";
 import { HealthController, SimpleHealthController } from "./health.controller";
 // import { HealthService } from "./health.service";
-// import { QueueModule } from "../../queues";
+// import { QueueModule } from "../../core/queue/queues";
 
 @Module({
   // imports: [QueueModule],

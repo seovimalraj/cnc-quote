@@ -7,8 +7,8 @@ import {
 import { AdminErrorsService, ErrorEvent } from './admin-errors.service';
 import { HeatmapCell } from '../admin-health/admin-health.service';
 import { AuthGuard } from '@nestjs/passport';
-import { RolesGuard } from '../../auth/roles.guard';
-import { Roles } from '../../auth/roles.decorator';
+import { RolesGuard } from '../auth/roles.guard';
+import { Roles } from '../auth/roles.decorator';
 
 @Controller('admin/errors')
 @UseGuards(AuthGuard, RolesGuard)

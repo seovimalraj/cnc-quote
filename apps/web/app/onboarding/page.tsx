@@ -9,7 +9,6 @@ import { CompanyInfoStep } from '@/components/onboarding/CompanyInfoStep'
 import { AddressStep } from '@/components/onboarding/AddressStep'
 import { TaxInfoStep } from '@/components/onboarding/TaxInfoStep'
 import { ReviewStep } from '@/components/onboarding/ReviewStep'
-import { posthog } from 'posthog-js'
 
 const STEPS = [
   { id: 'company', title: 'Company Info', description: 'Basic company details' },
@@ -54,7 +53,7 @@ export default function OnboardingPage() {
   const nextStep = () => {
     if (currentStep < STEPS.length - 1) {
       setCurrentStep(currentStep + 1)
-      posthog.capture('onboarding_step_completed', {
+      console.log('onboarding_step_completed', {
         step: STEPS[currentStep].id,
         step_number: currentStep + 1
       })
@@ -69,7 +68,7 @@ export default function OnboardingPage() {
 
   const handleComplete = async () => {
     try {
-      posthog.capture('onboarding_completed', {
+      console.log('onboarding_completed', {
         company_name: formData.company.name,
         industry: formData.company.industry,
         company_size: formData.company.size

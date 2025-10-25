@@ -1,6 +1,6 @@
 // @ts-nocheck
 /// <reference types="jest" />
-jest.mock('../../auth/rbac.middleware', () => ({
+jest.mock('../../../modules/auth/rbac.middleware', () => ({
   RbacGuard: () =>
     class {
       canActivate() {
@@ -13,8 +13,8 @@ import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { QuotesModule } from './quotes.module';
 import { QuotesService } from './quotes.service';
-import { JwtAuthGuard } from '../../auth/jwt.guard';
-import { OrgGuard } from '../../auth/org.guard';
+import { JwtAuthGuard } from '../auth/jwt.guard';
+import { OrgGuard } from '../auth/org.guard';
 import { SupabaseService } from '../../lib/supabase/supabase.service';
 import { AnalyticsService } from '../analytics/analytics.service';
 import { NotifyService } from '../notify/notify.service';

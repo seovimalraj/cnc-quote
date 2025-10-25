@@ -10,9 +10,9 @@ import {
   Header,
 } from '@nestjs/common';
 import { AdminDevService } from './admin-dev.service';
-import { JwtAuthGuard } from '../../auth/jwt.guard';
-import { RolesGuard } from '../../auth/roles.guard';
-import { Roles } from '../../auth/roles.decorator';
+import { JwtAuthGuard } from '../auth/jwt.guard';
+import { RolesGuard } from '../auth/roles.guard';
+import { Roles } from '../auth/roles.decorator';
 
 @Controller('admin/dev')
 @UseGuards(JwtAuthGuard, RolesGuard)

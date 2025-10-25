@@ -1,7 +1,7 @@
 import { SupabaseClient } from '@supabase/supabase-js';
 import { trace, SpanStatusCode } from '@opentelemetry/api';
-import { logger } from '../lib/logger.js';
-import { ComplianceMetricSample, MetricsPublisher } from '../lib/pushgateway.js';
+import { logger } from '../lib/logger';
+import { ComplianceMetricSample, MetricsPublisher } from '../lib/pushgateway';
 
 export interface ComplianceAnalyticsResult {
   bucketDate: string;

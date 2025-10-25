@@ -7,8 +7,8 @@ import {
 import { AdminMetricsService, HistogramBucket } from './admin-metrics.service';
 import { MetricPoint } from '../admin-health/admin-health.service';
 import { AuthGuard } from '@nestjs/passport';
-import { RolesGuard } from '../../auth/roles.guard';
-import { Roles } from '../../auth/roles.decorator';
+import { RolesGuard } from '../auth/roles.guard';
+import { Roles } from '../auth/roles.decorator';
 
 @Controller('admin/metrics')
 @UseGuards(AuthGuard, RolesGuard)

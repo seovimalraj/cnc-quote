@@ -1,5 +1,7 @@
 # Instant Quote Spec (Xometry Parity Oriented)
 
+> October 2025 update: The Instant Quote experience is now gate-protected. Unauthenticated users see a landing page at `/instant-quote` with sign-in/sign-up calls to action. Uploads and quote creation require a Supabase session; when authenticated, the page renders the full instant quote workspace.
+
 ## Scope
 Achieve feature parity (foundational) with Xometry-style instant quoting for CNC machining and sheet metal fabrication, supporting multi-part upload, configuration, dynamic pricing, DFM feedback, lead time selection, and admin overrides.
 
@@ -116,3 +118,46 @@ See GAP_ANALYSIS.md.
 6. Pricing Engine v2 multi-quantity.
 7. DFM taxonomy standardization.
 8. Real-time update channel.
+
+## Quote Lifecycle and Admin Review Triggers (Phase 3)
+
+States
+- Draft → Uploading → Calculating → Priced
+- Optional branch: NeedsReview (manual review required)
+- Customer edits (qty/material/finish) → Calculating → Repriced
+- Checkout → Ordered
+- Terminal: Expired | Cancelled
+
+Mermaid
+
+```mermaid
+stateDiagram-v2
+	[*] --> Draft
+	Draft --> Uploading: user uploads CAD
+	Uploading --> Calculating: geometry+DFM+pricing started
+	Calculating --> Priced: all parts priced
+	Priced --> NeedsReview: DFM critical | risky tolerance | unsupported finish
+	Priced --> Checkout: user proceeds
+	NeedsReview --> Priced: admin approves/adjusts
+	Checkout --> Ordered: payment captured | PO accepted
+	Priced --> Expired: ttl passed
+	Draft --> Cancelled: user abandons
+
+	Priced --> Calculating: user changes qty/material/finish
+	Calculating --> Priced: repriced
+```
+
+Admin review triggers
+- DFM severity critical present
+- Tolerance risk above threshold (configurable)
+- Unsupported material/finish combination
+- Margin guardrails breached (below min margin)
+
+Event mapping
+- user uploads → POST /quotes/:id/parts/upload-initiate → websocket: geometry_extracted/dfm_completed/pricing_completed
+- user changes config → POST /quotes/:id/parts/:partId/price (recalc) + realtime updates
+- admin approves/overrides → POST /admin/review/:quoteId/actions
+
+Observability
+- Spans: pricing.realtime.connect, pricing.calculate, pricing.recalculate
+- Attributes: traceId, quoteId, partId, orgId

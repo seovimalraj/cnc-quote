@@ -1,5 +1,6 @@
 "use client";
 import React, { useCallback, useRef, useState } from 'react';
+import { withRetry } from '../lib/retry';
 
 interface UploadFile {
   id: string; // internal temp id
@@ -32,34 +33,55 @@ export const MultiFileUpload: React.FC<MultiFileUploadProps> = ({ orgId, authTok
 
     const headers = { 'Content-Type': 'application/json', ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}) };
 
-    if (!createdQuoteId) {
-      const cq = await fetch(`${baseUrl}/api/quotes`, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({ org_id: orgId, parts: [{ file_id: serverFileId, process_type: 'cnc_milling', quantities: [1, 10, 50] }] })
-      });
+    const shouldRetry = (err: unknown) => {
+      // Retry on network errors and 5xx; avoid retrying 4xx client errors
+      if (err && typeof err === 'object' && 'status' in (err as any)) {
+        const status = Number((err as any).status);
+        return status >= 500 && status < 600;
+      }
+      return true;
+    };
 
-      if (cq.ok) {
-        const cqData = await cq.json();
-        createdQuoteId = cqData?.id || cqData?.quote_id || cqData?.quote?.id;
-        quoteItemId = cqData?.items?.[0]?.id || cqData?.quote?.items?.[0]?.id;
-        if (createdQuoteId) {
-          setQuoteId(createdQuoteId);
-          onQuoteReady?.(createdQuoteId);
+    if (!createdQuoteId) {
+      const cqData = await withRetry(async () => {
+        const cq = await fetch(`${baseUrl}/api/quotes`, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({ org_id: orgId, parts: [{ file_id: serverFileId, process_type: 'cnc_milling', quantities: [1, 10, 50] }] })
+        });
+        if (!cq.ok) {
+          const msg = await cq.text().catch(() => cq.statusText);
+          const e: any = new Error(`quote create failed: ${cq.status} ${msg}`);
+          e.status = cq.status;
+          throw e;
         }
+        return cq.json();
+      }, { retries: 2, baseDelayMs: 300, shouldRetry });
+
+      createdQuoteId = cqData?.id || cqData?.quote_id || cqData?.quote?.id;
+      quoteItemId = cqData?.items?.[0]?.id || cqData?.quote?.items?.[0]?.id;
+      if (createdQuoteId) {
+        setQuoteId(createdQuoteId);
+        onQuoteReady?.(createdQuoteId);
       }
     } else {
-      const ap = await fetch(`${baseUrl}/api/quotes/${createdQuoteId}/parts`, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({ parts: [{ file_id: serverFileId, process_type: 'cnc_milling', quantities: [1, 10, 50] }] })
-      });
+      const apData = await withRetry(async () => {
+        const ap = await fetch(`${baseUrl}/api/quotes/${createdQuoteId}/parts`, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({ parts: [{ file_id: serverFileId, process_type: 'cnc_milling', quantities: [1, 10, 50] }] })
+        });
+        if (!ap.ok) {
+          const msg = await ap.text().catch(() => ap.statusText);
+          const e: any = new Error(`add part failed: ${ap.status} ${msg}`);
+          e.status = ap.status;
+          throw e;
+        }
+        return ap.json();
+      }, { retries: 2, baseDelayMs: 300, shouldRetry });
 
-      if (ap.ok) {
-        const apData = await ap.json();
-        const item = (apData?.items || []).find((it: any) => it.file_id === serverFileId);
-        quoteItemId = item?.id;
-      }
+      const item = (apData?.items || []).find((it: any) => it.file_id === serverFileId);
+      quoteItemId = item?.id;
     }
 
     return { createdQuoteId, quoteItemId };
@@ -82,11 +104,10 @@ export const MultiFileUpload: React.FC<MultiFileUploadProps> = ({ orgId, authTok
   const startUpload = useCallback(async (localId: string, file: File) => {
     updateFileState(localId, { status: 'uploading', progress: 0, error: undefined });
 
-    const formData = new FormData();
-    formData.append('org_id', orgId);
-    formData.append('file', file);
-
-    const uploadPromise = new Promise<{ file: { id: string } }>((resolve, reject) => {
+    const doSingleUpload = () => new Promise<{ file: { id: string } }>((resolve, reject) => {
+      const formData = new FormData();
+      formData.append('org_id', orgId);
+      formData.append('file', file);
       const xhr = new XMLHttpRequest();
       xhr.open('POST', `${baseUrl}/api/files/direct`, true);
       if (authToken) {
@@ -106,15 +127,28 @@ export const MultiFileUpload: React.FC<MultiFileUploadProps> = ({ orgId, authTok
           resolve(xhr.response as { file: { id: string } });
         } else {
           const message = (xhr.response && (xhr.response.message || xhr.response.error)) || `Upload failed (${xhr.status})`;
-          reject(new Error(message));
+          const e: any = new Error(message);
+          e.status = xhr.status;
+          reject(e);
         }
       };
 
       xhr.onerror = () => {
-        reject(new Error('Network error during upload'));
+        const e: any = new Error('Network error during upload');
+        e.status = 0;
+        reject(e);
       };
 
       xhr.send(formData);
+    });
+
+    const uploadPromise = withRetry(doSingleUpload, {
+      retries: 2,
+      baseDelayMs: 300,
+      shouldRetry: (err) => {
+        const status = (err as any)?.status as number | undefined;
+        return !status || status >= 500; // retry network/5xx
+      }
     });
 
     try {
@@ -139,7 +173,9 @@ export const MultiFileUpload: React.FC<MultiFileUploadProps> = ({ orgId, authTok
 
       onUploaded?.({ file_id: serverFileId, filename: file.name, quote_id: createdQuoteId, quote_item_id: quoteItemId });
     } catch (err: any) {
-      updateFileState(localId, { status: 'error', error: err.message });
+      // eslint-disable-next-line no-console
+      console.warn('Upload error', err);
+      updateFileState(localId, { status: 'error', error: err.message || 'Upload failed' });
     }
   }, [authToken, baseUrl, createQuoteIfNeeded, onUploaded, orgId, updateFileState]);
 

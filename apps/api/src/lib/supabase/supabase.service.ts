@@ -12,7 +12,8 @@ export class SupabaseService implements OnModuleInit {
     this._client = createClient(this.config.getOrThrow("SUPABASE_URL"), this.config.getOrThrow("SUPABASE_SERVICE_KEY"));
   }
 
-  get client() {
-    return this._client;
+  get client(): any {
+    // Loosen typing for callers while we migrate to typed Database schema
+    return this._client as any;
   }
 }

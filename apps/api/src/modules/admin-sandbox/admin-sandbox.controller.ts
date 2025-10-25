@@ -18,9 +18,9 @@ import {
   TestData,
   SandboxStats,
 } from './admin-sandbox.service';
-import { JwtAuthGuard } from '../../auth/jwt.guard';
-import { RolesGuard } from '../../auth/roles.guard';
-import { Roles } from '../../auth/roles.decorator';
+import { JwtAuthGuard } from '../auth/jwt.guard';
+import { RolesGuard } from '../auth/roles.guard';
+import { Roles } from '../auth/roles.decorator';
 
 @Controller('admin/sandbox')
 @UseGuards(JwtAuthGuard, RolesGuard)

@@ -3,7 +3,7 @@ import { Test, TestingModule } from "@nestjs/testing";
 // Ensure Jest globals recognized in environments where ts-jest types not injected early
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import type {} from 'jest';
-import { DfmService } from "./dfm.service";
+import { DfmService } from "./legacy/dfm-v1.service";
 import { SupabaseService } from "../../lib/supabase/supabase.service";
 import { CacheService } from "../../lib/cache/cache.service";
 import { SeverityLegacy } from "@cnc-quote/shared";

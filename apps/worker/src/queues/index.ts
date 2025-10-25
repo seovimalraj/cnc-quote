@@ -3,7 +3,7 @@
  * Register BullMQ workers for each queue type
  */
 
-import { Worker, Queue, QueueScheduler } from 'bullmq';
+import { Worker, Queue } from 'bullmq';
 import { getRedisClient } from '../lib/redis.js';
 import { config } from '../config.js';
 import { logger } from '../lib/logger.js';
@@ -17,7 +17,6 @@ import { processModelLifecycle, ModelLifecyclePayload } from '../processors/mode
 import { listModelConfigs, MODEL_LIFECYCLE_QUEUE } from '@cnc-quote/shared';
 
 const workers: Worker[] = [];
-const schedulers: QueueScheduler[] = [];
 const queues: Queue[] = [];
 let complianceAnalyticsQueue: Queue<ComplianceAnalyticsPayload> | null = null;
 let aiModelLifecycleQueue: Queue<ModelLifecyclePayload> | null = null;
@@ -25,7 +24,7 @@ let aiModelLifecycleQueue: Queue<ModelLifecyclePayload> | null = null;
 /**
  * Create worker configuration
  */
-function createWorkerOptions(concurrency: number, attempts: number) {
+function createWorkerOptions(concurrency: number, _attempts: number) {
   return {
     connection: getRedisClient(),
     concurrency,
@@ -336,12 +335,6 @@ export async function registerComplianceAnalyticsWorker(): Promise<Worker> {
     logger.error({ queue: 'compliance-analytics', error: err }, 'Worker error');
   });
 
-  const scheduler = new QueueScheduler('compliance-analytics', {
-    connection: getRedisClient(),
-  });
-  await scheduler.waitUntilReady();
-  schedulers.push(scheduler);
-
   const queue = ensureComplianceAnalyticsQueue();
   await queue.waitUntilReady();
   await scheduleComplianceAnalyticsJob(queue);
@@ -377,10 +370,6 @@ export async function registerModelLifecycleWorker(): Promise<Worker> {
     logger.error({ queue: queueName, error: err }, 'Worker error');
   });
 
-  const scheduler = new QueueScheduler(queueName, { connection: getRedisClient() });
-  await scheduler.waitUntilReady();
-  schedulers.push(scheduler);
-
   const queue = ensureModelLifecycleQueue();
   await queue.waitUntilReady();
   await scheduleModelBiasReviewJobs(queue);
@@ -411,7 +400,6 @@ export async function closeAllWorkers(): Promise<void> {
   logger.info('⏳ Closing workers...');
   await Promise.all([
     ...workers.map((w) => w.close()),
-    ...schedulers.map((s) => s.close()),
     ...queues.map((q) => q.close()),
   ]);
   logger.info('✅ All workers closed');

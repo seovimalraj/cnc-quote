@@ -8,11 +8,13 @@ services:
       - "80:80"  
       - "443:443"
     volumes:
-      - ./nginx/simple.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
       - ./ssl/server.crt:/etc/ssl/server.crt:ro
       - ./ssl/server.key:/etc/ssl/server.key:ro
     depends_on:
       - web
+      - api
+      - cad-service
     networks:
       - cnc-network
     restart: unless-stopped
@@ -26,9 +28,10 @@ services:
       - NODE_ENV=production
       - SENTRY_SUPPRESS_INSTRUMENTATION_FILE_WARNING=1
       - SENTRY_SUPPRESS_GLOBAL_ERROR_HANDLER_FILE_WARNING=1
-      - NEXT_PUBLIC_SUPABASE_URL=http://localhost:5432
+      - NEXT_PUBLIC_SUPABASE_URL=/db
       - NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0
-      - NEXT_PUBLIC_API_URL=https://app.frigate.ai/api
+      - NEXT_PUBLIC_API_URL=/api
+      - NEXT_PUBLIC_PAYPAL_CLIENT_ID=your_paypal_client_id
       - SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU
       - JWT_SECRET=cnc-quote-jwt-secret-key-2024-production-ready
     depends_on:
@@ -47,7 +50,7 @@ services:
       - NODE_ENV=production
       - PORT=3001
       - DATABASE_URL=postgresql://postgres:postgres@supabase:5432/postgres
-      - SUPABASE_URL=https://app.frigate.ai/db
+      - SUPABASE_URL=http://supabase:54321
       - SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0
       - SUPABASE_SERVICE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU
       - SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU
@@ -87,12 +90,14 @@ services:
       dockerfile: apps/cad-service/Dockerfile
     environment:
       - PYTHONUNBUFFERED=1
-      - SUPABASE_URL=https://app.frigate.ai/db
+      - SUPABASE_URL=http://supabase:54321
       - SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU
       - SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU
       - REDIS_HOST=redis
       - REDIS_PORT=6379
+      - REDIS_URL=redis://redis:6379
       - API_URL=http://api:3001
+      - OPENCASCADE_PATH=/opt/opencascade
     depends_on:
       - supabase
       - redis

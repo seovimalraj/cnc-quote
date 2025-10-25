@@ -1,6 +1,5 @@
 import { ExceptionFilter, Catch, ArgumentsHost, HttpException, HttpStatus, Logger } from "@nestjs/common";
 import { Request, Response } from "express";
-import { RequestWithContext } from "../types/request-context";
 import { ErrorResponse } from "./error.types";
 
 @Catch()
@@ -13,8 +12,8 @@ export class GlobalErrorFilter implements ExceptionFilter {
     const request = ctx.getRequest<Request>();
 
     // Get request ID from request context
-    const requestId = (request as RequestWithContext).requestId || "unknown";
-    const requestLogger = (request as RequestWithContext).logger || this.logger;
+  const requestId = (request as any).requestId || "unknown";
+  const requestLogger = (request as any).logger || this.logger;
 
     // Determine status code and error details
     interface ErrorResponse {
@@ -53,16 +52,23 @@ export class GlobalErrorFilter implements ExceptionFilter {
     };
 
     // Log the error
-    requestLogger.error({
-      msg: "Request error",
-      error: normalizedError,
-      status,
-      url: request.url,
-      method: request.method,
-      body: request.body,
-      params: request.params,
-      query: request.query,
-    });
+    try {
+      // Prefer structured logging when available
+      (requestLogger as any).error?.(
+        {
+          error: normalizedError,
+          status,
+          url: request.url,
+          method: request.method,
+          body: request.body,
+          params: request.params,
+          query: request.query,
+        },
+        'Request error',
+      );
+    } catch {
+      this.logger.error(`Request error ${status} ${request.method} ${request.url}`, error.stack);
+    }
 
     // Send normalized response
     response.status(status).json(normalizedError);

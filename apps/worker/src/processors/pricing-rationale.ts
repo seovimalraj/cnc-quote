@@ -1,13 +1,13 @@
 import { Job } from 'bullmq';
 import { SpanStatusCode, trace } from '@opentelemetry/api';
-import { ContractsV1 } from '@cnc-quote/shared';
+import type { PricingRationaleSummaryJobV1 } from '@cnc-quote/shared/dist/contracts/v1';
 import { getSupabaseClient } from '../lib/supabase.js';
 import { getRedisClient } from '../lib/redis.js';
 import { logger } from '../lib/logger.js';
 import { PricingRationaleService } from '../services/pricing-rationale.service.js';
 import { incrementPricingRationaleFailure, recordPricingRationaleLatency } from '../lib/pricing-rationale-metrics.js';
 
-export type PricingRationalePayload = ContractsV1.PricingRationaleSummaryJobV1;
+export type PricingRationalePayload = PricingRationaleSummaryJobV1;
 
 export async function processPricingRationale(job: Job<PricingRationalePayload>) {
   const tracer = trace.getTracer('worker');

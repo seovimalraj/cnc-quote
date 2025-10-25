@@ -2,9 +2,9 @@ import { Body, Controller, Param, Post, Req, UseGuards } from '@nestjs/common';
 import { Request } from 'express';
 import { InvitesService } from './invites.service';
 import { InviteDtoSchema } from '../orgs/dto/invite.dto';
-import { RbacGuard } from '../../auth/rbac.middleware';
-import { JwtAuthGuard } from '../../auth/jwt.guard';
-import { OrgGuard } from '../../auth/org.guard';
+import { RbacGuard } from '../auth/rbac.middleware';
+import { JwtAuthGuard } from '../auth/jwt.guard';
+import { OrgGuard } from '../auth/org.guard';
 
 @Controller()
 @UseGuards(JwtAuthGuard, OrgGuard)

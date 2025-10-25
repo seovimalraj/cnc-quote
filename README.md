@@ -17,7 +17,6 @@ A comprehensive CNC manufacturing quote generation and DFM (Design for Manufactu
 - [🌐 Frontend Features](#-frontend-features)
 - [🔒 Security](#-security)
 - [📊 Monitoring & Analytics](#-monitoring--analytics)
-- [🧪 Testing](#-testing)
 - [🚀 Deployment](#-deployment)
 - [🛠️ Troubleshooting](#️-troubleshooting)
 - [🤝 Contributing](#-contributing)
@@ -46,10 +45,6 @@ A comprehensive CNC manufacturing quote generation and DFM (Design for Manufactu
 - **Manual Review System**: Flag complex parts for human review
 - **Price Override**: Admin capability to adjust pricing
   
-#### Phase 1 (Completed) – Foundational Enhancements Toward Xometry Parity
-
-Phase 1 established a transparent, extensible pricing & preview core:
-
 - ✅ Stateless multi-part Quote Preview API (`QuotePreviewService`) returning per-line unit/total price, complexity score, and lead time
 - ✅ Shared Catalog Snapshot (materials, finishes, processes, machines) with deterministic version tag
 - ✅ Shared Cost Model Types & Pricing Compute Utility (`pricing.compute.ts`) producing normalized breakdown fields (material, machining, finish, setup, inspection, overhead, margin)
@@ -64,23 +59,28 @@ These foundations unlocked Phase 2 without structural refactors.
 
 Focus: richer pricing exploration & user-visible economic levers.
 
-Delivered so far:
-- ✅ Price Tiers surfaced (e.g. standard vs expedited) with selectable tier impacting displayed unit / total price per line
-- ✅ Quantity Matrix generation (e.g. 1 / 5 / 10 / 25) returned in preview response for each part for ladder-style selection
 - ✅ UI quantity & tier selectors wired—changing either updates extended price + aggregate metrics
 - ✅ Aggregate lead time & price delta visualization (baseline vs selected tier / quantity) with per-line delta badges
 - ✅ Revision persistence scaffolding retained for upcoming history view integration
 - ✅ Extended shared types (`catalog.types.ts`) to include `price_tiers`, `quantity_matrix`, and structured lead time tier definitions
-- ✅ Consolidated pricing compute tests ensure stability as matrices & tiers expand
 
 Quote Revision Persistence (now active):
 ```
-GET  /api/quotes/:id/revisions          # List revisions (desc revision_number)
-POST /api/quotes/:id/revisions          # Create draft revision (optionally supply diff_summary)
-POST /api/quotes/revisions/:revisionId/apply  # Mark revision applied (future: materialize state)
-```
 `quote_revisions` table fields: `id, quote_id, revision_number, status, reason, created_by, diff_summary(jsonb), created_at, applied_at` (+ RLS policies for org membership).
 Shared diff helper: `computeQuoteDiffSummaryV1(prev, curr)` (shallow pricing + item count/status deltas).
+
+## Instant Quote Authentication Gate
+
+The route `/instant-quote` is now gated.
+
+- Not signed in: shows a landing page with sign-in/sign-up CTAs.
+- Signed in (Supabase session present): renders the full Instant Quote workspace.
+
+Required environment variables for the web app:
+
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- `NEXT_PUBLIC_API_URL` (or `API_URL`) for server-side proxy to the API
 
 Upcoming (Phase 2 remaining scope):
 - Persist actual quote revisions to storage + expose revision history endpoint (diff summary of cost buckets & lead time)

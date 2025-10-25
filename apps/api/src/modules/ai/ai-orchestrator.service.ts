@@ -81,10 +81,10 @@ export class AIOrchestrator {
     try {
       // Run all analyses in parallel for speed
       const [leadTime, quality, price, similarQuotes, aiRecommendations] = await Promise.all([
-        // ML Predictions
-        this.mlPredictionsService.predictLeadTime(partData),
-        this.mlPredictionsService.predictQuality(partData),
-        this.mlPredictionsService.predictPrice(partData, historicalQuotes),
+        // ML Predictions (casting to any to tolerate feature shape variants during migration)
+        this.mlPredictionsService.predictLeadTime(partData as any),
+        this.mlPredictionsService.predictQuality(partData as any),
+        this.mlPredictionsService.predictPrice(partData as any, historicalQuotes as any),
 
         // Semantic search for similar quotes
         historicalQuotes
@@ -106,9 +106,9 @@ export class AIOrchestrator {
           material: partData.material,
           dimensions: partData.dimensions,
           features: this.extractFeatureList(partData.features),
-          tolerance: partData.tolerance,
-          finish: partData.finish,
-          quantity: partData.quantity,
+          tolerance: (partData as any).tolerance,
+          finish: (partData as any).finish,
+          quantity: (partData as any).quantity,
         }),
       ]);
 

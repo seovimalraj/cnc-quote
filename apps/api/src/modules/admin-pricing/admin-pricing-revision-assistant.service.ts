@@ -7,15 +7,38 @@ import {
   Injectable,
   Logger,
   NotFoundException,
-  TooManyRequestsException,
+  HttpException,
+  HttpStatus,
 } from '@nestjs/common';
 import { Queue } from 'bullmq';
 import { v4 as uuidv4 } from 'uuid';
 import { z } from 'zod';
 import { ContractsV1, AdminPricingConfigSchema, sanitizePromptString } from '@cnc-quote/shared';
+// Derive assistant types from shared zod schemas (avoids deep import runtime issues)
+type AdminPricingRevisionAssistantRequestV1 = z.infer<
+  typeof ContractsV1.AdminPricingRevisionAssistantRequestSchemaV1
+>;
+type AdminPricingRevisionAssistantAdjustmentV1 = z.infer<
+  typeof ContractsV1.AdminPricingRevisionAssistantAdjustmentSchemaV1
+>;
+type AdminPricingRevisionAssistantApprovalDecisionV1 = z.infer<
+  typeof ContractsV1.AdminPricingRevisionAssistantApprovalDecisionSchemaV1
+>;
+type AdminPricingRevisionDualControlStateV1 = z.infer<
+  typeof ContractsV1.AdminPricingRevisionDualControlStateSchemaV1
+>;
+type AdminPricingRevisionAssistantApprovalV1 = z.infer<
+  typeof ContractsV1.AdminPricingRevisionAssistantApprovalSchemaV1
+>;
+type AdminPricingRevisionAssistantApprovalRequestV1 = z.infer<
+  typeof ContractsV1.AdminPricingRevisionAssistantApprovalRequestSchemaV1
+>;
+type AdminPricingRevisionAssistantRunV1 = z.infer<
+  typeof ContractsV1.AdminPricingRevisionAssistantRunSchemaV1
+>;
 import { SupabaseService } from '../../lib/supabase/supabase.service';
 import { CacheService } from '../../lib/cache/cache.service';
-import { AuditService } from '../../audit/audit.service';
+import { AuditService } from '../audit-legacy/audit.service';
 import { AdminFeatureFlagsService } from '../admin-feature-flags/admin-feature-flags.service';
 import { AdminPricingService } from './admin-pricing.service';
 import {
@@ -47,13 +70,13 @@ type AdminPricingConfig = z.infer<typeof AdminPricingConfigSchema>;
 
 interface RevisionRunRow {
   id: string;
-  status: ContractsV1.AdminPricingRevisionAssistantStatusV1;
+  status: AdminPricingRevisionAssistantRunV1['status'];
   instructions: string;
   focus_areas: string[] | null;
   base_version: string;
   base_config: AdminPricingConfig;
   proposal_config?: AdminPricingConfig | null;
-  adjustments?: ContractsV1.AdminPricingRevisionAssistantAdjustmentV1[] | null;
+  adjustments?: AdminPricingRevisionAssistantAdjustmentV1[] | null;
   diff_summary?: string[] | null;
   notes?: string | null;
   error_message?: string | null;
@@ -66,7 +89,7 @@ interface RevisionRunRow {
   updated_at: string;
   started_at?: string | null;
   completed_at?: string | null;
-  approval_state?: ContractsV1.AdminPricingRevisionDualControlStateV1 | null;
+  approval_state?: AdminPricingRevisionDualControlStateV1 | null;
   approval_required?: boolean | null;
   proposal_digest?: string | null;
 }
@@ -75,7 +98,7 @@ interface ApprovalRow {
   id: string;
   run_id: string;
   org_id: string;
-  decision: ContractsV1.AdminPricingRevisionAssistantApprovalDecisionV1;
+  decision: AdminPricingRevisionAssistantApprovalDecisionV1;
   approved_by: string;
   approved_by_email?: string | null;
   approved_role?: string | null;
@@ -100,16 +123,16 @@ export class AdminPricingRevisionAssistantService {
   ) {}
 
   async requestProposal(
-    payload: ContractsV1.AdminPricingRevisionAssistantRequestV1,
+    payload: AdminPricingRevisionAssistantRequestV1,
     user: any,
     traceId?: string,
-  ): Promise<ContractsV1.AdminPricingRevisionAssistantRunV1> {
+  ): Promise<AdminPricingRevisionAssistantRunV1> {
     const startedAt = Date.now();
     const orgId = this.resolveOrgId(user);
     const userId = this.resolveUserId(user);
     const requesterEmail = this.resolveUserEmail(user);
     let success = false;
-    let runContract: ContractsV1.AdminPricingRevisionAssistantRunV1 | undefined;
+  let runContract: AdminPricingRevisionAssistantRunV1 | undefined;
 
     return this.tracer.startActiveSpan('ai.assistant.request', async (span) => {
       span.setAttribute('ai.feature_flag', FEATURE_FLAG_KEY);
@@ -274,7 +297,7 @@ export class AdminPricingRevisionAssistantService {
     });
   }
 
-  async getRun(runId: string, user: any): Promise<ContractsV1.AdminPricingRevisionAssistantRunV1> {
+  async getRun(runId: string, user: any): Promise<AdminPricingRevisionAssistantRunV1> {
     const orgId = this.resolveOrgId(user);
     if (!orgId) {
       throw new ForbiddenException('Organization context required to view revision assistant run');
@@ -291,7 +314,7 @@ export class AdminPricingRevisionAssistantService {
     return this.mapRowToContract(row, approvals[runId] ?? []);
   }
 
-  async listRuns(user: any, limit = 10): Promise<ContractsV1.AdminPricingRevisionAssistantRunV1[]> {
+  async listRuns(user: any, limit = 10): Promise<AdminPricingRevisionAssistantRunV1[]> {
     const orgId = this.resolveOrgId(user);
     if (!orgId) {
       throw new ForbiddenException('Organization context required to list revision assistant runs');
@@ -316,15 +339,15 @@ export class AdminPricingRevisionAssistantService {
 
     return rows
       .map((row) => this.mapRowToContract(row, approvals[row.id] ?? []))
-      .filter(Boolean) as ContractsV1.AdminPricingRevisionAssistantRunV1[];
+      .filter(Boolean) as AdminPricingRevisionAssistantRunV1[];
   }
 
   async recordApproval(
     runId: string,
-    payload: ContractsV1.AdminPricingRevisionAssistantApprovalRequestV1,
+    payload: AdminPricingRevisionAssistantApprovalRequestV1,
     user: any,
     traceId?: string,
-  ): Promise<ContractsV1.AdminPricingRevisionAssistantRunV1> {
+  ): Promise<AdminPricingRevisionAssistantRunV1> {
     const orgId = this.resolveOrgId(user);
     if (!orgId) {
       throw new ForbiddenException('Organization context required to approve revision assistant run');
@@ -496,7 +519,7 @@ export class AdminPricingRevisionAssistantService {
     return Object.fromEntries(map.entries());
   }
 
-  private mapApprovalRowToContract(row: ApprovalRow): ContractsV1.AdminPricingRevisionAssistantApprovalV1 {
+  private mapApprovalRowToContract(row: ApprovalRow): AdminPricingRevisionAssistantApprovalV1 {
     return {
       approvalId: row.id,
       runId: row.run_id,
@@ -512,7 +535,7 @@ export class AdminPricingRevisionAssistantService {
   private deriveApprovalState(
     row: RevisionRunRow,
     approvals: ApprovalRow[],
-  ): ContractsV1.AdminPricingRevisionDualControlStateV1 {
+  ): AdminPricingRevisionDualControlStateV1 {
     if (row.approval_required === false || !row.proposal_config) {
       return 'not_required';
     }
@@ -546,7 +569,7 @@ export class AdminPricingRevisionAssistantService {
     }
   }
 
-  private mapRowToContract(row: RevisionRunRow, approvals: ApprovalRow[] = []): ContractsV1.AdminPricingRevisionAssistantRunV1 {
+  private mapRowToContract(row: RevisionRunRow, approvals: ApprovalRow[] = []): AdminPricingRevisionAssistantRunV1 {
     let proposalConfig: AdminPricingConfig | undefined;
     if (row.proposal_config) {
       const parsed = AdminPricingConfigSchema.safeParse(row.proposal_config);
@@ -560,7 +583,7 @@ export class AdminPricingRevisionAssistantService {
     }
 
     const adjustments = Array.isArray(row.adjustments)
-      ? (row.adjustments as ContractsV1.AdminPricingRevisionAssistantAdjustmentV1[])
+      ? (row.adjustments as AdminPricingRevisionAssistantAdjustmentV1[])
       : undefined;
 
   const dualControlState = this.deriveApprovalState(row, approvals);
@@ -634,8 +657,8 @@ export class AdminPricingRevisionAssistantService {
           threshold: RATE_LIMIT_MINUTE_THRESHOLD,
           count: minuteCount,
         });
-        incrementRevisionRateLimited({ ...attributes, window: 'minute' });
-        throw new TooManyRequestsException('Pricing revision assistant rate limit exceeded');
+  incrementRevisionRateLimited({ ...attributes, window: 'minute' });
+  throw new HttpException('Pricing revision assistant rate limit exceeded', HttpStatus.TOO_MANY_REQUESTS);
       }
 
       const hourKey = this.buildRateLimitKey(params.orgId, 'hour');
@@ -649,11 +672,11 @@ export class AdminPricingRevisionAssistantService {
           threshold: RATE_LIMIT_HOURLY_THRESHOLD,
           count: hourCount,
         });
-        incrementRevisionRateLimited({ ...attributes, window: 'hour' });
-        throw new TooManyRequestsException('Pricing revision assistant rate limit exceeded (per hour)');
+  incrementRevisionRateLimited({ ...attributes, window: 'hour' });
+  throw new HttpException('Pricing revision assistant rate limit exceeded (per hour)', HttpStatus.TOO_MANY_REQUESTS);
       }
     } catch (error) {
-      if (error instanceof TooManyRequestsException) {
+      if (error instanceof HttpException && error.getStatus && error.getStatus() === HttpStatus.TOO_MANY_REQUESTS) {
         throw error;
       }
       this.logger.warn('Failed to enforce pricing revision assistant rate limit', error);

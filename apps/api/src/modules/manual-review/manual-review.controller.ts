@@ -1,7 +1,7 @@
 import { Controller, Get, Post, Put, Delete, Body, Param, Query } from "@nestjs/common";
 import { ApiTags, ApiOperation, ApiResponse } from "@nestjs/swagger";
 import { ManualReviewService } from "./manual-review.service";
-import { ReqUser } from "../../auth/req-user.decorator";
+import { ReqUser } from "../auth/req-user.decorator";
 import {
   ManualReviewRule,
   CreateRuleDto,

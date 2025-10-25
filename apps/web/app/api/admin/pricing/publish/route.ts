@@ -11,7 +11,7 @@ export async function POST(request: NextRequest) {
     headers['content-type'] = contentType;
   }
 
-  const upstream = await proxyFetch(request, resolveApiUrl('/admin/pricing/publish'), {
+  const upstream = await proxyFetch(request, resolveApiUrl('/v1/admin/pricing/publish'), {
     method: 'POST',
     body: body.length > 0 ? body : undefined,
     headers,

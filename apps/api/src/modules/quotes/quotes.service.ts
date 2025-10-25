@@ -715,6 +715,51 @@ export class QuotesService {
     return quote;
   }
 
+  /**
+   * If a quote has current pricing (all parts with pricing.status === 'ready') and it's not expired
+   * or terminal, transition it to 'ready'. If currently in 'draft', it will advance to 'processing' first.
+   * Best-effort; safe to call repeatedly (idempotent via transitions enforcement).
+   */
+  async markReadyIfCurrent(quoteId: string): Promise<boolean> {
+    try {
+      const { data: quote, error } = await this.supabase.client
+        .from('quotes')
+        .select('id,status,expires_at,items:quote_items(id,config_json)')
+        .eq('id', quoteId)
+        .single();
+      if (error) throw error;
+
+      const status: ContractsV1.QuoteSummaryV1['status'] = (quote as any)?.status ?? 'draft';
+      if (['sent', 'accepted', 'rejected', 'expired', 'cancelled', 'converted'].includes(status)) {
+        return false;
+      }
+      const expiresAt: string | null = (quote as any)?.expires_at ?? null;
+      if (expiresAt && new Date(expiresAt).getTime() <= Date.now()) {
+        return false;
+      }
+
+      const items: Array<{ id: string; config_json: any }> = ((quote as any)?.items ?? []) as any;
+      if (!Array.isArray(items) || items.length === 0) return false;
+
+      const allReady = items.every((it) => {
+        const cfg = it?.config_json ?? {};
+        const pricing = cfg?.pricing ?? {};
+        return pricing?.status === 'ready';
+      });
+      if (!allReady) return false;
+
+      // Transition flow
+      if (status === 'draft') {
+        await this.transitionQuoteStatus(quoteId, 'processing');
+      }
+      await this.transitionQuoteStatus(quoteId, 'ready');
+      return true;
+    } catch (err) {
+      this.logger.debug(`markReadyIfCurrent skipped for ${quoteId}: ${(err as Error)?.message}`);
+      return false;
+    }
+  }
+
   private async trackQuoteAnalytics(event: QuoteAnalyticsEvent): Promise<void> {
     if (!this.analyticsService) return;
     try {

@@ -1,8 +1,8 @@
 import { Controller, Post, Body, UseGuards, Get, Param, Query } from "@nestjs/common";
 import { CadService } from "./cad.service";
-import { JwtAuthGuard } from "../../auth/jwt.guard";
-import { OrgGuard } from "../../auth/org.guard";
-import { User } from "../../auth/user.decorator";
+import { JwtAuthGuard } from "../auth/jwt.guard";
+import { OrgGuard } from "../auth/org.guard";
+import { User } from "../auth/user.decorator";
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiQuery } from "@nestjs/swagger";
 import { QueueAnalysisDto, GetAnalysisResultDto, GetPreviewDto, TaskResponseDto } from "./cad.dto";
 import { CadAnalysisResult, CadAnalysisRequest, CadAnalysisResult as CadAnalysisResultType, CadPreviewRequest, CadPreviewResult, CadTaskStatus } from "./cad.types";

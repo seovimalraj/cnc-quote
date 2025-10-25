@@ -16,9 +16,9 @@ import {
   Logger,
 } from '@nestjs/common';
 import { FinishesService } from '../finishes/finishes.service';
-import { AuthGuard } from '../../guards/auth.guard';
-import { RbacGuard } from '../../guards/rbac.guard';
-import { RequirePermissions } from '../../decorators/permissions.decorator';
+import { JwtAuthGuard } from '../auth/jwt.guard';
+import { RbacAuthGuard } from '../auth/rbac-auth.guard';
+import { Policies } from '../auth/policies.decorator';
 import { FormulaEvaluator } from '../../common/formula/formula-evaluator';
 import { z } from 'zod';
 
@@ -57,7 +57,7 @@ const TestFormulaRequestSchema = z.object({
     setup_minutes: z.number().optional(),
     run_minutes_per_part: z.number().optional(),
     batch_size: z.number().optional(),
-    part_class: z.string().optional(),
+  part_class: z.enum(['simple', 'complex', 'delicate']).optional(),
   }),
 });
 
@@ -66,7 +66,7 @@ type UpdateFinishOperationDto = z.infer<typeof UpdateFinishOperationSchema>;
 type TestFormulaRequest = z.infer<typeof TestFormulaRequestSchema>;
 
 @Controller('admin/finish-operations')
-@UseGuards(AuthGuard, RbacGuard)
+@UseGuards(JwtAuthGuard, RbacAuthGuard)
 export class AdminFinishOperationsController {
   private readonly logger = new Logger(AdminFinishOperationsController.name);
 
@@ -80,7 +80,7 @@ export class AdminFinishOperationsController {
    * List all finish operations (admin view, includes inactive)
    */
   @Get()
-  @RequirePermissions('admin:finishes:read')
+  @Policies({ action: 'view', resource: 'finishes' })
   async listAll(@Query('process') process?: string) {
     const filters: any = {};
     if (process) filters.process = process;
@@ -95,7 +95,7 @@ export class AdminFinishOperationsController {
    * Get single operation by ID
    */
   @Get(':id')
-  @RequirePermissions('admin:finishes:read')
+  @Policies({ action: 'view', resource: 'finishes' })
   async getById(@Param('id') id: string) {
     const { data, error } = await this.finishesService['supabase'].client
       .from('finish_operations')
@@ -115,9 +115,9 @@ export class AdminFinishOperationsController {
    * POST /admin/finish-operations
    * Create new finish operation
    */
-  @Post()
-  @RequirePermissions('admin:finishes:write')
-  async create(@Body() body: CreateFinishOperationDto) {
+      @Post('evaluate')
+  @Policies({ action: 'view', resource: 'finishes' })
+  async evaluate(@Body() body: any) {
     try {
       CreateFinishOperationSchema.parse(body);
     } catch (err: any) {
@@ -166,9 +166,9 @@ export class AdminFinishOperationsController {
    * PUT /admin/finish-operations/:id
    * Update finish operation
    */
-  @Put(':id')
-  @RequirePermissions('admin:finishes:write')
-  async update(@Param('id') id: string, @Body() body: UpdateFinishOperationDto) {
+    @Put(':id')
+  @Policies({ action: 'update', resource: 'finishes' })
+  async update(@Param('id') id: string, @Body() body: any) {
     try {
       UpdateFinishOperationSchema.parse(body);
     } catch (err: any) {
@@ -238,7 +238,7 @@ export class AdminFinishOperationsController {
    * Delete finish operation (soft delete via active flag)
    */
   @Delete(':id')
-  @RequirePermissions('admin:finishes:write')
+  @Policies({ action: 'delete', resource: 'finishes' })
   async delete(@Param('id') id: string) {
     try {
       const { error } = await this.finishesService['supabase'].client
@@ -261,7 +261,7 @@ export class AdminFinishOperationsController {
    * Test formula evaluation with context
    */
   @Post('test-formula')
-  @RequirePermissions('admin:finishes:read')
+  @Policies({ action: 'view', resource: 'finishes' })
   async testFormula(@Body() body: TestFormulaRequest) {
     try {
       TestFormulaRequestSchema.parse(body);

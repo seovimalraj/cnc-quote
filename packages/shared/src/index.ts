@@ -63,6 +63,8 @@ export {
 	computeQuoteDiffSummaryV1,
 	QUOTE_RATIONALE_CACHE_PREFIX_V1,
 	buildQuoteRationaleCacheKeyV1,
+  QUOTE_RATIONALE_CACHE_TTL_SECONDS,
+  buildQuoteRationaleRevisionCacheKeyV1,
 } from './contracts';
 export {
 	toQuoteSummaryV1,

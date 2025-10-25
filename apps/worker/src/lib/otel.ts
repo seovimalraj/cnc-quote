@@ -6,8 +6,6 @@
 import { NodeSDK } from '@opentelemetry/sdk-node';
 import { getNodeAutoInstrumentations } from '@opentelemetry/auto-instrumentations-node';
 import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-grpc';
-import { OTLPMetricExporter } from '@opentelemetry/exporter-metrics-otlp-grpc';
-import { PeriodicExportingMetricReader } from '@opentelemetry/sdk-metrics';
 import { Resource } from '@opentelemetry/resources';
 import { SemanticResourceAttributes } from '@opentelemetry/semantic-conventions';
 import { TraceIdRatioBasedSampler } from '@opentelemetry/sdk-trace-node';
@@ -41,26 +39,13 @@ export function initOtel(): void {
         url: config.otelEndpoint,
       }),
       
-      metricReader: new PeriodicExportingMetricReader({
-        exporter: new OTLPMetricExporter({
-          url: config.otelEndpoint,
-        }),
-        exportIntervalMillis: 60000,
-      }),
+      // metrics disabled for now to avoid version mismatch; traces remain enabled
       
       sampler: new TraceIdRatioBasedSampler(samplingRate),
       
       textMapPropagator: new W3CTraceContextPropagator(),
       
-      instrumentations: [
-        getNodeAutoInstrumentations({
-          '@opentelemetry/instrumentation-fs': { enabled: false },
-          '@opentelemetry/instrumentation-dns': { enabled: false },
-          '@opentelemetry/instrumentation-http': { enabled: true },
-          '@opentelemetry/instrumentation-bullmq': { enabled: true },
-          '@opentelemetry/instrumentation-redis-4': { enabled: true },
-        }),
-      ],
+      instrumentations: [getNodeAutoInstrumentations()],
     });
 
     sdk.start();

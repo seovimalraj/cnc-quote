@@ -10,11 +10,13 @@ interface PartListPanelProps {
   parts: Array<{ id: string; file_id?: string; status?: string; config_json?: any }>;
   loading?: boolean;
   orgId: string;
+  authToken?: string;
+  baseUrl?: string;
   onQuoteReady: (id: string) => void;
   onUploaded: (ctx: { quote_id?: string }) => void;
 }
 
-export function PartListPanel({ parts, loading, orgId, onQuoteReady, onUploaded }: PartListPanelProps) {
+export function PartListPanel({ parts, loading, orgId, authToken, baseUrl, onQuoteReady, onUploaded }: PartListPanelProps) {
   const { selectedPartId, selectAndFocus } = useInstantQuoteState();
   const pricingItems = usePricingStore(s => s.items);
   const perPartAlert = useMemo(() => {
@@ -38,7 +40,13 @@ export function PartListPanel({ parts, loading, orgId, onQuoteReady, onUploaded 
   }, [parts, pricingItems]);
   return (
     <div className="flex flex-col gap-4 h-full">
-      <MultiFileUpload orgId={orgId} baseUrl="" onQuoteReady={qid => onQuoteReady(qid)} onUploaded={onUploaded} />
+      <MultiFileUpload
+        orgId={orgId}
+        authToken={authToken}
+        baseUrl={baseUrl ?? ''}
+        onQuoteReady={qid => onQuoteReady(qid)}
+        onUploaded={onUploaded}
+      />
       <div className="rounded border border-gray-200 dark:border-gray-700 flex flex-col min-h-0 h-full">
         <div className="p-3 border-b border-gray-100 dark:border-gray-800">
           <h2 className="text-xs font-semibold tracking-wide text-gray-500">PARTS</h2>

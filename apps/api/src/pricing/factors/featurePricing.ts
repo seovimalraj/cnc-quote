@@ -18,7 +18,7 @@ export class FeaturePricingFactor implements Factor {
     try {
       // Extract features from geometry
       const extractionResult = await this.featureExtractor.extractFeatures(
-        cfg.geometry,
+        cfg.geometry as any,
         cfg.materialCode,
         cfg.processCode
       );
@@ -140,7 +140,7 @@ export class FeaturePricingFactor implements Factor {
 
     // Calculate adjustments for each feature type
     for (const [type, typeFeatures] of Object.entries(featureGroups)) {
-      const adjustment = this.getFeatureTypeAdjustment(type, typeFeatures, runningSubtotal);
+      const adjustment = this.getFeatureTypeAdjustment(type, typeFeatures as any[], runningSubtotal);
       if (adjustment) {
         adjustments.push(adjustment);
       }

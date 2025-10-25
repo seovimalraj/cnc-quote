@@ -76,6 +76,18 @@ function loadConfig(): Config {
     healthPort: process.env.HEALTH_PORT,
   };
 
+  // Provide safe defaults under test to avoid hard failures and allow unit tests to run
+  if (process.env.NODE_ENV === 'test') {
+    raw.modelGatewayUrl = raw.modelGatewayUrl || 'http://localhost:11434';
+    raw.modelServiceKeyset =
+      raw.modelServiceKeyset ||
+      JSON.stringify({ keys: [{ kid: 'test', privateKey: 'test', alg: 'RS256' }] });
+    raw.modelServiceActiveKeyId = raw.modelServiceActiveKeyId || 'test';
+    raw.modelServiceIssuer = raw.modelServiceIssuer || 'test-issuer';
+    raw.modelServiceAudience = raw.modelServiceAudience || 'test-audience';
+    raw.modelServiceTokenTtlSeconds = raw.modelServiceTokenTtlSeconds || '300';
+  }
+
   try {
     return configSchema.parse(raw);
   } catch (error) {

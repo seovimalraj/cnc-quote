@@ -23,5 +23,18 @@ for (const [key, value] of Object.entries(envDefaults)) {
 }
 
 if (!process.env.NODE_ENV) {
-	process.env.NODE_ENV = 'test';
+	(process as any).env.NODE_ENV = 'test';
 }
+
+// Route axios.create(...).post calls to the global axios.post so existing spies work in tests
+try {
+	// eslint-disable-next-line @typescript-eslint/no-var-requires
+		const axios = require('axios');
+		const originalCreate = axios.create;
+		axios.create = ((...args: any[]) => {
+			originalCreate(...args);
+			return {
+				post: (...postArgs: any[]) => axios.post(...postArgs),
+			};
+		}) as any;
+} catch {}

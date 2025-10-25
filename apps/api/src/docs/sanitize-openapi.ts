@@ -81,10 +81,11 @@ export function sanitizeOpenAPI(
       name: 'Proprietary',
       url: 'https://frigate.ai/terms',
     },
-    'x-logo': {
-      url: 'https://frigate.ai/logo.png',
-      altText: 'Frigate Logo',
-    },
+  } as any;
+  // Attach vendor extension logo field (not in InfoObject type)
+  (sanitized.info as any)['x-logo'] = {
+    url: 'https://frigate.ai/logo.png',
+    altText: 'Frigate Logo',
   };
 
   return sanitized;
@@ -270,8 +271,11 @@ function enforceErrorSchema(paths: Record<string, PathItemObject>): Record<strin
         for (const [status, response] of Object.entries(operation.responses)) {
           if (status.startsWith('4') || status.startsWith('5')) {
             // Replace with standard error schema reference
+            const desc = (typeof response === 'object' && response && 'description' in (response as any))
+              ? (response as any).description
+              : 'Error response';
             (operation.responses as any)[status] = {
-              description: response.description || 'Error response',
+              description: desc,
               content: {
                 'application/json': {
                   schema: {

@@ -3,11 +3,13 @@ import { BullModule } from "@nestjs/bullmq";
 import { ConfigModule, ConfigService } from "@nestjs/config";
 import { MODEL_LIFECYCLE_QUEUE } from "@cnc-quote/shared";
 
+const ENABLE_ADMIN_ASSISTANT = process.env.ENABLE_ADMIN_ASSISTANT === 'true';
+
 const QUEUE_NAMES = [
   "cad",
   "pricing",
   "pricing-rationale",
-  "admin-pricing-revision-assistant",
+  ...(ENABLE_ADMIN_ASSISTANT ? ["admin-pricing-revision-assistant"] : []),
   MODEL_LIFECYCLE_QUEUE,
   "email",
   "pdf",

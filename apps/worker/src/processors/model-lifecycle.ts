@@ -9,7 +9,7 @@ import { SpanStatusCode, trace } from '@opentelemetry/api';
 import { logger } from '../lib/logger.js';
 import { getSupabaseClient } from '../lib/supabase.js';
 import { ModelLifecycleService } from '../services/model-lifecycle.service.js';
-import type { ModelLifecycleJobV1 } from '@cnc-quote/shared';
+import type { ModelLifecycleJobV1 } from '@cnc-quote/shared/dist/ai/model-lifecycle.types';
 
 export type ModelLifecyclePayload = ModelLifecycleJobV1;
 

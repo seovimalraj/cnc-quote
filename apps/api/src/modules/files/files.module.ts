@@ -1,11 +1,13 @@
 import { Module } from '@nestjs/common';
 import { FilesController } from './files.controller';
+import { FilesService } from './files.service';
 import { StorageService } from './storage.service';
-import { SupabaseService } from '../../lib/supabase/supabase.service';
+import { SupabaseModule } from '../../lib/supabase/supabase.module';
 
 @Module({
+  imports: [SupabaseModule],
   controllers: [FilesController],
-  providers: [StorageService, SupabaseService],
-  exports: [StorageService]
+  providers: [FilesService, StorageService],
+  exports: [FilesService, StorageService]
 })
 export class FilesModule {}

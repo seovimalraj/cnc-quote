@@ -10,7 +10,7 @@
   ],
   "sideEffects": false,
   "scripts": {
-  "build": "tsup",
+  "build": "tsup && tsc -p tsconfig.build.json",
   "dev": "tsup --watch",
   "lint": "eslint \"src/**/*.ts\"",
   "type-check": "tsc --noEmit",

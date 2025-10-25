@@ -1,14 +1,14 @@
 import { Controller, Get, Post, Put, Patch, Body, Param, UseGuards, Query, Res, Req } from "@nestjs/common";
 import { Response } from "express";
-import { JwtAuthGuard } from "../../auth/jwt.guard";
-import { OrgGuard } from "../../auth/org.guard";
+import { JwtAuthGuard } from "../auth/jwt.guard";
+import { OrgGuard } from "../auth/org.guard";
 import { QuotesService } from "./quotes.service";
 import { UpdateQuoteDto } from "./quotes.dto";
 import { QuotePreviewService } from './quote-preview.service';
 import { QuoteRevisionsService } from './quote-revisions.service';
 import { MultiPartQuotePreviewRequest, ContractsV1 } from '@cnc-quote/shared';
-import { PoliciesGuard } from '../../auth/policies.guard';
-import { Policies } from '../../auth/policies.decorator';
+import { PoliciesGuard } from '../auth/policies.guard';
+import { Policies } from '../auth/policies.decorator';
 
 @Controller("api/quotes")
 @UseGuards(JwtAuthGuard, OrgGuard, PoliciesGuard)

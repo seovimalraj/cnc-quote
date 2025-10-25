@@ -1,4 +1,4 @@
-import { Module } from "@nestjs/common";
+import { Module, forwardRef } from "@nestjs/common";
 import { PricingService } from "./pricing.service";
 import { PricingEngineV2Service } from "./pricing-engine-v2.service";
 import { PricingController } from "./pricing.controller";
@@ -18,9 +18,8 @@ import { TaxModule } from "../../tax/tax.module";
 import { MaterialComparisonService } from "./material-comparison.service";
 import { MaterialComparisonController } from "./material-comparison.controller";
 import { CatalogModule } from "../catalog/catalog.module";
-import { AdminPricingModule } from "../admin-pricing/admin-pricing.module";
 import { NotifyModule } from "../notify/notify.module";
-import { PricingConfigService } from "./pricing-config.service";
+// PricingConfigService moved to AdminPricingModule to break circular dependency
 import { PricingComplianceService } from "./pricing-compliance.service";
 import { QueueModule } from "../../queues";
 import { AdminFeatureFlagsModule } from "../admin-feature-flags/admin-feature-flags.module";
@@ -28,9 +27,24 @@ import { AIModule } from "../ai/ai.module";
 import { PricingComplianceMlAssistService } from "./pricing-compliance-ml-assist.service";
 import { PricingComplianceMlAssistProcessor } from "./pricing-compliance-ml-assist.processor";
 import { PricingRationaleSummaryService } from "./pricing-rationale-summary.service";
+import { PricingCoreModule } from "../pricing-core/pricing-core.module";
+import { AdminPricingModule } from "../admin-pricing/admin-pricing.module";
 
 @Module({
-  imports: [SupabaseModule, CacheModule, ManualReviewModule, GeometryModule, TaxModule, CatalogModule, AdminPricingModule, QueueModule, NotifyModule, AdminFeatureFlagsModule, AIModule],
+  imports: [
+    SupabaseModule,
+    CacheModule,
+    ManualReviewModule,
+    GeometryModule,
+    TaxModule,
+    CatalogModule,
+    PricingCoreModule, // Import shared pricing infrastructure (includes queue)
+    forwardRef(() => AdminPricingModule), // Use forwardRef to break circular dependency
+    QueueModule,
+    NotifyModule,
+    AdminFeatureFlagsModule,
+    AIModule,
+  ],
   controllers: [PricingController, ProcessRecommendationController, MaterialComparisonController],
   providers: [
     PricingService,
@@ -47,7 +61,7 @@ import { PricingRationaleSummaryService } from "./pricing-rationale-summary.serv
     ToleranceCostBookRepository,
     ProcessRecommendationService,
     MaterialComparisonService,
-    PricingConfigService,
+    // PricingConfigService moved to AdminPricingModule (imported via AdminPricingModule)
   ],
   exports: [
     PricingService,
@@ -61,7 +75,7 @@ import { PricingRationaleSummaryService } from "./pricing-rationale-summary.serv
     PricingCacheRepository,
     ToleranceCostBookRepository,
     ProcessRecommendationService,
-    PricingConfigService,
+    // PricingConfigService exported by AdminPricingModule
   ],
 })
 export class PricingModule {}

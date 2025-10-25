@@ -13,8 +13,8 @@ import {
 } from "@nestjs/common";
 import { ApiBearerAuth, ApiParam, ApiQuery, ApiTags } from "@nestjs/swagger";
 import type { Request, Response } from "express";
-import { JwtAuthGuard } from "../../auth/jwt.guard";
-import { OrgGuard } from "../../auth/org.guard";
+import { JwtAuthGuard } from "../auth/jwt.guard";
+import { OrgGuard } from "../auth/org.guard";
 import { ReviewService } from "./review.service";
 
 @ApiTags("Review Management")

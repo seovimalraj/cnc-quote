@@ -1,10 +1,10 @@
 import { Controller, Get, Post, Param, Query, UseGuards } from "@nestjs/common";
 import { ApiTags, ApiBearerAuth } from "@nestjs/swagger";
-import { JwtAuthGuard } from "../../auth/jwt.guard";
-import { OrgGuard } from "../../auth/org.guard";
+import { JwtAuthGuard } from "../auth/jwt.guard";
+import { OrgGuard } from "../auth/org.guard";
 import { QueueMonitorService } from "./queue-monitor.service";
-import { RolesGuard } from "../../auth/roles.guard";
-import { Roles } from "../../auth/roles.decorator";
+import { RolesGuard } from "../auth/roles.guard";
+import { Roles } from "../auth/roles.decorator";
 
 @ApiTags("Queue Monitor")
 @Controller("admin")
