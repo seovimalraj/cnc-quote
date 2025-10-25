@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { SupabaseService } from "../../../lib/supabase/supabase.service";
 import { ContractsV1 } from '@cnc-quote/shared';
 import { MaterialsService } from './materials.service';
-import { FinishesService } from './finishes.service';
+import { CatalogFinishesService } from './finishes.service';
 
 export interface MaterialCatalogItem {
   id: string;
@@ -30,7 +30,7 @@ export class CatalogService {
   constructor(
     private readonly supabase: SupabaseService,
     private readonly materialsService: MaterialsService,
-    private readonly finishesService: FinishesService,
+    private readonly finishesService: CatalogFinishesService,
   ) {}
 
   async getCatalogStats(orgId: string) {

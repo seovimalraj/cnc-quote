@@ -3,7 +3,7 @@ import { SupabaseService } from "../../../lib/supabase/supabase.service";
 import { Finish } from "@cnc-quote/shared";
 
 @Injectable()
-export class FinishesService {
+export class CatalogFinishesService {
   constructor(private readonly supabase: SupabaseService) {}
 
   async getFinishes(filters: any = {}) {

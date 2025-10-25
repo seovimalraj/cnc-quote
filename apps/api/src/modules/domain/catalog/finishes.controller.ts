@@ -11,7 +11,7 @@ import {
   HttpException,
   HttpStatus,
 } from '@nestjs/common';
-import { FinishesService } from './finishes.service';
+import { CatalogFinishesService } from './finishes.service';
 import { AuthGuard } from '@nestjs/passport';
 import { OrgGuard } from "../../core/auth/org.guard";
 import { ReqUser } from "../../core/auth/req-user.decorator";
@@ -20,7 +20,7 @@ import { Finish } from "@cnc-quote/shared";
 @Controller('admin/finishes')
 @UseGuards(AuthGuard, OrgGuard)
 export class FinishesController {
-  constructor(private readonly finishesService: FinishesService) {}
+  constructor(private readonly finishesService: CatalogFinishesService) {}
 
   @Get()
   async getFinishes(@Query() filters: any) {

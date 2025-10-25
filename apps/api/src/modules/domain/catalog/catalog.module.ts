@@ -5,7 +5,7 @@ import { MachinesService } from './machines.service';
 import { MachinesController } from './machines.controller';
 import { MaterialsService } from './materials.service';
 import { MaterialsController } from './materials.controller';
-import { FinishesService } from './finishes.service';
+import { CatalogFinishesService } from './finishes.service';
 import { FinishesController } from './finishes.controller';
 import { InspectionTemplatesService } from './inspection-templates.service';
 import { InspectionTemplatesController } from './inspection-templates.controller';
@@ -28,7 +28,7 @@ import { CacheModule } from "../../../lib/cache/cache.module";
     CatalogService,
     MachinesService,
     MaterialsService,
-    FinishesService,
+    CatalogFinishesService,
     InspectionTemplatesService,
     QapTemplatesService,
   ],
@@ -36,7 +36,7 @@ import { CacheModule } from "../../../lib/cache/cache.module";
     CatalogService,
     MachinesService,
     MaterialsService,
-    FinishesService,
+    CatalogFinishesService,
     InspectionTemplatesService,
     QapTemplatesService,
   ],
