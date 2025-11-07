@@ -1,7 +1,10 @@
 'use client';
 
 import DefaultLayout from '@/components/Layouts/DefaultLayout';
-import { useState } from 'react';
+import { useState, useEffect, useMemo } from 'react';
+import { api } from '@/lib/api';
+import { toast } from 'react-hot-toast';
+import { formatDate } from '@/lib/format';
 import {
   DocumentDuplicateIcon,
   ClockIcon,
@@ -162,14 +165,6 @@ const CustomerPortal = () => {
       style: 'currency',
       currency: 'USD',
     }).format(amount);
-  };
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-    });
   };
 
   return (

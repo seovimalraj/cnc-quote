@@ -1,11 +1,10 @@
 import { Global, Module } from '@nestjs/common';
 import { PolicyEngine } from './policy.engine';
-import { SupabaseModule } from "../../../lib/supabase/supabase.module";
 import { PolicySeeder } from './policies.seed';
 
 @Global()
 @Module({
-  imports: [SupabaseModule],
+  imports: [], // SupabaseModule removed - it's @Global
   providers: [PolicyEngine, PolicySeeder],
   exports: [PolicyEngine],
 })

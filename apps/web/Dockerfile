@@ -23,23 +23,17 @@ FROM node:20-alpine AS production
 
 WORKDIR /app
 
-# Install production dependencies
-RUN apk add --no-cache curl && npm install -g pnpm
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
-COPY apps/web/package.json ./apps/web/
-COPY packages ./packages
-RUN pnpm install --frozen-lockfile
+# Install curl for healthcheck
+RUN apk add --no-cache curl
 
-# Copy built Next.js application
-COPY --from=builder /app/apps/web/.next ./.next
-COPY --from=builder /app/apps/web/public ./public
+# Copy built standalone application from builder
+COPY --from=builder /app/apps/web/.next/standalone ./
+COPY --from=builder /app/apps/web/.next/static ./apps/web/.next/static
+COPY --from=builder /app/apps/web/public ./apps/web/public
 
 # Copy startup script
 COPY apps/web/start-web.sh ./start-web.sh
-
-# Ensure directories exist and have correct permissions
-RUN chmod +x ./start-web.sh && \
-    chmod -R 755 public .next
+RUN chmod +x ./start-web.sh
 
 # Expose port
 EXPOSE 3000

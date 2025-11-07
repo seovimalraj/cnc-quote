@@ -38,14 +38,17 @@ function resolveApiBase(): string {
   const candidates = [
     process.env.API_BASE_URL,
     process.env.API_URL,
-    process.env.NEXT_PUBLIC_API_URL,
     process.env.NEXT_PUBLIC_API_BASE_URL,
+    process.env.NEXT_PUBLIC_API_URL,
   ];
 
-  const base = candidates.find((entry) => typeof entry === 'string' && entry.length > 0);
-  if (!base) {
-    throw new Error('API base URL is not configured. Set API_URL or NEXT_PUBLIC_API_URL.');
+  let base = candidates.find((entry) => typeof entry === 'string' && entry.length > 0) ?? '';
+
+  // If base is missing or relative, default to internal API host without version prefix.
+  if (!base || base.startsWith('/')) {
+    base = 'http://api:3001';
   }
+
   return base.replace(/\/$/, '');
 }
 

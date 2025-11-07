@@ -1,11 +1,9 @@
 import { Module } from '@nestjs/common';
 import { AdminDevController } from './admin-dev.controller';
 import { AdminDevService } from './admin-dev.service';
-import { SupabaseModule } from "../../../lib/supabase/supabase.module";
-import { CacheModule } from "../../../lib/cache/cache.module";
 
 @Module({
-  imports: [SupabaseModule, CacheModule],
+  imports: [], // SupabaseModule removed - it's @Global
   controllers: [AdminDevController],
   providers: [AdminDevService],
   exports: [AdminDevService],

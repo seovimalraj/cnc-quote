@@ -71,7 +71,8 @@ describe('ManualReviewService.escalatePricingGuardrail', () => {
     supabaseFrom.mockImplementationOnce((table: string) => {
       expect(table).toBe('manual_review_tasks');
       const maybeSingle = jest.fn().mockResolvedValue({ data: null, error: null });
-      const secondEq = jest.fn().mockReturnValue({ maybeSingle });
+      const inFn = jest.fn().mockReturnValue({ maybeSingle });
+      const secondEq = jest.fn().mockReturnValue({ in: inFn, maybeSingle });
       const firstEq = jest.fn().mockReturnValue({ eq: secondEq });
       const select = jest.fn().mockReturnValue({ eq: firstEq });
       return { select };
@@ -161,7 +162,8 @@ describe('ManualReviewService.escalatePricingGuardrail', () => {
     supabaseFrom.mockImplementationOnce((table: string) => {
       expect(table).toBe('manual_review_tasks');
       const maybeSingle = jest.fn().mockResolvedValue({ data: existingTask, error: null });
-      const secondEq = jest.fn().mockReturnValue({ maybeSingle });
+      const inFn = jest.fn().mockReturnValue({ maybeSingle });
+      const secondEq = jest.fn().mockReturnValue({ in: inFn, maybeSingle });
       const firstEq = jest.fn().mockReturnValue({ eq: secondEq });
       const select = jest.fn().mockReturnValue({ eq: firstEq });
       return { select };

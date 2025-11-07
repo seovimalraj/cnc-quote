@@ -39,3 +39,15 @@ venv/
 # IDE
 .idea/
 .vscode/
+
+# Build artifacts
+*.tsbuildinfo
+tsconfig.tsbuildinfo
+
+# Backup/temp files (enforce proper versioning instead)
+*.backup.*
+*.old.*
+*.new.ts
+*.new.tsx
+*-backup.*
+*-old.*

@@ -1,11 +1,9 @@
 import { Module } from '@nestjs/common';
 import { AdminOrgsController } from './admin-orgs.controller';
 import { AdminOrgsService } from './admin-orgs.service';
-import { SupabaseModule } from "../../../lib/supabase/supabase.module";
-import { CacheModule } from "../../../lib/cache/cache.module";
 
 @Module({
-  imports: [SupabaseModule, CacheModule],
+  imports: [], // SupabaseModule removed - it's @Global
   controllers: [AdminOrgsController],
   providers: [AdminOrgsService],
   exports: [AdminOrgsService],

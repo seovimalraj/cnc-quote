@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import AppHeader from '@/layout/AppHeader';
 import { cn } from '@/lib/utils';
+import { LayoutDashboard, Menu, X } from 'lucide-react';
 
 interface CustomerLayoutProps { readonly children: React.ReactNode }
 
@@ -21,38 +22,56 @@ export default function CustomerLayout({ children }: Readonly<CustomerLayoutProp
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   return (
-    <div className="flex h-screen w-full overflow-hidden">
+    <div className="flex h-screen w-full overflow-hidden bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-gray-950 dark:via-blue-950 dark:to-indigo-950">
       {/* Sidebar */}
       <aside className={cn(
-        'bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 flex flex-col w-60 shrink-0 transition-transform duration-200',
-        open ? 'translate-x-0' : '-translate-x-60 lg:translate-x-0'
+        'bg-white/80 backdrop-blur-xl dark:bg-gray-900/80 border-r border-gray-200/50 dark:border-gray-800/50 flex flex-col w-64 shrink-0 transition-all duration-300 shadow-xl',
+        open ? 'translate-x-0' : '-translate-x-64 lg:translate-x-0'
       )}>
-        <div className="h-14 flex items-center px-4 font-semibold text-sm tracking-wide border-b border-gray-200 dark:border-gray-800">
-          <Link href="/portal/dashboard" className="text-blue-600">CNC Portal</Link>
+      {/* Header */}
+      <div className="h-16 flex items-center px-6 font-bold text-lg tracking-tight border-b border-gray-200/50 dark:border-gray-800/50 bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg">
+        <div className="flex items-center gap-2">
+          <LayoutDashboard size={24} />
+          <span>Frigate Fast Parts</span>
         </div>
-        <nav className="flex-1 overflow-y-auto py-3 text-sm">
-          <ul className="space-y-0.5 px-2">
+      </div>
+        <nav className="flex-1 overflow-y-auto py-4 text-sm scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-700">
+          <ul className="space-y-1 px-3">
             {primaryNav.map(i => {
               const active = pathname === i.href || pathname?.startsWith(i.href + '/');
               return (
                 <li key={i.href}>
-                  <Link href={i.href} className={cn('flex items-center rounded-md px-3 py-2 font-medium', active ? 'bg-blue-50 text-blue-700 dark:bg-blue-500/10 dark:text-blue-300' : 'text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800')}>{i.label}</Link>
+                  <Link href={i.href} className={cn(
+                    'flex items-center rounded-lg px-4 py-2.5 font-medium transition-all duration-200',
+                    active 
+                      ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-500/30' 
+                      : 'text-gray-700 hover:bg-white dark:text-gray-300 dark:hover:bg-gray-800/50 hover:shadow-md'
+                  )}>{i.label}</Link>
                 </li>
               );
             })}
           </ul>
         </nav>
-        <div className="p-3 border-t border-gray-200 dark:border-gray-800 text-xs text-gray-500 dark:text-gray-400">
-          <p>&copy; {new Date().getFullYear()} CNC Quote</p>
-          <p className="mt-1"><Link href="/legal/privacy" className="hover:underline">Privacy</Link> · <Link href="/legal/terms" className="hover:underline">Terms</Link></p>
+        <div className="p-4 border-t border-gray-200/50 dark:border-gray-800/50 text-xs text-gray-500 dark:text-gray-400 bg-gray-50/50 dark:bg-gray-900/50">
+          <p className="font-semibold">&copy; {new Date().getFullYear()} CNC Quote</p>
+          <p className="mt-2 space-x-2">
+            <Link href="/legal/privacy" className="hover:text-blue-600 transition-colors">Privacy</Link>
+            <span>·</span>
+            <Link href="/legal/terms" className="hover:text-blue-600 transition-colors">Terms</Link>
+          </p>
         </div>
       </aside>
       {/* Main */}
       <div className="flex flex-1 flex-col min-w-0">
         <AppHeader />
-        <main className="flex-1 overflow-y-auto p-4 md:p-6 bg-gray-50 dark:bg-gray-950">{children}</main>
+        <main className="flex-1 overflow-y-auto p-6 md:p-8">{children}</main>
       </div>
-      <button onClick={() => setOpen(o=>!o)} className="fixed bottom-4 left-4 z-50 rounded-full bg-blue-600 text-white shadow-lg px-4 py-2 lg:hidden">{open? 'Close' : 'Menu'}</button>
+      <button 
+        onClick={() => setOpen(o=>!o)} 
+        className="fixed bottom-6 left-6 z-50 rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-2xl px-6 py-3 lg:hidden hover:shadow-blue-500/50 transition-all duration-300 hover:scale-105 font-medium"
+      >
+        {open? 'Close' : 'Menu'}
+      </button>
     </div>
   );
 }

@@ -7,6 +7,8 @@ import { AdminFeatureFlagsService } from "../admin-feature-flags/admin-feature-f
 import { AdminPricingService } from './admin-pricing.service';
 import { ADMIN_PRICING_REVISION_QUEUE } from './admin-pricing-revision.queue';
 import type { AdminPricingConfig } from '@cnc-quote/shared';
+import { CacheService } from '../../../lib/cache/cache.service';
+import { AuditService } from '../../legacy/audit-legacy/audit.service';
 
 const FEATURE_FLAG_KEY = 'admin_pricing_revision_assistant';
 
@@ -100,6 +102,8 @@ describe('AdminPricingRevisionAssistantService', () => {
         { provide: SupabaseService, useValue: supabase },
         { provide: AdminFeatureFlagsService, useValue: featureFlags },
         { provide: AdminPricingService, useValue: adminPricing },
+        { provide: CacheService, useValue: { increment: jest.fn().mockResolvedValue(1), get: jest.fn().mockResolvedValue(undefined), set: jest.fn().mockResolvedValue(undefined) } },
+        { provide: AuditService, useValue: { log: jest.fn().mockResolvedValue(undefined) } },
         { provide: getQueueToken(ADMIN_PRICING_REVISION_QUEUE), useValue: queue },
       ],
     }).compile();
@@ -152,7 +156,7 @@ describe('AdminPricingRevisionAssistantService', () => {
     queue.getWorkers.mockResolvedValue([]);
 
     await expect(
-      service.requestProposal({ version: 1, instructions: 'noop' }, { userId: 'user-1' }),
+      service.requestProposal({ version: 1, instructions: 'noop' }, { userId: 'user-1', orgId: 'org-1' }),
     ).rejects.toBeInstanceOf(ForbiddenException);
 
     expect(queue.getWorkers).toHaveBeenCalledTimes(1);
@@ -178,7 +182,7 @@ describe('AdminPricingRevisionAssistantService', () => {
 
     const result = await service.requestProposal(
       { version: 1, instructions: 'Tighten expedited margins', focusAreas: ['eu'] },
-      { userId: 'admin-1', email: 'ops@example.com' },
+      { userId: 'admin-1', email: 'ops@example.com', orgId: 'org-1' },
       'trace-request',
     );
 
@@ -215,7 +219,7 @@ describe('AdminPricingRevisionAssistantService', () => {
     });
 
     await expect(
-      service.requestProposal({ version: 1, instructions: 'test' }, { userId: 'ops-1' }),
+      service.requestProposal({ version: 1, instructions: 'test' }, { userId: 'ops-1', orgId: 'org-1' }),
     ).rejects.toBeInstanceOf(ForbiddenException);
 
     expect(queue.add).not.toHaveBeenCalled();

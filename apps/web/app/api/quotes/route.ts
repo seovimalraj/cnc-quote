@@ -67,7 +67,8 @@ export async function POST(request: NextRequest) {
     guestEmail: parsed.guestEmail,
   }
 
-  const upstream = await proxyFetch(request, resolveApiUrl('/quotes'), {
+  // API controller is mounted at /api/quotes on the backend
+  const upstream = await proxyFetch(request, resolveApiUrl('/api/quotes'), {
     method: 'POST',
     body: JSON.stringify(payload),
     headers: { 'content-type': 'application/json' },

@@ -1,6 +1,5 @@
 "use client";
 import { useEffect, useState } from 'react';
-import { createClient } from '@/lib/supabase/client';
 
 interface SessionUser {
   id: string;
@@ -23,16 +22,29 @@ export function useUserSession(): UseUserSessionResult {
   async function load() {
     setLoading(true);
     try {
-      const supabase = createClient();
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user) {
-        // Custom claims may carry role/org; fallback fetch from /api/me if needed
-        const role = (session.user.app_metadata as any)?.role || (session.user.user_metadata as any)?.role || 'user';
-        const org_id = (session.user.app_metadata as any)?.org_id || (session.user.user_metadata as any)?.org_id;
-        setUser({ id: session.user.id, email: session.user.email!, role, org_id });
+      // Call our custom session endpoint instead of Supabase
+      const response = await fetch('/api/auth/session', {
+        credentials: 'include', // Include cookies
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        if (data.user) {
+          setUser({
+            id: data.user.id || data.user.sub,
+            email: data.user.email,
+            role: data.user.role || 'user',
+            org_id: data.user.organization_id || data.user.org_id,
+          });
+        } else {
+          setUser(null);
+        }
       } else {
         setUser(null);
       }
+    } catch (error) {
+      console.error('Session load error:', error);
+      setUser(null);
     } finally {
       setLoading(false);
     }
@@ -45,9 +57,14 @@ export function useUserSession(): UseUserSessionResult {
     user,
     refresh: load,
     signOut: async () => {
-      const supabase = createClient();
-      await supabase.auth.signOut();
+      // Call logout endpoint to clear cookies
+      await fetch('/api/auth/logout', {
+        method: 'POST',
+        credentials: 'include',
+      });
       setUser(null);
+      // Redirect to signin
+      window.location.href = '/signin';
     }
   };
 }

@@ -17,7 +17,7 @@ export function RouteDecider() {
         if (error || !user) {
           // User not authenticated, redirect to sign in
           posthog.capture('route_decision', { decision: 'signin', reason: 'not_authenticated' })
-          router.push('/auth/sign-in')
+          router.push('/signin')
           return
         }
 
@@ -50,7 +50,7 @@ export function RouteDecider() {
       } catch (error) {
         console.error('Error checking user status:', error)
         posthog.capture('route_decision_error', { error: error instanceof Error ? error.message : 'Unknown error' })
-        router.push('/auth/sign-in')
+        router.push('/signin')
       }
     }
 

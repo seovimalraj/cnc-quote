@@ -107,7 +107,7 @@ export class FileSecurityService {
 
       // Basic file signature validation
       switch (extension) {
-        case '.stl':
+        case '.stl': {
           // STL files should start with "solid" (ASCII) or have binary header
           if (buffer.length < 80) {
             return { isValid: false, error: 'STL file is too small' };
@@ -117,15 +117,17 @@ export class FileSecurityService {
             return { isValid: false, error: 'Invalid STL file format' };
           }
           break;
+        }
 
         case '.step':
-        case '.stp':
+        case '.stp': {
           // STEP files should contain ISO standard header
           const content = buffer.slice(0, Math.min(1024, buffer.length)).toString('ascii');
           if (!content.includes('ISO') && !content.includes('STEP')) {
             return { isValid: false, error: 'Invalid STEP file format' };
           }
           break;
+        }
 
         case '.zip':
           // ZIP files should have PK header

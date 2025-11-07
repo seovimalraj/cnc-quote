@@ -415,7 +415,7 @@ export class AdminAlertsService {
 
   private parseCondition(condition: string): { metric: string; aggregator: string; operator: string; threshold: number } | null {
     // Simple condition parser: "p95(first_price) > 2000"
-    const match = condition.match(/^(\w+)\(([\w\.:-]+)\) ([><=]+) ([\d\.]+)$/);
+  const match = condition.match(/^(\w+)\(([\w.:-]+)\) ([><=]+) ([\d.]+)$/);
     if (!match) return null;
 
     return {

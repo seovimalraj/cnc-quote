@@ -4,7 +4,7 @@ import { z } from 'zod';
 
 import { SUPPLIER_PORTAL_VERSION, SUPPLIER_PORTAL_VERSION_HEADER } from '@cnc-quote/shared';
 
-import { forwardJsonWithSchema, proxyFetch } from '../src/app/api/_lib/proxyFetch';
+import { forwardJsonWithSchema, proxyFetch } from '../app/api/_lib/proxyFetch';
 
 describe('proxyFetch', () => {
   it('does not throw when no Authorization header present', async () => {

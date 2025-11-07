@@ -1,4 +1,4 @@
-import { PricingConfigService } from './pricing-config.service';
+import { PricingConfigService } from '../../admin/admin-pricing/pricing-config.service';
 import { ConfigWithMetadata } from "../../admin/admin-pricing/admin-pricing.service";
 import type { AdminPricingConfig } from '@cnc-quote/shared';
 

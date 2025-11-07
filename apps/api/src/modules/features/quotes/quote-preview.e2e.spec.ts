@@ -1,6 +1,6 @@
 // @ts-nocheck
 /// <reference types="jest" />
-jest.mock('../../../modules/auth/rbac.middleware', () => ({
+jest.mock('../../core/auth/rbac.middleware', () => ({
   RbacGuard: () =>
     class {
       canActivate() {
@@ -15,7 +15,9 @@ import { QuotesModule } from './quotes.module';
 import { QuotesService } from './quotes.service';
 import { JwtAuthGuard } from "../../core/auth/jwt.guard";
 import { OrgGuard } from "../../core/auth/org.guard";
+import { PoliciesGuard } from "../../core/auth/policies.guard";
 import { SupabaseService } from "../../../lib/supabase/supabase.service";
+import { SupabaseModule } from "../../../lib/supabase/supabase.module";
 import { AnalyticsService } from "../analytics/analytics.service";
 import { NotifyService } from "../notify/notify.service";
 
@@ -31,18 +33,21 @@ describe('Quote Preview E2E (risk uplift)', () => {
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [QuotesModule],
+      imports: [SupabaseModule, QuotesModule],
+      providers: [],
     })
+      .overrideProvider(SupabaseService)
+      .useValue({
+        client: {
+          from: () => supabaseQueryMock,
+        },
+      })
       .overrideGuard(JwtAuthGuard)
       .useValue({ canActivate: () => true })
       .overrideGuard(OrgGuard)
       .useValue({ canActivate: () => true })
-      .overrideProvider(SupabaseService)
-      .useValue({
-        client: {
-          from: () => supabaseQueryMock
-        }
-      })
+  .overrideGuard(PoliciesGuard)
+  .useValue({ canActivate: () => true })
       .overrideProvider(AnalyticsService)
       .useValue({ track: jest.fn() })
   .overrideProvider(NotifyService)

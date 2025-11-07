@@ -90,7 +90,7 @@ async function InviteContent({ searchParams }: InvitePageProps) {
             <p className="text-sm text-gray-600">
               Please check your email for a valid invite link or contact the organization administrator.
             </p>
-            <Link href="/auth/sign-in">
+            <Link href="/signin">
               <Button>Go to Sign In</Button>
             </Link>
           </CardContent>
@@ -115,7 +115,7 @@ async function InviteContent({ searchParams }: InvitePageProps) {
             <p className="text-sm text-gray-600">
               The invite may have expired or been revoked by an administrator.
             </p>
-            <Link href="/auth/sign-in">
+            <Link href="/signin">
               <Button>Go to Sign In</Button>
             </Link>
           </CardContent>
@@ -213,7 +213,7 @@ async function InviteContent({ searchParams }: InvitePageProps) {
             <div className="text-center pt-4">
               <p className="text-xs text-gray-500">
                 Already have an account?{' '}
-                <Link href="/auth/sign-in" className="text-blue-600 hover:text-blue-500">
+                <Link href="/signin" className="text-blue-600 hover:text-blue-500">
                   Sign in here
                 </Link>
               </p>

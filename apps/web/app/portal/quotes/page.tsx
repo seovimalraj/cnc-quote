@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
+import { formatDate } from '@/lib/format';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -155,6 +156,187 @@ export default function QuotesListPage() {
       created_at: '2024-09-08T09:15:00Z',
       updated_at: '2024-09-08T09:15:00Z',
     },
+    {
+      id: 'Q-2024-003',
+      organization_id: 'org-123',
+      status: 'Accepted',
+      source: 'web',
+      currency: 'USD',
+      lines: [
+        {
+          id: 'line-3',
+          file_id: 'file-789',
+          file_name: 'gear.stp',
+          thumb_url: '/api/placeholder/100/100',
+          qty: 100,
+          process: 'CNC',
+          material: 'Stainless Steel 316',
+          finish: 'Bead Blasted',
+          dfm_summary: { pass: 18, warn: 1, blocker: 0 },
+          lead_time_options: [
+            {
+              id: 'lead-3',
+              region: 'USA',
+              speed: 'Expedite',
+              business_days: 5,
+              unit_price: 32.75,
+              msrp: 38.00,
+              savings_text: 'Save $5.25',
+              eta_date: '2024-08-15T00:00:00Z',
+            },
+          ],
+          unit_price: 32.75,
+          total_price: 3275.00,
+        },
+      ],
+      selected_lead_option_ids: { 'line-3': 'lead-3' },
+      subtotal: 3275.00,
+      promo_code: 'SUMMER10',
+      created_at: '2024-08-05T11:20:00Z',
+      updated_at: '2024-08-06T09:45:00Z',
+    },
+    {
+      id: 'Q-2024-004',
+      organization_id: 'org-123',
+      status: 'Sent',
+      source: 'large_order',
+      currency: 'USD',
+      lines: [
+        {
+          id: 'line-4',
+          file_id: 'file-012',
+          file_name: 'plate.step',
+          thumb_url: '/api/placeholder/100/100',
+          qty: 200,
+          process: 'SheetMetal',
+          material: 'Aluminum 5052',
+          finish: 'Powder Coated',
+          dfm_summary: { pass: 14, warn: 0, blocker: 0 },
+          lead_time_options: [
+            {
+              id: 'lead-4',
+              region: 'USA',
+              speed: 'Economy',
+              business_days: 15,
+              unit_price: 18.25,
+              msrp: 22.00,
+              savings_text: 'Save $3.75',
+              eta_date: '2024-09-25T00:00:00Z',
+            },
+          ],
+          unit_price: 18.25,
+          total_price: 3650.00,
+        },
+        {
+          id: 'line-5',
+          file_id: 'file-013',
+          file_name: 'connector.iges',
+          thumb_url: '/api/placeholder/100/100',
+          qty: 200,
+          process: 'CNC',
+          material: 'Brass C360',
+          finish: 'Polished',
+          dfm_summary: { pass: 16, warn: 2, blocker: 0 },
+          lead_time_options: [
+            {
+              id: 'lead-5',
+              region: 'USA',
+              speed: 'Economy',
+              business_days: 15,
+              unit_price: 24.50,
+              msrp: 28.00,
+              savings_text: 'Save $3.50',
+              eta_date: '2024-09-25T00:00:00Z',
+            },
+          ],
+          unit_price: 24.50,
+          total_price: 4900.00,
+        },
+      ],
+      selected_lead_option_ids: { 'line-4': 'lead-4', 'line-5': 'lead-5' },
+      subtotal: 8550.00,
+      promo_code: null,
+      created_at: '2024-09-01T14:30:00Z',
+      updated_at: '2024-09-03T10:15:00Z',
+    },
+    {
+      id: 'Q-2024-005',
+      organization_id: 'org-123',
+      status: 'Needs_Review',
+      source: 'widget',
+      currency: 'USD',
+      lines: [
+        {
+          id: 'line-6',
+          file_id: 'file-345',
+          file_name: 'valve.step',
+          thumb_url: '/api/placeholder/100/100',
+          qty: 30,
+          process: 'CNC',
+          material: 'Titanium Ti-6Al-4V',
+          finish: 'As Machined',
+          dfm_summary: { pass: 10, warn: 4, blocker: 2 },
+          lead_time_options: [
+            {
+              id: 'lead-6',
+              region: 'USA',
+              speed: 'Standard',
+              business_days: 12,
+              unit_price: 125.00,
+              msrp: 145.00,
+              savings_text: 'Save $20.00',
+              eta_date: '2024-09-22T00:00:00Z',
+            },
+          ],
+          unit_price: 125.00,
+          total_price: 3750.00,
+        },
+      ],
+      selected_lead_option_ids: { 'line-6': 'lead-6' },
+      subtotal: 3750.00,
+      promo_code: null,
+      created_at: '2024-09-07T16:45:00Z',
+      updated_at: '2024-09-09T11:30:00Z',
+    },
+    {
+      id: 'Q-2024-006',
+      organization_id: 'org-123',
+      status: 'Expired',
+      source: 'web',
+      currency: 'USD',
+      lines: [
+        {
+          id: 'line-7',
+          file_id: 'file-678',
+          file_name: 'spacer.stp',
+          thumb_url: '/api/placeholder/100/100',
+          qty: 75,
+          process: 'CNC',
+          material: 'Aluminum 7075',
+          finish: 'Black Anodized',
+          dfm_summary: { pass: 17, warn: 1, blocker: 0 },
+          lead_time_options: [
+            {
+              id: 'lead-7',
+              region: 'USA',
+              speed: 'Standard',
+              business_days: 10,
+              unit_price: 28.50,
+              msrp: 32.00,
+              savings_text: 'Save $3.50',
+              eta_date: '2024-07-20T00:00:00Z',
+            },
+          ],
+          unit_price: 28.50,
+          total_price: 2137.50,
+        },
+      ],
+      selected_lead_option_ids: { 'line-7': 'lead-7' },
+      subtotal: 2137.50,
+      promo_code: null,
+      created_at: '2024-07-01T08:00:00Z',
+      updated_at: '2024-07-02T13:20:00Z',
+    },
   ];
 
   useEffect(() => {
@@ -263,14 +445,6 @@ export default function QuotesListPage() {
       style: 'currency',
       currency: currency,
     }).format(amount);
-  };
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-    });
   };
 
   return (

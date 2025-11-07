@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Optional } from '@nestjs/common';
 import { SupabaseService } from "../../../lib/supabase/supabase.service";
 import { QapService } from "../qap/qap.service";
 import { FileMeta, QAPDocument, Certificate, FAIRReport, Invoice } from "@cnc-quote/shared";
@@ -7,11 +7,15 @@ import { FileMeta, QAPDocument, Certificate, FAIRReport, Invoice } from "@cnc-qu
 export class DocumentsService {
   constructor(
     private readonly supabase: SupabaseService,
-    private readonly qapService: QapService,
+    @Optional() private readonly qapService?: QapService,
   ) {}
 
   // QAP Document Methods
   async generateQapDocument(orderId: string, templateId: string, userId: string, orgId: string) {
+    if (!this.qapService) {
+      throw new Error('QAP service is not available - QapModule is disabled');
+    }
+    
     try {
       // Generate QAP document using the QAP service
       const qapResult = await this.qapService.generateQapDocument({

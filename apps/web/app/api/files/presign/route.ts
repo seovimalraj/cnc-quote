@@ -1,16 +1,7 @@
 import { UploadPresignSchema, UploadSpecSchema, type UploadSpec } from '@cnc-quote/shared/contracts/vnext';
-
-import { forwardJsonWithSchema, proxyFetch } from '@/app/api/_lib/proxyFetch';
-
-const ensureBase = (): string => {
-  const base = process.env.NEST_BASE;
-  if (!base) {
-    throw new Error('NEST_BASE is not configured for file presign proxy');
-  }
-  return base.replace(/\/$/, '');
-};
-
-const buildUrl = (): string => new URL('/files/presign', ensureBase()).toString();
+import { NextResponse } from 'next/server';
+import { v4 as uuidv4 } from 'uuid';
+import { createClient } from '@/lib/supabase/server';
 
 const badRequest = (message: string): Response =>
   new Response(JSON.stringify({ error: message }), {
@@ -43,11 +34,28 @@ export async function POST(request: Request) {
 
   const normalized = normalizeSpec(parseResult.data);
 
-  const upstream = await proxyFetch(request, buildUrl(), {
-    method: 'POST',
-    body: JSON.stringify(normalized),
-    headers: { 'content-type': 'application/json' },
-  });
+  // Directly create a signed upload URL using Supabase Storage to avoid backend dependency for presign
+  const supabase = await createClient();
 
-  return forwardJsonWithSchema(upstream, UploadPresignSchema);
+  const fileId = normalized.fileId || uuidv4();
+  const fileName = normalized.fileName || `${fileId}`;
+  const path = `instant-quote/${fileId}/${fileName}`;
+
+  const { data: signedUrlData, error } = await supabase.storage
+    .from('cad-files')
+    .createSignedUploadUrl(path, 3600);
+
+  if (error || !signedUrlData?.signedUrl) {
+    return NextResponse.json({ error: 'Failed to create upload URL' }, { status: 500 });
+  }
+
+  // Conform to UploadPresignSchema
+  const response = {
+    url: signedUrlData.signedUrl,
+    method: 'POST' as const,
+    fileId,
+    metadata: { path: signedUrlData.path },
+  };
+
+  return NextResponse.json(UploadPresignSchema.parse(response));
 }

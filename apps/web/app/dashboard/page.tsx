@@ -1,12 +1,9 @@
 import CustomerLayout from '@/components/CustomerLayout';
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
-import Link from 'next/link';
-import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Input } from '@/components/ui/input';
 import {
   CubeIcon,
   DocumentTextIcon,
@@ -75,7 +72,7 @@ export default async function DashboardPage() {
   const { data: { user }, error } = await supabase.auth.getUser()
 
   if (error || !user) {
-    redirect('/auth/sign-in')
+    redirect('/signin')
   }
 
   return (
@@ -86,9 +83,9 @@ export default async function DashboardPage() {
             <h1 className="text-2xl font-semibold">Dashboard</h1>
             <p className="text-sm text-gray-500 dark:text-gray-400">Welcome back, {user.email?.split('@')[0] || 'User'}.</p>
           </div>
-          <Link href="/instant-quote">
-            <Button className="bg-blue-600 hover:bg-blue-500 text-white"><PlusIcon className="w-4 h-4 mr-1"/>New Quote</Button>
-          </Link>
+          <button className="bg-blue-600 text-white px-4 py-2 rounded-md font-medium cursor-not-allowed opacity-50 flex items-center">
+            <PlusIcon className="w-4 h-4 mr-1"/>New Quote
+          </button>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <Card><CardContent className="p-4"><p className="text-xs uppercase text-gray-500 mb-1">Active Quotes</p><p className="text-2xl font-semibold">--</p></CardContent></Card>
@@ -107,7 +104,7 @@ export default async function DashboardPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
+                <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center opacity-75">
                   <CubeIcon className="w-12 h-12 mx-auto text-gray-400 mb-4" />
                   <h3 className="text-lg font-medium text-gray-900 mb-2">
                     Drag & drop your files here
@@ -115,9 +112,9 @@ export default async function DashboardPage() {
                   <p className="text-gray-600 mb-4">
                     Support for STEP, STL, IGES, DXF, and more
                   </p>
-                  <Button variant="outline">
+                  <button className="px-4 py-2 border border-gray-300 bg-white text-gray-700 rounded-md font-medium cursor-not-allowed opacity-50">
                     Browse Files
-                  </Button>
+                  </button>
                 </div>
               </CardContent>
             </Card>
@@ -130,58 +127,61 @@ export default async function DashboardPage() {
                   <div className="flex items-center space-x-2">
                     <div className="relative">
                       <MagnifyingGlassIcon className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-                      <Input
+                      <input
                         placeholder="Search orders..."
-                        className="pl-10 w-64"
+                        className="pl-10 w-64 px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-gray-900 cursor-not-allowed opacity-75"
+                        disabled
                       />
                     </div>
-                    <Button variant="outline" size="sm">
+                    <button className="px-3 py-2 border border-gray-300 bg-white text-gray-700 rounded-md font-medium cursor-not-allowed opacity-50 flex items-center">
                       <FunnelIcon className="w-4 h-4 mr-2" />
                       Filter
-                    </Button>
+                    </button>
                   </div>
                 </div>
               </CardHeader>
               <CardContent>
-                <Tabs defaultValue="recent">
-                  <TabsList className="grid w-full grid-cols-3">
-                    <TabsTrigger value="recent">Recent</TabsTrigger>
-                    <TabsTrigger value="priced">Priced</TabsTrigger>
-                    <TabsTrigger value="drafts">Drafts</TabsTrigger>
-                  </TabsList>
+                <div className="grid w-full grid-cols-3 mb-6 bg-gray-100 rounded-md p-1">
+                  <button className="px-3 py-2 text-sm font-medium bg-white text-gray-900 rounded-md shadow-sm">
+                    Recent
+                  </button>
+                  <button className="px-3 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 cursor-not-allowed opacity-50">
+                    Priced
+                  </button>
+                  <button className="px-3 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 cursor-not-allowed opacity-50">
+                    Drafts
+                  </button>
+                </div>
 
-                  <TabsContent value="recent" className="mt-6">
-                    <div className="space-y-4">
-                      {mockRecentQuotes.map((quote) => (
-                        <div key={quote.id} className="border rounded-lg p-4 hover:bg-gray-50">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center space-x-4">
-                              <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                                <CubeIcon className="w-5 h-5 text-blue-600" />
-                              </div>
-                              <div>
-                                <h4 className="font-medium text-gray-900">{quote.partName}</h4>
-                                <p className="text-sm text-gray-600">{quote.id}</p>
-                              </div>
-                            </div>
-                            <div className="text-right">
-                              {getStatusBadge(quote.status)}
-                              {quote.price && (
-                                <p className="text-lg font-semibold text-gray-900 mt-1">
-                                  ${quote.price}
-                                </p>
-                              )}
-                            </div>
+                <div className="space-y-4">
+                  {mockRecentQuotes.map((quote) => (
+                    <div key={quote.id} className="border rounded-lg p-4 bg-gray-50 cursor-not-allowed opacity-75">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-4">
+                          <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                            <CubeIcon className="w-5 h-5 text-blue-600" />
                           </div>
-                          <div className="mt-4 flex items-center justify-between text-sm text-gray-600">
-                            <span>{quote.material} • Qty: {quote.quantity}</span>
-                            <span>{quote.createdAt}</span>
+                          <div>
+                            <h4 className="font-medium text-gray-900">{quote.partName}</h4>
+                            <p className="text-sm text-gray-600">{quote.id}</p>
                           </div>
                         </div>
-                      ))}
+                        <div className="text-right">
+                          {getStatusBadge(quote.status)}
+                          {quote.price && (
+                            <p className="text-lg font-semibold text-gray-900 mt-1">
+                              ${quote.price}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                      <div className="mt-4 flex items-center justify-between text-sm text-gray-600">
+                        <span>{quote.material} • Qty: {quote.quantity}</span>
+                        <span>{quote.createdAt}</span>
+                      </div>
                     </div>
-                  </TabsContent>
-                </Tabs>
+                  ))}
+                </div>
               </CardContent>
             </Card>
           </div>
@@ -199,7 +199,7 @@ export default async function DashboardPage() {
               <CardContent>
                 <div className="space-y-3">
                   {mockResumeData.map((file) => (
-                    <div key={file.id} className="flex items-center justify-between p-3 border rounded-lg">
+                    <div key={file.id} className="flex items-center justify-between p-3 border rounded-lg bg-gray-50 cursor-not-allowed opacity-75">
                       <div className="flex items-center space-x-3">
                         <div className="w-8 h-8 bg-gray-100 rounded flex items-center justify-center">
                           <DocumentTextIcon className="w-4 h-4 text-gray-600" />
@@ -211,15 +211,15 @@ export default async function DashboardPage() {
                           <p className="text-xs text-gray-600">{file.size}</p>
                         </div>
                       </div>
-                      <Button variant="ghost" size="sm">
+                      <button className="p-2 text-gray-400 cursor-not-allowed opacity-50">
                         <ArrowPathIcon className="w-4 h-4" />
-                      </Button>
+                      </button>
                     </div>
                   ))}
                 </div>
-                <Button variant="outline" className="w-full mt-4">
+                <button className="w-full mt-4 px-4 py-2 border border-gray-300 bg-white text-gray-700 rounded-md font-medium cursor-not-allowed opacity-50">
                   View All Files
-                </Button>
+                </button>
               </CardContent>
             </Card>
 
@@ -256,6 +256,14 @@ export default async function DashboardPage() {
             </Card>
           </div>
         </div>
+      </div>
+
+      {/* Demo Notice */}
+      <div className="mt-8 bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <h3 className="text-sm font-semibold text-blue-900 mb-2">Dashboard Demo</h3>
+        <p className="text-sm text-blue-800">
+          This is a demo of the customer dashboard. In the live application, you can upload files for instant quotes, view and manage your orders, and track your manufacturing projects.
+        </p>
       </div>
     </CustomerLayout>
   );

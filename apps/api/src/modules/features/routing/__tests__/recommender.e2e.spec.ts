@@ -5,9 +5,11 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { RecommenderController } from "../recommender.controller";
 import { RecommenderService } from "../recommender.service";
-import { RateLimitService } from "../../../lib/rate-limit/rate-limit.service";
-import { CacheService } from "../../../lib/cache/cache.service";
+import { RateLimitService } from "../../../../lib/rate-limit/rate-limit.service";
+import { CacheService } from "../../../../lib/cache/cache.service";
 import { RecommendRequest, ProcessRecommendationResponse } from "../types";
+import { ConfigService } from "@nestjs/config";
+import { PolicyEngine } from "../../../core/auth/policy.engine";
 
 describe('RecommenderController (e2e)', () => {
   let controller: RecommenderController;
@@ -49,6 +51,14 @@ describe('RecommenderController (e2e)', () => {
         { provide: RecommenderService, useValue: mockService },
         { provide: RateLimitService, useValue: mockRateLimit },
         { provide: CacheService, useValue: mockCache },
+        { provide: ConfigService, useValue: { get: jest.fn().mockReturnValue(true) } },
+        {
+          provide: PolicyEngine,
+          useValue: {
+            getMembership: jest.fn().mockResolvedValue({ role: 'admin' }),
+            can: jest.fn().mockResolvedValue({ allowed: true }),
+          },
+        },
       ],
     }).compile();
 

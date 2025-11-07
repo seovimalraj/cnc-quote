@@ -126,10 +126,10 @@ export type {
 export {
 	SupplierCapabilitySchemaV1,
 	SupplierApprovalSchemaV1,
-	SupplierEventKindV1,
 	SupplierCapabilityUpdatedEventSchemaV1,
 	SupplierApprovalRecordedEventSchemaV1,
 } from './supplier';
+export type { SupplierEventKindV1 } from './supplier';
 export type {
 	SupplierCapabilityV1,
 	SupplierApprovalV1,

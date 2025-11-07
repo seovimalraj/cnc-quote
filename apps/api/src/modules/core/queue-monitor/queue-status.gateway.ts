@@ -10,7 +10,7 @@ import { JwtService } from '@nestjs/jwt';
 export class QueueStatusGateway implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer() server: Server;
   private logger = new Logger(QueueStatusGateway.name);
-  private interval?: NodeJS.Timeout;
+  private interval?: ReturnType<typeof setInterval>;
 
   constructor(
     private readonly queueMonitor: QueueMonitorService,

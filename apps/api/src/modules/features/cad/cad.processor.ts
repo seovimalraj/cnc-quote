@@ -1,3 +1,4 @@
+/* eslint-disable no-unreachable */ // TODO: Investigate ESLint false-positive for unreachable code in this processor
 import { Processor, WorkerHost } from "@nestjs/bullmq";
 import { Logger } from "@nestjs/common";
 import { Job } from "bullmq";

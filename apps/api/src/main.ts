@@ -34,11 +34,12 @@ async function bootstrap() {
   await startOTel();
 
   const app = await NestFactory.create(AppModule, {
-    bufferLogs: true, // Buffer logs until httpLogger is ready
+    bufferLogs: false, // Enable logs to see route mapping
+    logger: ['error', 'warn', 'log', 'debug', 'verbose'], // Enable all logs temporarily
   });
 
-  // Disable NestJS default logger, use Pino instead
-  app.useLogger(false);
+  // Keep NestJS logger enabled temporarily for debugging
+  // app.useLogger(false);
 
   // Apply HTTP request/response logger (Pino with trace correlation)
   app.use(httpLogger);
@@ -49,11 +50,11 @@ async function bootstrap() {
     reqCtxMiddleware.use(req, res, next);
   });
 
-  // Enable API versioning
-  app.enableVersioning({
-    type: VersioningType.URI,
-    defaultVersion: "1",
-  });
+  // Disable API versioning for now (causes routes to be /v1/api/... instead of /api/...)
+  // app.enableVersioning({
+  //   type: VersioningType.URI,
+  //   defaultVersion: "1",
+  // });
 
   // Configure request size limits
   app.use(bodyParser.json({ limit: "10mb" }));

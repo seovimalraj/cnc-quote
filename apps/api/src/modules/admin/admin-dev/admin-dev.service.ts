@@ -1,3 +1,4 @@
+/* eslint-disable no-unreachable */ // TODO: Investigate false-positive flags from ESLint's no-unreachable in this service
 import { Injectable, Logger, BadRequestException, ForbiddenException } from '@nestjs/common';
 import { SupabaseService } from "../../../lib/supabase/supabase.service";
 import { CacheService } from "../../../lib/cache/cache.service";

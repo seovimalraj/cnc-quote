@@ -8,6 +8,7 @@
 import Link from 'next/link';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { formatCurrency } from '@/lib/format';
 import {
   Table,
   TableBody,
@@ -108,18 +109,6 @@ export function AdminQuotesTable({ rows, isFetching = false, hasNextPage = false
       ) : null}
     </div>
   );
-}
-
-function formatCurrency(value: number, currency: string): string {
-  try {
-    return new Intl.NumberFormat(undefined, {
-      style: 'currency',
-      currency,
-      maximumFractionDigits: 2,
-    }).format(value ?? 0);
-  } catch {
-    return value.toFixed(2);
-  }
 }
 
 function formatAbsolute(value?: string | null): string {

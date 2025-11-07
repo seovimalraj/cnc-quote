@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { api } from '@/lib/api';
 import { toast } from 'react-hot-toast';
+import { formatDate } from '@/lib/format';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -287,9 +288,26 @@ export default function DocumentsPage() {
     }
   };
 
+  const refreshInvoices = async () => {
+    setIsRefreshing(true);
+    await fetchInvoices();
+    setIsRefreshing(false);
+  };
+
+  const handleDeleteInvoice = async (invoiceId: string) => {
+    if (!window.confirm('Are you sure you want to delete this invoice?')) return;
+
+    try {
+      await api.delete(`/api/documents/invoices/${invoiceId}`);
+      toast.success('Invoice deleted successfully');
+      fetchInvoices();
+    } catch (error) {
+      toast.error('Failed to delete invoice');
+    }
+  };
+
   // Helper functions
   const formatCurrency = (amount: number) => `$${amount.toFixed(2)}`;
-  const formatDate = (dateString: string) => new Date(dateString).toLocaleDateString();
   const formatFileSize = (bytes: number) => {
     if (bytes === 0) return '0 Bytes';
     const k = 1024;

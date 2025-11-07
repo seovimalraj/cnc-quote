@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { createServerClient } from '@supabase/ssr';
 
 const ADMIN_ROLES = new Set(['admin','org_admin','reviewer','finance','auditor']);
 
@@ -15,40 +14,23 @@ export async function middleware(request: NextRequest) {
   // Prepare a response object we can mutate (cookies/headers)
   let response = NextResponse.next({ request });
 
-  // Initialize Supabase SSR client for session/cookies management
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return request.cookies.getAll();
-        },
-        setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
-          response = NextResponse.next({ request });
-          cookiesToSet.forEach(({ name, value, options }) =>
-            response.cookies.set(name, value, options)
-          );
-        },
-      },
-    }
-  );
+  // Parse lightweight session context from cookies (no Supabase dependency)
+  const authed = !!request.cookies.get('sb-access-token');
+  let parsedUser: { id?: string; role?: string; organization_id?: string } = {};
+  try {
+    const userDataRaw = request.cookies.get('user-data')?.value;
+    if (userDataRaw) parsedUser = JSON.parse(userDataRaw);
+  } catch {}
 
-  const { data: { session } } = await supabase.auth.getSession();
-
-  // Handle widget endpoints with CORS + CSP
+  // Handle widget endpoints with CORS + CSP (allowlist via env)
   if (pathname.startsWith('/widget')) {
     const origin = request.headers.get('origin');
     if (origin) {
-      const { data: widgetOrigin } = await supabase
-        .from('widget_origins')
-        .select('active')
-        .eq('origin', origin)
-        .eq('active', true)
-        .maybeSingle();
-
-      if (widgetOrigin) {
+      const allowlist = (process.env.WIDGET_ALLOWED_ORIGINS || '')
+        .split(',')
+        .map(s => s.trim())
+        .filter(Boolean);
+      if (allowlist.length === 0 || allowlist.includes(origin)) {
         response.headers.set('Access-Control-Allow-Origin', origin);
         response.headers.set('Access-Control-Allow-Methods', 'GET, POST');
         response.headers.set('Access-Control-Allow-Headers', 'Content-Type');
@@ -89,8 +71,7 @@ export async function middleware(request: NextRequest) {
   }
 
   // RBAC + auth enforcement
-  const role = request.cookies.get('role')?.value || 'anon';
-  const authed = !!request.cookies.get('sb-access-token');
+  let role = request.cookies.get('role')?.value || parsedUser.role || 'anon';
 
   if (pathname.startsWith('/admin')) {
     if (!authed || !ADMIN_ROLES.has(role)) {
@@ -102,16 +83,16 @@ export async function middleware(request: NextRequest) {
   if (pathname.startsWith('/portal')) {
     if (!authed) {
       const url = request.nextUrl.clone();
-      url.pathname = '/auth/sign-in';
+      url.pathname = '/signin';
       url.searchParams.set('redirect', pathname);
       return NextResponse.redirect(url);
     }
   }
 
   // Required org_id check (if authenticated)
-  if (session?.user && !session.user.user_metadata.org_id) {
+  if (authed && !parsedUser.organization_id) {
     const url = request.nextUrl.clone();
-    url.pathname = '/auth/sign-in';
+    url.pathname = '/signin';
     return NextResponse.redirect(url);
   }
 

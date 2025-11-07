@@ -51,6 +51,16 @@ const forwardTracingAndCookies = (incoming: Headers, out: Headers) => {
   }
 };
 
+const parseCookie = (cookieHeader: string | null): Record<string, string> => {
+  if (!cookieHeader) return {};
+  return cookieHeader.split(';').reduce((acc, part) => {
+    const [k, ...rest] = part.trim().split('=');
+    if (!k) return acc;
+    acc[k] = decodeURIComponent(rest.join('='));
+    return acc;
+  }, {} as Record<string, string>);
+};
+
 const ensureAuthHeaders = async (incoming: Headers, out: Headers) => {
   if (!out.has('authorization')) {
     const incomingAuth = incoming.get('authorization');
@@ -70,6 +80,45 @@ const ensureAuthHeaders = async (incoming: Headers, out: Headers) => {
     }
     if (!orgId && ctx.orgId) {
       orgId = ctx.orgId;
+    }
+  }
+
+  // If still no Authorization, fall back to custom session cookie set by our /api/auth/signin route
+  if (!out.has('authorization')) {
+    const cookies = parseCookie(incoming.get('cookie'));
+    const sbAccess = cookies['sb-access-token'];
+    if (sbAccess) {
+      out.set('authorization', `Bearer ${sbAccess}`);
+    }
+    // Try to extract org id from user-data cookie
+    if (!orgId) {
+      // Prefer user-data cookie first
+      if (cookies['user-data']) {
+        try {
+          const user = JSON.parse(cookies['user-data']);
+          if (user && typeof user.organization_id === 'string' && user.organization_id.length > 0) {
+            orgId = user.organization_id;
+          }
+        } catch {
+          // ignore
+        }
+      }
+      // As a fallback, decode JWT payload to derive org id
+      if (!orgId && sbAccess) {
+        try {
+          const [h, p] = sbAccess.split('.');
+          if (p) {
+            const json = Buffer.from(p.replace(/-/g, '+').replace(/_/g, '/'), 'base64').toString('utf8');
+            const payload = JSON.parse(json);
+            const derived = payload.org_id || payload.orgId || payload.organizationId;
+            if (typeof derived === 'string' && derived.length > 0) {
+              orgId = derived;
+            }
+          }
+        } catch {
+          // ignore
+        }
+      }
     }
   }
 

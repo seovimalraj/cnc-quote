@@ -4,8 +4,6 @@ import { DfmService } from "./dfm.service";
 import { DfmAnalysisProcessor } from "../../../queues/jobs/dfm-analysis.processor";
 import { RiskController } from './risk.controller';
 import { RiskService } from './risk.service';
-import { SupabaseModule } from "../../../lib/supabase/supabase.module";
-import { CacheModule } from "../../../lib/cache/cache.module";
 import { AdminFeatureFlagsModule } from "../../admin/admin-feature-flags/admin-feature-flags.module";
 import { AnalyticsModule } from "../analytics/analytics.module";
 import { GeometryModule } from "../../domain/geometry/geometry.module";
@@ -13,8 +11,8 @@ import { GeometryModule } from "../../domain/geometry/geometry.module";
 
 @Module({
   imports: [
-    SupabaseModule,
-    CacheModule,
+    // SupabaseModule removed - it's @Global
+    // CacheModule removed - it's @Global
     AdminFeatureFlagsModule,
     AnalyticsModule,
     GeometryModule,

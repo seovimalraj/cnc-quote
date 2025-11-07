@@ -45,12 +45,12 @@ export const SupplierApprovalSchemaV1 = z.object({
 
 export type SupplierApprovalV1 = z.infer<typeof SupplierApprovalSchemaV1>;
 
-export const SupplierEventKindV1 = z.enum([
+export const SupplierEventKindSchemaV1 = z.enum([
   'SupplierCapabilityUpdated',
   'SupplierApprovalRecorded',
 ]);
 
-export type SupplierEventKindV1 = z.infer<typeof SupplierEventKindV1>;
+export type SupplierEventKindV1 = z.infer<typeof SupplierEventKindSchemaV1>;
 
 export const SupplierCapabilityUpdatedEventSchemaV1 = z.object({
   kind: z.literal('SupplierCapabilityUpdated'),

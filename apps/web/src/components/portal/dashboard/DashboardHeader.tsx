@@ -46,7 +46,7 @@ export function DashboardHeader({ user }: DashboardHeaderProps) {
   const handleSignOut = async () => {
     posthog.capture('dashboard_signout')
     await supabase.auth.signOut()
-    router.push('/auth/sign-in')
+    router.push('/signin')
   }
 
   const userName = user.user_metadata?.name || user.email?.split('@')[0] || 'User'

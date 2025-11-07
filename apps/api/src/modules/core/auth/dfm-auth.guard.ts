@@ -16,16 +16,18 @@ export class DfmAuthGuard implements CanActivate {
 
     // Try JWT authentication first
     const authHeader = request.headers.authorization;
+    let jwtValid = false;
     if (authHeader?.startsWith('Bearer ')) {
       const token = authHeader.substring(7);
       try {
         // Validate JWT token (this would be handled by JwtAuthGuard normally)
         // For now, we'll assume it's valid if present
-        return true;
+        jwtValid = true;
       } catch (error) {
         // JWT invalid, try session if allowed
       }
     }
+    if (jwtValid) return true;
 
     // Try session authentication if allowed
     if (allowSession) {

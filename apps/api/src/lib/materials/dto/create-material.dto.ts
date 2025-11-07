@@ -15,7 +15,7 @@ import {
   ValidateNested,
 } from 'class-validator';
 
-const MATERIAL_CODE_REGEX = /^[A-Z0-9_\-\.]{3,64}$/;
+const MATERIAL_CODE_REGEX = /^[A-Z0-9_.-]{3,64}$/;
 const REGION_ENUM = ['US', 'EU', 'IN', 'UK', 'CA', 'AU'] as const;
 
 export class RegionMultiplierDto {

@@ -2,10 +2,9 @@ import { Module } from '@nestjs/common';
 import { FilesController } from './files.controller';
 import { FilesService } from './files.service';
 import { StorageService } from './storage.service';
-import { SupabaseModule } from "../../../lib/supabase/supabase.module";
 
 @Module({
-  imports: [SupabaseModule],
+  imports: [], // SupabaseModule removed - it's @Global
   controllers: [FilesController],
   providers: [FilesService, StorageService],
   exports: [FilesService, StorageService]

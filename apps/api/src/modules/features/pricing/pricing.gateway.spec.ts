@@ -8,9 +8,9 @@ declare const it: any;
 declare const expect: any;
 declare const beforeEach: any;
 declare const jest: any;
-import { PricingGateway } from "../../pricing.gateway";
+import { PricingGateway } from "./pricing.gateway";
 // Mock the pricing engine service BEFORE importing it in Nest context
-jest.mock('../../pricing-engine-v2.service', () => ({
+jest.mock('./pricing-engine-v2.service', () => ({
   PricingEngineV2Service: class {
     async calculatePricing(req: any) {
       return {
@@ -25,7 +25,7 @@ jest.mock('../../pricing-engine-v2.service', () => ({
     }
   }
 }));
-jest.mock('../../pricing-persistence.service', () => ({
+jest.mock('./pricing-persistence.service', () => ({
   PricingPersistenceService: class {
     async persistMatrixAndTotals() { /* no-op */ }
   }

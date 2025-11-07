@@ -1,7 +1,7 @@
 // @ts-nocheck
 /// <reference types="jest" />
 import { Test, TestingModule } from "@nestjs/testing";
-import { PricingService } from "./legacy/pricing-v1.service";
+import { PricingService } from "./pricing.service";
 import { SupabaseService } from "../../../lib/supabase/supabase.service";
 import { ManualReviewService } from "../manual-review/manual-review.service";
 import { CacheService } from "../../../lib/cache/cache.service";

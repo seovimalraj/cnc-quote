@@ -158,7 +158,7 @@ export class FeaturePricingFactor implements Factor {
     const avgDifficulty = features.reduce((sum, f) => sum + f.machining_difficulty, 0) / count;
 
     switch (type) {
-      case 'hole':
+      case 'hole': {
         // Holes add cost based on count and difficulty
         const holeCost = runningSubtotal * (count * 0.01 + avgDifficulty * 0.005);
         return {
@@ -167,8 +167,9 @@ export class FeaturePricingFactor implements Factor {
           amount: holeCost,
           meta: { count, avgDifficulty }
         };
+      }
 
-      case 'thread':
+      case 'thread': {
         // Threads are expensive
         const threadCost = runningSubtotal * (count * 0.03);
         return {
@@ -177,8 +178,9 @@ export class FeaturePricingFactor implements Factor {
           amount: threadCost,
           meta: { count }
         };
+      }
 
-      case 'undercut':
+      case 'undercut': {
         // Undercuts significantly increase cost
         const undercutCost = runningSubtotal * (count * 0.1);
         return {
@@ -187,8 +189,9 @@ export class FeaturePricingFactor implements Factor {
           amount: undercutCost,
           meta: { count }
         };
+      }
 
-      case 'thin_wall':
+      case 'thin_wall': {
         // Thin walls may require special handling
         const thinWallCost = runningSubtotal * (count * 0.02);
         return {
@@ -197,6 +200,7 @@ export class FeaturePricingFactor implements Factor {
           amount: thinWallCost,
           meta: { count }
         };
+      }
 
       default:
         return null;

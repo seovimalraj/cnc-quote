@@ -27,7 +27,7 @@ export default function CreateOrganizationPage() {
       const { data: { user }, error: userError } = await supabase.auth.getUser()
 
       if (userError || !user) {
-        redirect('/auth/sign-in?error=Please sign in first')
+        redirect('/signin?error=Please sign in first')
       }
 
       // In a real implementation, you'd create the organization in your database

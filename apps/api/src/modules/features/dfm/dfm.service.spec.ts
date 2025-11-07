@@ -3,10 +3,11 @@ import { Test, TestingModule } from "@nestjs/testing";
 // Ensure Jest globals recognized in environments where ts-jest types not injected early
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import type {} from 'jest';
-import { DfmService } from "./legacy/dfm-v1.service";
+import { DfmService } from "./dfm.service";
 import { SupabaseService } from "../../../lib/supabase/supabase.service";
 import { CacheService } from "../../../lib/cache/cache.service";
 import { SeverityLegacy } from "@cnc-quote/shared";
+import { GeometryService } from "../../domain/geometry/geometry.service";
 
 describe("DfmService", () => {
   let service: DfmService;
@@ -40,6 +41,12 @@ describe("DfmService", () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         DfmService,
+        {
+          provide: GeometryService,
+          useValue: {
+            fetchMeshMetadata: jest.fn().mockResolvedValue({ triangle_count: 0 }),
+          },
+        },
         {
           provide: SupabaseService,
           useValue: {

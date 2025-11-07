@@ -19,8 +19,7 @@ interface ChartData {
   isPositive: boolean;
 }
 
-const AnalyticsPage = () => {
-  const [timeRange, setTimeRange] = useState('30days');
+export default function AnalyticsPage() {
 
   // Mock analytics data
   const kpiData = [
@@ -109,9 +108,9 @@ const AnalyticsPage = () => {
                 Analytics & Reports
               </h3>
               <select
-                value={timeRange}
-                onChange={(e) => setTimeRange(e.target.value)}
-                className="rounded border border-stroke bg-transparent py-2 px-3 text-black outline-none transition focus:border-primary dark:border-strokedark dark:bg-form-input dark:text-white dark:focus:border-primary"
+                defaultValue="30days"
+                className="rounded border border-stroke bg-gray-50 py-2 px-3 text-black outline-none cursor-not-allowed opacity-75"
+                disabled
               >
                 <option value="7days">Last 7 days</option>
                 <option value="30days">Last 30 days</option>
@@ -331,6 +330,4 @@ const AnalyticsPage = () => {
       </div>
     </DefaultLayout>
   );
-};
-
-export default AnalyticsPage;
+}

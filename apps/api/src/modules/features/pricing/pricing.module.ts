@@ -5,8 +5,6 @@ import { PricingController } from "./pricing.controller";
 import { PricingGateway } from "./pricing.gateway";
 import { PricingPersistenceService } from "./pricing-persistence.service";
 import { ValidationService } from "./validation.service";
-import { SupabaseModule } from "../../../lib/supabase/supabase.module";
-import { CacheModule } from "../../../lib/cache/cache.module";
 import { ManualReviewModule } from "../manual-review/manual-review.module";
 import { GeometryModule } from "../../domain/geometry/geometry.module";
 import { PricingCacheService } from "../../../lib/pricing-core/cache.service";
@@ -28,22 +26,23 @@ import { PricingComplianceMlAssistService } from "./pricing-compliance-ml-assist
 import { PricingComplianceMlAssistProcessor } from "./pricing-compliance-ml-assist.processor";
 import { PricingRationaleSummaryService } from "./pricing-rationale-summary.service";
 import { PricingCoreModule } from "../../legacy/pricing-core/pricing-core.module";
-import { AdminPricingModule } from "../../admin/admin-pricing/admin-pricing.module";
+// AdminPricingModule REMOVED - causes circular dependency (AdminPricing imports Pricing, Pricing imports AdminPricing)
+// PricingEngineV2Service uses @Optional() PricingConfigService, so it works without AdminPricingModule
 
 @Module({
   imports: [
-    SupabaseModule,
-    CacheModule,
+    // SupabaseModule removed - it's @Global
+    // CacheModule removed - it's @Global
     ManualReviewModule,
     GeometryModule,
     TaxModule,
     CatalogModule,
     PricingCoreModule, // Import shared pricing infrastructure (includes queue)
-    forwardRef(() => AdminPricingModule), // Use forwardRef to break circular dependency
+    // AdminPricingModule REMOVED - circular dependency broken
     QueueModule,
     NotifyModule,
     AdminFeatureFlagsModule,
-    forwardRef(() => AIModule), // Use forwardRef to prevent circular dependency issues
+    // forwardRef(() => AIModule), // DISABLED - AIModule causes DI error, temporarily disabled
   ],
   controllers: [PricingController, ProcessRecommendationController, MaterialComparisonController],
   providers: [
@@ -54,7 +53,7 @@ import { AdminPricingModule } from "../../admin/admin-pricing/admin-pricing.modu
     PricingPersistenceService,
     PricingComplianceService,
     PricingComplianceMlAssistService,
-    PricingComplianceMlAssistProcessor,
+    // PricingComplianceMlAssistProcessor, // DISABLED - depends on OllamaService from AIModule
     PricingRationaleSummaryService,
     PricingCacheService,
     PricingCacheRepository,

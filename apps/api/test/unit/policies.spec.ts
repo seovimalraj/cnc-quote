@@ -81,8 +81,6 @@ describe('PoliciesGuard', () => {
       supabase.client.from.mockReturnValueOnce({
         select: jest.fn().mockReturnThis(),
         eq: jest.fn().mockReturnThis(),
-        eq: jest.fn().mockReturnThis(),
-        eq: jest.fn().mockReturnThis(),
         single: jest.fn().mockResolvedValue({ data: { policy_id: 'policy-1' }, error: null }),
       } as any);
 
@@ -109,8 +107,6 @@ describe('PoliciesGuard', () => {
       // Mock policy check - no matching policy
       supabase.client.from.mockReturnValueOnce({
         select: jest.fn().mockReturnThis(),
-        eq: jest.fn().mockReturnThis(),
-        eq: jest.fn().mockReturnThis(),
         eq: jest.fn().mockReturnThis(),
         single: jest.fn().mockResolvedValue({ data: null, error: { code: 'PGRST116', message: 'No rows' } }),
       } as any);
@@ -143,8 +139,6 @@ describe('PoliciesGuard', () => {
       // Mock policy check - org_admin has '*' action on quotes
       supabase.client.from.mockReturnValueOnce({
         select: jest.fn().mockReturnThis(),
-        eq: jest.fn().mockReturnThis(),
-        eq: jest.fn().mockReturnThis(),
         eq: jest.fn().mockReturnThis(),
         single: jest.fn().mockResolvedValue({ data: { policy_id: 'policy-org-admin-all-quotes' }, error: null }),
       } as any);
@@ -280,8 +274,6 @@ describe('PoliciesGuard', () => {
       // Mock policy check - org_admin has '*' action on quotes
       supabase.client.from.mockReturnValueOnce({
         select: jest.fn().mockReturnThis(),
-        eq: jest.fn().mockReturnThis(),
-        eq: jest.fn().mockReturnThis(),
         eq: jest.fn().mockReturnThis(),
         single: jest.fn().mockResolvedValue({ data: { policy_id: 'policy-wildcard' }, error: null }),
       } as any);

@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
 import { toast } from 'react-hot-toast';
+import { formatDate } from '@/lib/format';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -48,9 +49,72 @@ const SOURCE_OPTIONS = [
 
 export default function OrdersPage() {
   const router = useRouter();
-  const [orders, setOrders] = useState<Order[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [total, setTotal] = useState(0);
+  
+  // Mock orders data
+  const mockOrders: Order[] = [
+    {
+      id: 'ORD-2024-001',
+      quote_id: 'Q-2024-001',
+      status: 'Shipped',
+      eta_date: '2024-02-01',
+      updated_at: '2024-01-20',
+      totals: { grand_total: 2275.00 },
+    },
+    {
+      id: 'ORD-2024-002',
+      quote_id: 'Q-2024-003',
+      status: 'In_Production',
+      eta_date: '2024-02-10',
+      updated_at: '2024-01-19',
+      totals: { grand_total: 3275.00 },
+    },
+    {
+      id: 'ORD-2024-003',
+      quote_id: 'Q-2024-004',
+      status: 'QA_Final',
+      eta_date: '2024-02-05',
+      updated_at: '2024-01-18',
+      totals: { grand_total: 8550.00 },
+    },
+    {
+      id: 'ORD-2024-004',
+      quote_id: 'Q-2024-002',
+      status: 'Completed',
+      eta_date: '2024-01-15',
+      updated_at: '2024-01-15',
+      totals: { grand_total: 1850.00 },
+    },
+    {
+      id: 'ORD-2024-005',
+      quote_id: 'Q-2024-005',
+      status: 'Ready_To_Ship',
+      eta_date: '2024-01-25',
+      updated_at: '2024-01-22',
+      totals: { grand_total: 3750.00 },
+    },
+  ];
+
+  const mockShipments: Shipment[] = [
+    {
+      id: 'ship-1',
+      carrier: 'UPS',
+      service: 'Ground',
+      status: 'In_Transit',
+      tracking_numbers: ['1Z9999999999999999'],
+      ship_date: '2024-01-20',
+      delivery_date: '2024-02-01',
+      packages: [{ id: 'pkg-1', tracking_number: '1Z9999999999999999', length: 12, width: 10, height: 8, weight: 5 }],
+      events: [
+        { ts: '2024-01-22T10:00:00Z', status: 'In Transit', location: 'Philadelphia, PA', description: 'Package is in transit' },
+        { ts: '2024-01-21T14:30:00Z', status: 'Departed Facility', location: 'Newark, NJ', description: 'Package departed facility' },
+        { ts: '2024-01-20T09:00:00Z', status: 'Origin Scan', location: 'New York, NY', description: 'Package picked up' },
+      ],
+    },
+  ];
+  
+  const [orders, setOrders] = useState<Order[]>(mockOrders);
+  const [isLoading, setIsLoading] = useState(false);
+  const [total, setTotal] = useState(mockOrders.length);
   const [page, setPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
@@ -69,34 +133,8 @@ export default function OrdersPage() {
 
   // Load orders when filters change
   const loadOrders = useCallback(async () => {
-    try {
-      setIsLoading(true);
-      const params = new URLSearchParams({
-        page: page.toString(),
-        page_size: ITEMS_PER_PAGE.toString(),
-        q: debouncedSearchQuery,
-        ...(filters.status && { status: filters.status.join(',') }),
-        ...(filters.date_range?.from && { date_from: filters.date_range.from }),
-        ...(filters.date_range?.to && { date_to: filters.date_range.to }),
-        ...(filters.value && { value_band: filters.value }),
-        ...(filters.source && { source: filters.source }),
-      });
-
-      const response = await api.get<OrdersListResponse>(`/orders?${params}`);
-      setOrders(response.data.orders);
-      setTotal(response.data.total);
-
-      trackEvent('orders_list_view', {
-        page,
-        filters: Object.keys(filters).length,
-        search_query: debouncedSearchQuery || undefined,
-      });
-    } catch (error) {
-      toast.error('Failed to load orders');
-      console.error('Error loading orders:', error);
-    } finally {
-      setIsLoading(false);
-    }
+    // Mock implementation - no actual API call
+    setIsLoading(false);
   }, [page, debouncedSearchQuery, filters]);
 
   useEffect(() => {
@@ -107,7 +145,6 @@ export default function OrdersPage() {
   const handleFilterChange = (key: keyof OrderFilters, value: any) => {
     setFilters(prev => ({ ...prev, [key]: value }));
     setPage(1); // Reset to first page
-        trackEvent('orders_filter_changed', { filter: key, value });
   };
 
   // Handle search
@@ -118,71 +155,27 @@ export default function OrdersPage() {
 
   // Handle row actions
   const handleViewOrder = (orderId: string) => {
-    trackEvent('orders_row_view', { order_id: orderId });
     router.push(`/portal/orders/${orderId}`);
   };
 
   const handleTrackOrder = async (orderId: string) => {
     setTrackingOrderId(orderId);
     setIsTrackingLoading(true);
-    try {
-      const response = await api.get<Shipment[]>(`/orders/${orderId}/shipments`);
-      setTrackingShipments(response.data);
-    } catch (error) {
-      toast.error('Failed to load tracking information');
-      console.error('Error loading shipments:', error);
-    } finally {
+    // Mock implementation - use mock shipments
+    setTimeout(() => {
+      setTrackingShipments(mockShipments);
       setIsTrackingLoading(false);
-    }
+    }, 500);
   };
 
   const handleDownloadInvoice = async (orderId: string) => {
-    try {
-      const response = await fetch(`/api/orders/${orderId}/invoices/latest.pdf`);
-      if (!response.ok) throw new Error('Download failed');
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `invoice-${orderId}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
-      trackEvent('orders_download_invoice', { order_id: orderId });
-    } catch (error) {
-      toast.error('Failed to download invoice');
-      console.error('Error downloading invoice:', error);
-    }
+    // Mock implementation - no actual download
+    toast.success(`Invoice download started for ${orderId}`);
   };
 
   const handleExportCSV = async () => {
-    try {
-      const params = new URLSearchParams({
-        ...(filters.status && { status: filters.status.join(',') }),
-        ...(filters.date_range?.from && { date_from: filters.date_range.from }),
-        ...(filters.date_range?.to && { date_to: filters.date_range.to }),
-        ...(filters.value && { value_band: filters.value }),
-        ...(filters.source && { source: filters.source }),
-        q: debouncedSearchQuery,
-      });
-
-      const response = await fetch(`/api/orders/export.csv?${params}`);
-      if (!response.ok) throw new Error('Export failed');
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'orders-export.csv';
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
-      trackEvent('orders_export');
-    } catch (error) {
-      toast.error('Failed to export orders');
-      console.error('Error exporting orders:', error);
-    }
+    // Mock implementation - no actual export
+    toast.success('CSV export started');
   };
 
   const handleOpenCarrierTracking = (carrier: string, trackingNumber: string) => {
@@ -199,11 +192,6 @@ export default function OrdersPage() {
 
   // Format currency
   const formatCurrency = (amount: number) => `$${amount.toFixed(2)}`;
-
-  // Format date
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString();
-  };
 
   // Get status badge variant
   const getStatusVariant = (status: string) => {

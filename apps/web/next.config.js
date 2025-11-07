@@ -5,12 +5,43 @@
 
 const nextConfig = {
   reactStrictMode: true,
+  output: 'standalone',
   experimental: {
     serverActions: {
   allowedOrigins: ['localhost:3000', 'app.frigate.ai']
     },
     forceSwcTransforms: true,
   },
+  webpack: (config, { isServer }) => {
+    // Enable WebAssembly support for OpenCascade.js
+    config.experiments = {
+      ...config.experiments,
+      asyncWebAssembly: true,
+      layers: true,
+    };
+
+    // Handle .wasm files properly
+    config.module.rules.push({
+      test: /\.wasm$/,
+      type: 'asset/resource',
+    });
+
+    // Exclude OpenCascade.js from server-side processing entirely
+    if (isServer) {
+      config.externals = [...config.externals, 'opencascade.js'];
+    } else {
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        fs: false,
+        path: false,
+        crypto: false,
+      };
+    }
+
+    return config;
+  },
+  // External packages that should not be bundled
+  serverExternalPackages: ['pg'],
   typescript: {
     ignoreBuildErrors: true,
   },

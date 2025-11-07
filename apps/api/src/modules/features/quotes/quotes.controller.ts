@@ -19,6 +19,24 @@ export class QuotesController {
     private readonly revisionsService: QuoteRevisionsService,
   ) {}
 
+  /**
+   * Resolve organization id from available sources without requiring RbacGuard.
+   * Preference: RBAC context -> header x-org-id -> JWT user claims.
+   */
+  private resolveOrgId(req: any): string | undefined {
+    const headerOrg = (req.headers?.['x-org-id'] || req.headers?.['X-Org-Id']) as
+      | string
+      | undefined;
+    return (
+      req.rbac?.orgId ||
+      headerOrg ||
+      req.user?.org_id ||
+      req.user?.orgId ||
+      req.user?.organizationId ||
+      undefined
+    );
+  }
+
   // Multi-part quote initialization
   @Post()
   @Policies({ action: 'create', resource: 'quotes' })
@@ -26,7 +44,7 @@ export class QuotesController {
     @Req() req: any,
     @Body() body: { parts: any[]; currency?: string; customer_id?: string },
   ) {
-    const orgId = req.rbac?.orgId;
+    const orgId = this.resolveOrgId(req);
     const payload = { ...body, org_id: orgId } as Parameters<QuotesService['createMultiPartQuote']>[0];
     req.audit = {
       action: 'QUOTE_CREATED',
@@ -44,7 +62,7 @@ export class QuotesController {
   @Post('preview-multipart')
   @Policies({ action: 'view', resource: 'quotes' })
   async previewMultiPart(@Req() req: any, @Body() body: MultiPartQuotePreviewRequest) {
-    return this.previewService.preview({ ...body, org_id: req.rbac?.orgId } as MultiPartQuotePreviewRequest & { org_id?: string | null });
+    return this.previewService.preview({ ...body, org_id: this.resolveOrgId(req) } as MultiPartQuotePreviewRequest & { org_id?: string | null });
   }
 
   // Batch add parts to existing quote (subsequent uploads)
@@ -57,7 +75,7 @@ export class QuotesController {
       resourceId: id,
       before: null,
     };
-    const result = await this.quotesService.addPartsToQuote(id, req.rbac?.orgId, body.parts || []);
+    const result = await this.quotesService.addPartsToQuote(id, this.resolveOrgId(req), body.parts || []);
     req.audit.after = { parts_added: body.parts?.length ?? 0 };
     return result;
   }
@@ -71,16 +89,16 @@ export class QuotesController {
   @Policies({ action: 'view', resource: 'quotes' })
   async getQuote(@Req() req: any, @Param("id") id: string, @Query('view') view?: string) {
     if (view === 'vnext') {
-      return this.quotesService.getQuoteSummaryVNext(id, req.rbac?.orgId);
+      return this.quotesService.getQuoteSummaryVNext(id, this.resolveOrgId(req));
     }
 
-    return this.quotesService.getQuote(id, req.rbac?.orgId);
+    return this.quotesService.getQuote(id, this.resolveOrgId(req));
   }
 
   @Get(":id/summary")
   @Policies({ action: 'view', resource: 'quotes' })
   async getQuoteSummary(@Req() req: any, @Param("id") id: string) {
-    return this.quotesService.getQuoteSummaryV1(id, req.rbac?.orgId);
+    return this.quotesService.getQuoteSummaryV1(id, this.resolveOrgId(req));
   }
 
   @Put(":id")
@@ -92,7 +110,7 @@ export class QuotesController {
       resourceId: id,
       before: null,
     };
-    const result = await this.quotesService.updateQuote(id, data, req.rbac?.orgId);
+    const result = await this.quotesService.updateQuote(id, data, this.resolveOrgId(req));
     req.audit.after = { status: result.status, total_amount: result.total_amount };
     return result;
   }
@@ -158,14 +176,15 @@ export class QuotesController {
   @Post(":id/status")
   @Policies({ action: 'update', resource: 'quotes' })
   async transition(@Req() req: any, @Param('id') id: string, @Body() body: { status: string }) {
-    const before = await this.quotesService.getQuoteSummaryV1(id, req.rbac?.orgId);
+    const orgId = this.resolveOrgId(req);
+    const before = await this.quotesService.getQuoteSummaryV1(id, orgId);
     req.audit = {
       action: 'QUOTE_STATUS_CHANGED',
       resourceType: 'quote',
       resourceId: id,
       before: { status: before.status },
     };
-    const updated = await this.quotesService.transitionQuoteStatus(id, body.status as any, req.rbac?.orgId);
+    const updated = await this.quotesService.transitionQuoteStatus(id, body.status as any, orgId);
     req.audit.after = { status: updated.status };
     return { success: true, quote: updated };
   }
@@ -173,14 +192,15 @@ export class QuotesController {
   @Post(":id/to-processing")
   @Policies({ action: 'update', resource: 'quotes' })
   async toProcessing(@Req() req: any, @Param('id') id: string) {
-    const before = await this.quotesService.getQuoteSummaryV1(id, req.rbac?.orgId);
+    const orgId = this.resolveOrgId(req);
+    const before = await this.quotesService.getQuoteSummaryV1(id, orgId);
     req.audit = {
       action: 'QUOTE_STATUS_CHANGED',
       resourceType: 'quote',
       resourceId: id,
       before: { status: before.status },
     };
-    const updated = await this.quotesService.transitionQuoteStatus(id, 'processing', req.rbac?.orgId);
+    const updated = await this.quotesService.transitionQuoteStatus(id, 'processing', orgId);
     req.audit.after = { status: updated.status };
     return { success: true, quote: updated };
   }
@@ -188,14 +208,15 @@ export class QuotesController {
   @Post(":id/to-ready")
   @Policies({ action: 'update', resource: 'quotes' })
   async toReady(@Req() req: any, @Param('id') id: string) {
-    const before = await this.quotesService.getQuoteSummaryV1(id, req.rbac?.orgId);
+    const orgId = this.resolveOrgId(req);
+    const before = await this.quotesService.getQuoteSummaryV1(id, orgId);
     req.audit = {
       action: 'QUOTE_STATUS_CHANGED',
       resourceType: 'quote',
       resourceId: id,
       before: { status: before.status },
     };
-    const updated = await this.quotesService.transitionQuoteStatus(id, 'ready', req.rbac?.orgId);
+    const updated = await this.quotesService.transitionQuoteStatus(id, 'ready', orgId);
     req.audit.after = { status: updated.status };
     return { success: true, quote: updated };
   }
@@ -203,14 +224,15 @@ export class QuotesController {
   @Post(":id/to-sent")
   @Policies({ action: 'update', resource: 'quotes' })
   async toSent(@Req() req: any, @Param('id') id: string) {
-    const before = await this.quotesService.getQuoteSummaryV1(id, req.rbac?.orgId);
+    const orgId = this.resolveOrgId(req);
+    const before = await this.quotesService.getQuoteSummaryV1(id, orgId);
     req.audit = {
       action: 'QUOTE_STATUS_CHANGED',
       resourceType: 'quote',
       resourceId: id,
       before: { status: before.status },
     };
-    const updated = await this.quotesService.transitionQuoteStatus(id, 'sent', req.rbac?.orgId);
+    const updated = await this.quotesService.transitionQuoteStatus(id, 'sent', orgId);
     req.audit.after = { status: updated.status };
     return { success: true, quote: updated };
   }
@@ -218,14 +240,15 @@ export class QuotesController {
   @Post(":id/to-accepted")
   @Policies({ action: 'update', resource: 'quotes' })
   async toAccepted(@Req() req: any, @Param('id') id: string) {
-    const before = await this.quotesService.getQuoteSummaryV1(id, req.rbac?.orgId);
+    const orgId = this.resolveOrgId(req);
+    const before = await this.quotesService.getQuoteSummaryV1(id, orgId);
     req.audit = {
       action: 'QUOTE_STATUS_CHANGED',
       resourceType: 'quote',
       resourceId: id,
       before: { status: before.status },
     };
-    const updated = await this.quotesService.transitionQuoteStatus(id, 'accepted', req.rbac?.orgId);
+    const updated = await this.quotesService.transitionQuoteStatus(id, 'accepted', orgId);
     req.audit.after = { status: updated.status };
     return { success: true, quote: updated };
   }

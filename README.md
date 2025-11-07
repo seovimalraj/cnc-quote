@@ -22,94 +22,169 @@ A comprehensive CNC manufacturing quote generation and DFM (Design for Manufactu
 - [🤝 Contributing](#-contributing)
 - [📝 License](#-license)
 
-## 🚀 Features
+# CNC Quote Platform
 
-### 🎯 Core Functionality
-- **Instant Quote Generation**: Get pricing for CNC parts in seconds
-- **DFM (Design for Manufacturing) Analysis**: Automated design feedback and optimization suggestions
-- **Multi-Process Support**: CNC Milling, Turning, and Injection Molding
-- **Material Catalog**: Comprehensive database of materials and finishes
-- **Lead Time Management**: Flexible delivery options with dynamic pricing
-- **File Upload & Processing**: Support for CAD files (STEP, STL, IGES, etc.)
+Enterprise-grade CNC manufacturing quote generation and Design for Manufacturing (DFM) analysis platform. Built with modern microservices architecture to deliver instant pricing, automated design feedback, and comprehensive order management.
 
-### 👥 User Management
-- **Multi-tenant Architecture**: Organization-based user management
-- **Role-based Access Control**: Admin, Manager, and User roles
-- **Customer Portal**: Self-service quote management and order tracking
-- **Admin Dashboard**: Comprehensive management interface
+## Table of Contents
 
-### 💰 Pricing & Quoting
-- **Dynamic Pricing Engine**: Real-time pricing based on geometry, material, and quantity
-- **Quote Versioning**: Track quote changes and iterations
-- **Bulk Pricing**: Quantity breaks and volume discounts
-- **Manual Review System**: Flag complex parts for human review
-- **Price Override**: Admin capability to adjust pricing
-  
-- ✅ Stateless multi-part Quote Preview API (`QuotePreviewService`) returning per-line unit/total price, complexity score, and lead time
-- ✅ Shared Catalog Snapshot (materials, finishes, processes, machines) with deterministic version tag
-- ✅ Shared Cost Model Types & Pricing Compute Utility (`pricing.compute.ts`) producing normalized breakdown fields (material, machining, finish, setup, inspection, overhead, margin)
-- ✅ Lead Time Tiers (standard / expedited) surfaced in preview response with baseline & derived rush days + multipliers
-- ✅ Per-part cost breakdown UI (Instant Quote summary > expandable per-line breakdown with granular cost buckets + lead time)
-- ✅ Quote Revision Type Scaffolding (types + backend service shell) for future diff-based revisioning
-- ✅ Unit test coverage for pricing compute (edge cases: zero qty, unknown codes, high complexity multipliers)
+- [Overview](#overview)
+- [Features](#features)
+- [Architecture](#architecture)
+- [Project Structure](#project-structure)
+- [Technology Stack](#technology-stack)
+- [Installation](#installation)
+- [Configuration](#configuration)
+- [Docker Deployment](#docker-deployment)
+- [API Documentation](#api-documentation)
+- [Frontend Features](#frontend-features)
+- [Security](#security)
+- [Monitoring & Observability](#monitoring--observability)
+- [Testing](#testing)
+- [Deployment](#deployment)
+- [Troubleshooting](#troubleshooting)
+- [Contributing](#contributing)
+- [License](#license)
 
-These foundations unlocked Phase 2 without structural refactors.
+## Overview
 
-#### Phase 2 (In Progress) – Tiered Pricing & Comparative UX
+The CNC Quote Platform is a full-stack manufacturing intelligence system designed to streamline the RFQ (Request for Quote) process for precision machining operations. It combines real-time pricing computation, automated Design for Manufacturing analysis, and comprehensive order lifecycle management into a unified platform.
 
-Focus: richer pricing exploration & user-visible economic levers.
+**Key Capabilities:**
+- Sub-second quote generation for CNC milling, turning, sheet metal, and injection molding
+- AI-powered DFM analysis with actionable design recommendations
+- Multi-tenant architecture supporting customer portals, supplier networks, and admin dashboards
+- Stateless pricing preview API for rapid cost exploration
+- Integration-ready payment processing and document generation
 
-- ✅ UI quantity & tier selectors wired—changing either updates extended price + aggregate metrics
-- ✅ Aggregate lead time & price delta visualization (baseline vs selected tier / quantity) with per-line delta badges
-- ✅ Revision persistence scaffolding retained for upcoming history view integration
-- ✅ Extended shared types (`catalog.types.ts`) to include `price_tiers`, `quantity_matrix`, and structured lead time tier definitions
+**Target Users:**
+- Manufacturing businesses seeking quote automation
+- Engineering teams requiring design feedback
+- Procurement departments managing supplier networks
+- Shop floor operations coordinating production
 
-Quote Revision Persistence (now active):
-```
-`quote_revisions` table fields: `id, quote_id, revision_number, status, reason, created_by, diff_summary(jsonb), created_at, applied_at` (+ RLS policies for org membership).
-Shared diff helper: `computeQuoteDiffSummaryV1(prev, curr)` (shallow pricing + item count/status deltas).
-
-## Instant Quote Authentication Gate
-
-The route `/instant-quote` is now gated.
-
-- Not signed in: shows a landing page with sign-in/sign-up CTAs.
-- Signed in (Supabase session present): renders the full Instant Quote workspace.
-
-Required environment variables for the web app:
-
-- `NEXT_PUBLIC_SUPABASE_URL`
-- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-- `NEXT_PUBLIC_API_URL` (or `API_URL`) for server-side proxy to the API
-
-Upcoming (Phase 2 remaining scope):
-- Persist actual quote revisions to storage + expose revision history endpoint (diff summary of cost buckets & lead time)
-- Merge realtime (event-driven) vs preview ladder data into a unified delta comparison view
-- Local caching of preview requests keyed by stable part config hash to reduce network churn
-- Add rush tier pricing heuristics for machine setup compression & overtime cost modeling
-- Visual variance indicators when delta thresholds (e.g. ±12% unit price) are exceeded
-
-Early Phase 3 Lookahead (dependency prep):
-- Introduce bundle / multi-part optimization heuristics (shared setup amortization)
-- Margin optimization overlay (target vs achieved; highlight low-margin lines)
-- Risk scoring integration feeding surcharge or manual review gating
+## Features
 
 
-### 📦 Order Management
-- **Order Lifecycle**: From quote creation through production, QC, shipment, and completion
-- **Payment Integration**: PayPal Orders API (create & capture)
-- **Document Generation**: Automated QAP (Quality Assurance Plan) documents
-- **Notification System**: Email and in-app notifications
+### Core Functionality
 
-### 🔍 Analytics & Reporting
-- **Quote Analytics**: Conversion rates, pricing trends
-- **Order Metrics**: Revenue, volume, and performance tracking
-- **Customer Insights**: Usage patterns and preferences
-### Queue / Job Monitoring (Enterprise Grade)
+**Instant Quote Generation**
+- Real-time pricing computation for multiple manufacturing processes
+- Support for CNC milling (3-axis, 4-axis, 5-axis), turning, sheet metal fabrication, and injection molding
+- Quantity-based pricing tiers with automatic volume discounts
+- Lead time variants (standard, expedited) with dynamic pricing adjustments
 
-- **Performance Monitoring**: System health and uptime tracking
+**Design for Manufacturing (DFM) Analysis**
+- Automated geometry analysis and manufacturability scoring
+- Feature detection (holes, pockets, thin walls, sharp corners)
+- Material and process-specific design recommendations
+- Real-time feedback during part configuration
 
-## 🏗️ Architecture
+**Material & Process Intelligence**
+- Comprehensive catalog of metals, plastics, and composites
+- Process capability matrices and machine specifications
+- Finish options (anodizing, powder coating, plating, polishing)
+- Tolerance and inspection level configuration
+
+**File Processing & CAD Support**
+- Support for STEP, STEP, STL, IGES, IGS, OBJ formats
+- Server-side geometry extraction and validation
+- 3D visualization with interactive controls
+- Automated volume, surface area, and feature calculations
+
+### User Management & Access Control
+
+**Organization & Role Management**
+- Multi-tenant architecture with organization isolation
+- Role-based access control (Admin, Manager, User, Supplier)
+- Customer self-service portals
+- Supplier network management
+- Admin dashboards with comprehensive controls
+
+**Authentication & Sessions**
+- JWT-based authentication with refresh tokens
+- Supabase Auth integration
+- OAuth 2.0 support (extensible)
+- Session management with Redis
+- API key authentication for service-to-service communication
+
+### Pricing & Quoting
+
+**Dynamic Pricing Engine**
+- Real-time cost computation based on:
+  - Part geometry (volume, surface area, complexity)
+  - Material selection and availability
+  - Manufacturing process and machine capabilities
+  - Finish requirements and post-processing
+  - Quantity breaks and volume discounts
+  - Lead time tier selection
+
+**Quote Management**
+- Multi-part quote composition
+- Version control and revision tracking
+- Quote-to-order conversion workflow
+- Price override capabilities (admin)
+- Approval workflows and notifications
+
+**Stateless Pricing Preview API**
+- Heuristic cost estimation without persistence
+- Catalog snapshot versioning for consistency
+- Per-part cost breakdown (material, machining, finish, setup, QA, overhead, margin)
+- Lead time calculation with tier variants
+- Real-time UI updates during configuration
+
+### Order Management & Fulfillment
+
+**Order Lifecycle Management**
+- Canonical status progression: NEW → PAID → IN_PRODUCTION → QC → SHIPPED → COMPLETE
+- Status validation with directed acyclic graph (DAG) enforcement
+- Audit trail with complete status history
+- Timeline visualization with milestone tracking
+- Cancellation workflows with refund support
+
+**Payment Integration**
+- PayPal Orders API (create, authorize, capture)
+- Extensible payment provider architecture
+- Transaction logging and reconciliation
+- Refund and adjustment handling
+
+**Document Generation**
+- Automated Quality Assurance Plans (QAP)
+- Purchase orders and packing slips
+- Shipping labels and tracking
+- Certificate of conformance generation
+
+**Notifications**
+- Email notifications for status changes
+- In-app notification center
+- Webhook support for external integrations
+- Configurable notification preferences
+
+### Analytics & Reporting
+
+**Quote Intelligence**
+- Conversion rate tracking (quote-to-order)
+- Pricing trend analysis
+- Win/loss attribution
+- Material and process popularity metrics
+
+**Order Analytics**
+- Revenue by time period, customer, material, process
+- Volume trends and capacity utilization
+- Average order value and lifetime customer value
+- Fulfillment cycle time analysis
+
+**System Metrics**
+- API performance and latency percentiles
+- Queue health and job throughput
+- Error rates and failure modes
+- Resource utilization tracking
+
+## Architecture
+
+
+
+The platform follows a microservices architecture with clear separation of concerns:
 
 ```
 ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
@@ -118,7 +193,7 @@ Early Phase 3 Lookahead (dependency prep):
 │                 │    │                 │    │                 │
 │ - React UI      │    │ - REST API      │    │ - File Analysis │
 │ - SSR/SSG       │    │ - Authentication│    │ - DFM Checks    │
-│ - Responsive    │    │ - Business Logic│    │ - Geometry Calc │
+│ - Client State  │    │ - Business Logic│    │ - Geometry Calc │
 └─────────────────┘    └─────────────────┘    └─────────────────┘
          │                        │                        │
          │                        │                        │
@@ -127,13 +202,25 @@ Early Phase 3 Lookahead (dependency prep):
 │     Nginx       │    │   PostgreSQL    │    │     Redis       │
 │   (Proxy/SSL)   │    │   (Supabase)    │    │   (Cache/Jobs)  │
 │                 │    │                 │    │                 │
-│ - Load Balancer │    │ - User Data     │    │ - Session Store │
-│ - SSL/TLS       │    │ - Orders/Quotes │    │ - Rate Limiting │
-│ - Static Assets │    │ - Materials     │    │ - Job Queue     │
+│ - Load Balancer │    │ - Relational DB │    │ - Session Store │
+│ - SSL/TLS       │    │ - Row Security  │    │ - Rate Limiting │
+│ - Static Assets │    │ - Auth & Storage│    │ - Job Queues    │
 └─────────────────┘    └─────────────────┘    └─────────────────┘
 ```
 
-## 📦 Project Structure
+**Design Principles:**
+- **Separation of Concerns**: Each service has a single, well-defined responsibility
+- **Stateless Services**: Horizontal scalability through stateless design
+- **Event-Driven Architecture**: Asynchronous job processing with BullMQ
+- **Data Integrity**: Row-level security (RLS) and audit logging
+- **API-First**: OpenAPI documentation and type-safe contracts
+
+**Communication Patterns:**
+- Synchronous: HTTP/REST for request-response operations
+- Asynchronous: Redis-backed queues for long-running tasks
+- Real-time: WebSocket support for live updates (extensible)
+
+## Project Structure
 
 ```
 cnc-quote/
@@ -198,9 +285,9 @@ cnc-quote/
 └── package.json           # Workspace configuration
 ```
 
-## ⚙️ Technology Stack
+## Technology Stack
 
-### 🖥️ Frontend
+### Frontend
 - **Framework**: Next.js 15 (App Router)
 - **Language**: TypeScript
 - **UI Library**: React 18
@@ -210,7 +297,7 @@ cnc-quote/
 - **State Management**: React Context + Zustand
 - **HTTP Client**: Axios
 
-### ⚙️ Backend
+### Backend
 - **Framework**: NestJS (TypeScript)
 - **Database**: PostgreSQL (Supabase)
 - **ORM**: Prisma
@@ -221,14 +308,14 @@ cnc-quote/
 - **File Storage**: Supabase Storage
 - **API Documentation**: Swagger/OpenAPI
 
-### 🐍 CAD Service
+### CAD Service
 - **Framework**: FastAPI (Python)
 - **CAD Libraries**: OpenCASCADE, FreeCAD
 - **File Processing**: pythonOCC
 - **Geometry Analysis**: Custom algorithms
 - **Container**: Docker
 
-### 🛠️ DevOps & Infrastructure
+### DevOps & Infrastructure
 - **Containerization**: Docker + Docker Compose
 - **Reverse Proxy**: Nginx (SSL termination)
 - **Process Management**: PM2
@@ -237,7 +324,7 @@ cnc-quote/
 - **Deployment**: Render.com, Docker
 - **Build System**: Turbo (monorepo)
 
-## 🛠️ Installation
+## Installation
 
 ### Prerequisites
 - Node.js 18+ and pnpm
@@ -295,7 +382,7 @@ pnpm dev:api      # Backend (http://localhost:5001)
 pnpm dev:cad      # CAD Service (http://localhost:8000)
 ```
 
-## 🔧 Configuration
+## Configuration
 
 ### Web Application (apps/web/.env.local)
 ```env
@@ -362,7 +449,7 @@ PROCESSING_TIMEOUT=300
 OCC_DATA_PATH=/opt/opencascade/share/opencascade
 ```
 
-## 🐳 Docker Deployment
+## Docker Deployment
 
 ### Development with Docker Compose
 ```bash
@@ -398,7 +485,7 @@ docker-compose ps
 - **prometheus**: Metrics collection (port 9090)
 - **grafana**: Monitoring dashboards (port 3001)
 
-## 📖 API Documentation
+## API Documentation
 
 ### Base URLs
 - **Development**: `http://localhost:5001`
@@ -538,9 +625,9 @@ GET    /dfm/results/:id   # Get analysis results
 }
 ```
 
-## 🌐 Frontend Features
+## Frontend Features
 
-### 📱 Pages & Routes
+### Pages & Routes
 - **Home** (`/`): Landing page with CTAs
 - **Instant Quote** (`/instant-quote`): File upload and quote generation
 - **Dashboard** (`/dashboard`): User dashboard and quote management  
@@ -548,7 +635,7 @@ GET    /dfm/results/:id   # Get analysis results
 - **Materials** (`/materials`): Material catalog browser
 - **Admin** (`/admin`): Administrative interface
 
-### 🎨 Components
+### Components
 - **QuoteForm**: Multi-step quote generation
 - **FileUploader**: Drag & drop CAD file upload
 - **DFMResults**: Interactive design feedback display
@@ -556,7 +643,7 @@ GET    /dfm/results/:id   # Get analysis results
 - **MaterialSelector**: Material and finish picker
 - **OrderTracker**: Real-time order status
 
-### 🧩 Instant Quote Layout (Xometry-Style)
+### Instant Quote Layout (Three-Column Design)
 The `/instant-quote` page now uses a three-column responsive layout mirroring established manufacturing marketplaces:
 
 1. Left Sidebar (Upload & Parts)
@@ -594,7 +681,7 @@ Planned Enhancements (TODO):
 - Stream DFM issue deltas w/ severity indicators.
 - Inline lead time selector affecting price ladder.
 
-### � Multi-Part Pricing Preview Integration
+### Multi-Part Pricing Preview Integration
 The UI integrates the backend `POST /api/quotes/preview-multipart` endpoint for heuristic, stateless pricing exploration.
 
 Workflow:
@@ -626,7 +713,7 @@ Future Preview Enhancements:
 - Integrate risk/inspection level multipliers once catalog expands
 - Provide visual variance indicators when preview deviates > threshold from last realtime price
 
-### 🧊 Interactive 3D Part Viewer
+### Interactive 3D Part Viewer
 The Instant Quote center column integrates an interactive 3D viewer (`Part3DViewer`) modeled after Xometry-style usability.
 
 Implemented Capabilities:
@@ -669,13 +756,13 @@ Performance Notes:
 - Measurement lines use simple `Line` primitive (`@react-three/drei`).
 
 
-### �🔧 Custom Hooks
+### Custom Hooks
 - `useQuote()`: Quote management and state
 - `useAuth()`: Authentication and user context  
 - `useUpload()`: File upload with progress
 - `useDFM()`: DFM analysis integration
 
-## 🔒 Security
+## Security
 
 ### Authentication & Authorization
 - **JWT Tokens**: Secure session management
@@ -696,7 +783,7 @@ Performance Notes:
 - **Container Security**: Minimal Docker images
 - **Network Isolation**: Service segmentation
 
-## 📊 Monitoring & Analytics
+## Monitoring & Observability
 
 ### Application Monitoring
 - **Prometheus Metrics**: Request rates, errors, latency
@@ -725,7 +812,7 @@ scrape_configs:
       - targets: ['api:5001']
 ```
 
-## 🧪 Testing
+## Testing
 
 ### Test Coverage
 - **Unit Tests**: Component and function testing
@@ -752,7 +839,7 @@ pnpm test:coverage
 - `scripts/dfm-acceptance-test.ts`: DFM functionality testing
 - `apps/web/e2e/`: Playwright E2E tests
 
-## 🚀 Deployment
+## Deployment
 
 ### Production Deployment
 ```bash
@@ -778,7 +865,7 @@ pnpm test:coverage
 - **Environment Promotion**: Dev → Staging → Production
 - **Rollback Strategy**: Quick reversion capabilities
 
-## 🛠️ Troubleshooting
+## Troubleshooting
 
 ### Common Issues
 
@@ -851,7 +938,7 @@ grep DATABASE_URL apps/api/.env
 ./scripts/doctor.ts
 ```
 
-## 🤝 Contributing
+## Contributing
 
 ### Development Workflow
 1. Fork the repository
@@ -874,47 +961,66 @@ grep DATABASE_URL apps/api/.env
 - Update documentation as needed
 - Ensure Docker compatibility
 
-## 📝 License
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ---
 
-## 🔄 Order Lifecycle
+## Order Lifecycle
 
-The platform uses a canonical set of order statuses to ensure consistent state transitions across services and UI layers.
+The platform implements a canonical order status system with enforced state transitions to maintain data integrity and workflow consistency.
 
-Canonical Statuses:
+### Status Definitions
 
-| Status | Meaning |
-| ------ | ------- |
-| `NEW` | Order created (converted from quote, awaiting payment or just initialized) |
-| `PAID` | Payment captured (funds secured) |
-| `IN_PRODUCTION` | Manufacturing work started (work orders active) |
-| `QC` | Quality inspection in progress |
-| `SHIPPED` | Order dispatched / in transit |
-| `COMPLETE` | Delivered & finalized |
+| Status | Description |
+|--------|-------------|
+| `NEW` | Order created (quote conversion completed, awaiting payment) |
+| `PAID` | Payment successfully captured and verified |
+| `IN_PRODUCTION` | Manufacturing operations in progress |
+| `QC` | Quality control and inspection phase |
+| `SHIPPED` | Order dispatched to customer |
+| `COMPLETE` | Order fulfilled and closed |
 | `CANCELLED` | Order voided (terminal state) |
 
-Allowed Transitions (DAG):
+### State Transition Rules
+
+The system enforces a directed acyclic graph (DAG) for status transitions:
 
 ```
-NEW -> PAID -> IN_PRODUCTION -> QC -> SHIPPED -> COMPLETE
-NEW -> CANCELLED
-PAID -> CANCELLED
-IN_PRODUCTION -> CANCELLED
-QC -> CANCELLED
+NEW → PAID → IN_PRODUCTION → QC → SHIPPED → COMPLETE
+  ↓      ↓          ↓           ↓
+  CANCELLED (terminal state accessible from most states)
 ```
 
-Notes:
-- Self-transitions are treated as idempotent (ignored logically).
-- `COMPLETE` and `CANCELLED` are final states (no further forward transitions).
-- Legacy DB status values (`draft`, `approved`, `in_production`, etc.) are mapped to canonical forms in service layer.
-- Validation is enforced via shared `validateOrderStatusTransition(from, to)` logic exported in `@cnc-quote/shared`.
+**Transition Validation:**
+- Self-transitions are idempotent (no-op)
+- `COMPLETE` and `CANCELLED` are terminal (no further transitions allowed)
+- All transitions are validated server-side using `validateOrderStatusTransition(from, to)`
+- Unauthorized transitions return HTTP 400 with detailed error messages
 
-### Status Mapping (DB ⇄ Canonical)
+### Audit Trail
 
-| DB (legacy) | Canonical |
-| ----------- | --------- |
-| `draft` / `pending_approval` | `NEW` |
+All status changes are persisted in the `order_status_history` table:
+- `order_id` - Foreign key to orders table
+- `new_status` - Target status
+- `notes` - Optional transition notes
+- `changed_by` - User ID who initiated the change
+- `created_at` - Timestamp of transition
+
+### Implementation Details
+
+**Service Layer:** `OrdersService.updateOrderStatus(orderId, newStatus, userId, notes)` handles:
+- Transition validation
+- History recording
+- Event publishing (for webhooks/notifications)
+- Atomic database operations
+
+**Legacy Status Mapping:** The system maintains backward compatibility with legacy database values:
+
+| Legacy DB Value | Canonical Status |
+|----------------|------------------|
+| `draft`, `pending_approval` | `NEW` |
 | `approved` | `PAID` |
 | `in_production` | `IN_PRODUCTION` |
 | `quality_check` | `QC` |
@@ -922,25 +1028,19 @@ Notes:
 | `completed` | `COMPLETE` |
 | `cancelled` | `CANCELLED` |
 
-### Timeline & History
-- Status changes persisted in `order_status_history` (order_id, new_status, notes, changed_by, created_at)
-- Helper: `OrdersService.updateOrderStatus` validates and appends history atomically.
-- Payments capture path promotes `NEW` → `PAID` with validation & analytics event logging.
-
-### Extensibility Roadmap
-Potential future statuses: `ON_HOLD`, `PARTIAL_SHIPPED`, `RETURN_REQUESTED` (would require transition map extension + UI lane updates).
+**Future Extensibility:**
+- Additional states (`ON_HOLD`, `PARTIAL_SHIPPED`, `RETURN_REQUESTED`) can be added by extending the transition graph
+- State-specific actions (notifications, webhook triggers) are configuration-driven
+- Timeline visualization supports custom milestone definitions
 
 ---
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+## Support & Contact
 
----
+**Documentation:** Complete guides available in the `/docs` directory  
+**Issue Tracking:** Report bugs and request features via GitHub Issues  
+**Discussion Forum:** Technical questions and community support via GitHub Discussions  
+**Commercial Support:** vimalraj@frigate.ai
 
-## 📞 Support
-
-- **Documentation**: Check this README and `/docs` folder
-- **Issues**: Report bugs via GitHub Issues
-- **Discussions**: Use GitHub Discussions for questions
-- **Email**: vimalraj@frigate.ai
-
-**Built with ❤️ by the Vimal & Team**
+**Developed by Vimal & Team**
+````

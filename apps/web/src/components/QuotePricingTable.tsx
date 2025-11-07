@@ -3,6 +3,7 @@ import React, { useEffect, useMemo, useRef } from 'react';
 import { usePricingStore } from '../store/pricingStore';
 import clsx from 'clsx';
 import { ComplianceBadge } from './instant-quote/ComplianceBadge';
+import { formatCurrency } from '@/lib/format';
 
 interface Props {
   quoteItemId: string;
@@ -82,8 +83,8 @@ export const QuotePricingTable: React.FC<Props> = ({ quoteItemId, currency = 'US
             return (
               <tr key={r.quantity} className={clsx('border-t border-gray-100 dark:border-gray-700 transition-colors', optimistic && 'bg-amber-50 dark:bg-amber-900/20')}> 
                 <td className="p-2">{r.quantity}</td>
-                <td className="p-2 text-right tabular-nums">{r.unit_price !== undefined ? formatMoney(r.unit_price, currency) : '—'}</td>
-                <td className="p-2 text-right tabular-nums">{r.total_price !== undefined ? formatMoney(r.total_price, currency) : '—'}</td>
+                <td className="p-2 text-right tabular-nums">{r.unit_price !== undefined ? formatCurrency(r.unit_price, currency) : '—'}</td>
+                <td className="p-2 text-right tabular-nums">{r.total_price !== undefined ? formatCurrency(r.total_price, currency) : '—'}</td>
                 <td className="p-2 text-right">{r.lead_time_days ?? '—'}</td>
                 <td className="p-2">
                   <div className="flex items-center gap-2">
@@ -107,7 +108,7 @@ export const QuotePricingTable: React.FC<Props> = ({ quoteItemId, currency = 'US
             {subtotalDelta !== undefined && subtotalDelta !== 0 && (
               <>
                 <ArrowIcon up={subtotalDelta > 0} />
-                <span>{(subtotalDelta > 0 ? '+' : '') + formatMoney(subtotalDelta, currency)}</span>
+                <span>{(subtotalDelta > 0 ? '+' : '') + formatCurrency(subtotalDelta, currency)}</span>
               </>
             )}
           </span>
@@ -116,10 +117,6 @@ export const QuotePricingTable: React.FC<Props> = ({ quoteItemId, currency = 'US
     </div>
   );
 };
-
-function formatMoney(v: number, currency: string) {
-  return new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(v);
-}
 
 const ArrowIcon: React.FC<{ up: boolean }> = ({ up }) => (
   <svg

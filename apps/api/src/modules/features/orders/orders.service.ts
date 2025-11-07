@@ -1,4 +1,4 @@
-import { Injectable } from "@nestjs/common";
+import { Injectable, Optional } from "@nestjs/common";
 import { SupabaseService } from "../../../lib/supabase/supabase.service";
 import { NotifyService } from "../notify/notify.service";
 import { QapService } from "../qap/qap.service";
@@ -10,7 +10,7 @@ export class OrdersService {
   constructor(
     private readonly supabase: SupabaseService,
     private readonly notify: NotifyService,
-    private readonly qapService: QapService,
+    @Optional() private readonly qapService?: QapService,
   ) {}
 
   // Kanban Board Methods
@@ -689,15 +689,17 @@ export class OrdersService {
           },
         };
 
-        // Generate QAP document
-        await this.qapService.generateQapDocument({
-          templateId: template.id,
-          orderId: order.id,
-          orderItemId: item.id,
-          orgId: order.org_id,
-          userId,
-          documentData: qapData,
-        });
+        // Generate QAP document (skip if QapService not available)
+        if (this.qapService) {
+          await this.qapService.generateQapDocument({
+            templateId: template.id,
+            orderId: order.id,
+            orderItemId: item.id,
+            orgId: order.org_id,
+            userId,
+            documentData: qapData,
+          });
+        }
       }
     } catch (error) {
       console.error("Error generating QAP documents:", error);

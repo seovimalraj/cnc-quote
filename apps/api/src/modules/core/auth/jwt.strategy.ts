@@ -1,14 +1,14 @@
 import { Injectable } from "@nestjs/common";
 import { PassportStrategy } from "@nestjs/passport";
 import { ExtractJwt, Strategy } from "passport-jwt";
-import { passportJwtSecret } from "jwks-rsa";
-import { createClient, SupabaseClient } from "@supabase/supabase-js";
 import { Role, ROLES } from "@cnc-quote/shared";
 
 export interface JwtPayload {
   sub: string;
+  userId?: string;
   email: string;
   org_id?: string;
+  organizationId?: string;
   aud?: string;
   role?: Role | "user";
   iss?: string;
@@ -30,48 +30,38 @@ export interface RequestUser {
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
-  private readonly supabase: SupabaseClient;
-
   constructor() {
     super({
-      jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
-      audience: process.env.JWT_AUDIENCE,
-      issuer: `${process.env.SUPABASE_URL}/auth/v1`,
-      algorithms: ["RS256"],
-      secretOrKeyProvider: passportJwtSecret({
-        cache: true,
-        rateLimit: true,
-        jwksRequestsPerMinute: 5,
-        jwksUri: `${process.env.SUPABASE_URL}/auth/v1/jwks`,
-      }),
+      jwtFromRequest: ExtractJwt.fromExtractors([
+        ExtractJwt.fromAuthHeaderAsBearerToken(),
+        (req) => {
+          // Also check cookies for browser requests
+          if (req && req.cookies) {
+            return req.cookies['sb-access-token'];
+          }
+          return null;
+        },
+      ]),
+      secretOrKey: process.env.JWT_SECRET || 'CvLsEGE0l29M+R1s6OcSm8r8We3JI7C9Gyox2fheQ4I=',
+      algorithms: ["HS256"],
     });
-
-    this.supabase = createClient(
-      process.env.SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    );
   }
 
   async validate(payload: JwtPayload): Promise<RequestUser> {
-    // Fetch user role from database
-    const { data: user } = await this.supabase
-      .from('users')
-      .select('role')
-      .eq('id', payload.sub)
-      .single();
-
     const resolveRole = (value: unknown): Role | undefined =>
       typeof value === 'string' && (ROLES as string[]).includes(value)
         ? (value as Role)
         : undefined;
 
-    const resolvedRole = resolveRole(user?.role) ?? resolveRole(payload.role);
+    const resolvedRole = resolveRole(payload.role);
+    const userId = payload.sub || payload.userId;
+    const orgId = payload.org_id || payload.organizationId;
 
     return {
-      sub: payload.sub,
-      userId: payload.sub,
+      sub: userId,
+      userId: userId,
       email: payload.email,
-      org_id: payload.org_id,
+      org_id: orgId,
       role: resolvedRole ?? 'user',
       last_org_id: payload.last_org_id ?? null,
       default_org_id: payload.default_org_id ?? null,

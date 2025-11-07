@@ -22,7 +22,7 @@ export class PricingGateway implements OnGatewayConnection, OnGatewayDisconnect 
   @WebSocketServer() server: Server;
   private readonly logger = new Logger(PricingGateway.name);
   private readonly connectedUsers = new Map<string, { user_id: string; org_id: string }>();
-  private readonly debounceTimers = new Map<string, NodeJS.Timeout>(); // key: quote_id
+  private readonly debounceTimers = new Map<string, ReturnType<typeof setTimeout>>(); // key: quote_id
   private readonly pendingRecalc = new Map<string, Set<string>>(); // quote_id -> set of quote_item_ids needing recalculation
   private readonly optimisticTracker = new Map<string, number>(); // correlation_id -> start timestamp
   // Basic in-memory metrics (reset on process restart)

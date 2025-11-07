@@ -2,15 +2,14 @@ import { Module, forwardRef } from '@nestjs/common';
 import { AdminPricingController } from './admin-pricing.controller';
 import { AdminPricingService } from './admin-pricing.service';
 import { PricingConfigService } from './pricing-config.service';
-import { SupabaseModule } from "../../../lib/supabase/supabase.module";
-import { CacheModule } from "../../../lib/cache/cache.module";
 import { PricingModule } from "../../features/pricing/pricing.module";
 
 @Module({
   imports: [
-    SupabaseModule,
-    CacheModule,
-    forwardRef(() => PricingModule), // Use forwardRef to break circular dependency
+    // SupabaseModule removed - it's @Global
+    // CacheModule removed - it's @Global
+    // PricingModule removed - AdminPricingModule should not depend on PricingModule
+    // Admin modules should be independent, PricingModule can import AdminPricingModule if needed
   ],
   controllers: [AdminPricingController],
   providers: [

@@ -1,13 +1,13 @@
 import { BadRequestException, Injectable } from "@nestjs/common";
 import { SupabaseService } from "../../lib/supabase/supabase.service";
-import { AdminMetricsService } from "./admin-metrics/admin-metrics.service";
+// AdminMetricsService removed due to DI issues - metrics endpoints disabled
 import { ContractsV1 } from '@cnc-quote/shared';
 import { AdminRiskComplianceService } from './admin-risk-compliance.service';
 
 @Injectable()
 export class AdminService {
   constructor(
-    private readonly adminMetrics: AdminMetricsService,
+    // adminMetrics removed - DI issues
     private readonly supabase: SupabaseService,
     private readonly riskCompliance: AdminRiskComplianceService,
   ) {}
@@ -300,7 +300,8 @@ export class AdminService {
   }
 
   async getDatabaseMetrics(window: string = '1h') {
-    return this.adminMetrics.getDatabaseLatencySnapshot(window);
+    // Stub: AdminMetricsService disabled due to DI issues
+    throw new BadRequestException('Database metrics endpoint temporarily disabled');
   }
 
   async getWebhookStatus(window: string = '1h') {
@@ -396,8 +397,8 @@ export class AdminService {
   }
 
   async getSLOMetrics(window: string = '1h') {
-    const snapshot = await this.adminMetrics.getSloSnapshot(window);
-    return snapshot;
+    // Stub: AdminMetricsService disabled due to DI issues
+    throw new BadRequestException('SLO metrics endpoint temporarily disabled');
   }
 
   async getRecentEvents(limit?: number): Promise<ContractsV1.AdminRecentEventsResponseV1> {

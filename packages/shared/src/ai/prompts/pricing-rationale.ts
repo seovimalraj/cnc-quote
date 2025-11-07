@@ -126,9 +126,17 @@ export function renderPricingRationaleUserPrompt(costSheet: QuoteRationaleCostSh
   return { prompt, metadata: PRICING_RATIONALE_USER_PROMPT };
 }
 
+/**
+ * Format currency value for display in rationale
+ */
 function formatCurrency(value: unknown): string {
   const numeric = toNullableNumber(value) ?? 0;
-  return numeric.toFixed(2);
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(numeric);
 }
 
 function formatNumber(value: unknown): string {

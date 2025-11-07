@@ -3,10 +3,10 @@ import { createHash } from 'crypto';
 const JSON_BYTE_LIMIT = 200_000;
 const SENSITIVE_KEY_REGEX = /(token|secret|password|key|credential|email|phone|ssn|address|dob|birth)/i;
 const EMAIL_REGEX = /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi;
-const PHONE_REGEX = /\+?[0-9][0-9\s().\-]{6,}[0-9]/g;
+const PHONE_REGEX = /\+?[0-9][0-9\s().-]{6,}[0-9]/g;
 const CREDIT_CARD_REGEX = /\b(?:\d[ -]*?){13,16}\b/g;
 const SSN_REGEX = /\b\d{3}-\d{2}-\d{4}\b/g;
-const DOB_REGEX = /\b\d{2}[\/\-]\d{2}[\/\-]\d{4}\b/g;
+const DOB_REGEX = /\b\d{2}[/-]\d{2}[/-]\d{4}\b/g;
 
 function scrubText(value: string): string {
   return value

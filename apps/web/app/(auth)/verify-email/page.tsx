@@ -32,13 +32,13 @@ function VerifyEmailContent() {
             </div>
 
             <div className="space-y-3">
-              <Link href="/auth/sign-in" className="w-full">
+              <Link href="/signin" className="w-full">
                 <Button className="w-full">
                   Back to Sign In
                 </Button>
               </Link>
 
-              <Link href="/auth/sign-up" className="w-full">
+              <Link href="/sign-up" className="w-full">
                 <Button variant="outline" className="w-full">
                   Try Different Email
                 </Button>

@@ -17,11 +17,11 @@ const outfit = Outfit({
 
 export const metadata: Metadata = {
   title: {
-    template: "%s | CNC Quote",
-    default: "CNC Quote",
+    template: "%s | Frigate Portal",
+    default: "Frigate Portal",
   },
   description:
-    "CNC Quote platform for managing quotes, orders, and customers.",
+    "Frigate Fast Parts - Instant CNC quotes and manufacturing platform.",
 };
 
 export default function RootLayout({ children }: PropsWithChildren) {

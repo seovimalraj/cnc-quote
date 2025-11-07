@@ -10,6 +10,8 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { AlertTriangle, ArrowLeft, Loader2, RefreshCw } from 'lucide-react';
 
+import { formatCurrency } from '@/lib/format';
+
 import { RequireAnyRole } from '@/components/auth/RequireAnyRole';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -457,18 +459,6 @@ function deriveLineSummaries(lines: ContractsVNext.QuoteLineVNext[]) {
 			dfmIssues: dfmIssueCount,
 		};
 	});
-}
-
-function formatCurrency(value: number, currency: string): string {
-	try {
-		return new Intl.NumberFormat(undefined, {
-			style: 'currency',
-			currency,
-			maximumFractionDigits: 2,
-		}).format(value ?? 0);
-	} catch {
-		return value.toFixed(2);
-	}
 }
 
 function formatAbsolute(value?: string | null): string {

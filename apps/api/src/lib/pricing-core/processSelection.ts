@@ -162,7 +162,7 @@ export class ProcessSelectionService {
           }
           break;
 
-        case 'sheet_metal':
+        case 'sheet_metal': {
           // Favor sheet metal for thin, flat parts
           const thickness = Math.min(...geom.bbox_mm);
           if (thickness < 3) {
@@ -174,6 +174,7 @@ export class ProcessSelectionService {
             reasoning.push('Flat geometry well-suited for sheet metal');
           }
           break;
+        }
 
         case 'injection_molding':
           // Only viable for high volume
