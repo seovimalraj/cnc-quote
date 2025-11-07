@@ -86,7 +86,7 @@
     "jwks-rsa": "^3.2.0",
     "luxon": "^3.7.2",
     "minio": "^8.0.6",
-    "nanoid": "^4.0.2",
+    "nanoid": "^5.0.9",
     "nest-winston": "^1.10.2",
     "node-fetch": "^2.7.0",
     "nodemailer": "^7.0.6",
